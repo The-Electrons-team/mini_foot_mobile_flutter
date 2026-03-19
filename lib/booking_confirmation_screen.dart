@@ -22,6 +22,7 @@ class BookingConfirmationScreen extends StatefulWidget {
   final int finalPrice;
   final String paymentMethod;
   final String reference;
+  final bool fromReservations;
 
   const BookingConfirmationScreen({
     super.key,
@@ -32,6 +33,7 @@ class BookingConfirmationScreen extends StatefulWidget {
     required this.finalPrice,
     required this.paymentMethod,
     required this.reference,
+    this.fromReservations = false,
   });
 
   @override
@@ -184,7 +186,9 @@ class _BookingConfirmationScreenState extends State<BookingConfirmationScreen> {
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
                   GestureDetector(
-                    onTap: () => Navigator.popUntil(context, (r) => r.isFirst),
+                    onTap: () => widget.fromReservations
+                        ? Navigator.pop(context)
+                        : Navigator.popUntil(context, (r) => r.isFirst),
                     child: Container(
                       width: 34, height: 34,
                       decoration: BoxDecoration(
@@ -267,16 +271,20 @@ class _BookingConfirmationScreenState extends State<BookingConfirmationScreen> {
                 children: [
                   Expanded(
                     child: GestureDetector(
-                      onTap: () => Navigator.popUntil(context, (r) => r.isFirst),
+                      onTap: () => widget.fromReservations
+                          ? Navigator.pop(context)
+                          : Navigator.popUntil(context, (r) => r.isFirst),
                       child: Container(
                         height: 52,
                         decoration: BoxDecoration(
                           color: kDark,
                           borderRadius: BorderRadius.circular(26),
                         ),
-                        child: const Center(
-                          child: Text('Accueil',
-                              style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 14)),
+                        child: Center(
+                          child: Text(
+                            widget.fromReservations ? 'Retour' : 'Accueil',
+                            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 14),
+                          ),
                         ),
                       ),
                     ),
