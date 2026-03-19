@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'onboarding_screen.dart';
 
 const Color kGreen = Color(0xFF006F39);
+const Color kBeige = Color(0xFFF5F0E8);
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -79,7 +80,7 @@ class _SplashScreenState extends State<SplashScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: kBeige,
       body: FadeTransition(
         opacity: _fadeAnim,
         child: Center(

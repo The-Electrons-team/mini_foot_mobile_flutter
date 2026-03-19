@@ -4,8 +4,10 @@ import 'terrain_map_screen.dart';
 import 'terrain_list_screen.dart';
 import 'terrain_detail_screen.dart';
 import 'terrain_data.dart';
+import 'reservations_screen.dart';
 
 const Color kGreen = Color(0xFF006F39);
+const Color kBeige = Color(0xFFF5F0E8);
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -28,7 +30,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F5F5),
+      backgroundColor: kBeige,
       body: _pages[_selectedIndex],
       bottomNavigationBar: _BottomNavBar(
         selectedIndex: _selectedIndex,
@@ -327,7 +329,7 @@ class _HomePage extends StatelessWidget {
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
                 crossAxisSpacing: 12,
-                mainAxisSpacing: 0,
+                mainAxisSpacing: 12,
                 childAspectRatio: 0.85,
                 children: [
                   _QuickAction(
@@ -355,6 +357,14 @@ class _HomePage extends StatelessWidget {
                     label: 'Classement',
                     bgColor: Color(0xFFFCE4EC),
                     iconColor: Color(0xFFAD1457),
+                  ),
+                  _QuickAction(
+                    icon: Icons.receipt_long_rounded,
+                    label: 'Réservations',
+                    bgColor: const Color(0xFFE0F2F1),
+                    iconColor: const Color(0xFF00695C),
+                    onTap: () => Navigator.push(context,
+                        MaterialPageRoute(builder: (_) => const ReservationsScreen())),
                   ),
                 ],
               ),

@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'terrain_data.dart';
+import 'payment_screen.dart';
 
 const Color kGreen = Color(0xFF006F39);
 const Color kDark = Color(0xFF1A1A1A);
+const Color kBeige = Color(0xFFF5F0E8);
 
 class TerrainBookingScreen extends StatefulWidget {
   final Terrain terrain;
@@ -91,7 +93,7 @@ class _TerrainBookingScreenState extends State<TerrainBookingScreen> {
         DateTime(_focusedMonth.year, _focusedMonth.month, 1).weekday % 7;
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: kBeige,
       body: SafeArea(
         child: Column(
           children: [
@@ -347,7 +349,7 @@ class _TerrainBookingScreenState extends State<TerrainBookingScreen> {
               padding: EdgeInsets.fromLTRB(
                   20, 12, 20, MediaQuery.of(context).padding.bottom + 12),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: kBeige,
                 boxShadow: [BoxShadow(
                     color: Colors.black.withValues(alpha: 0.06),
                     blurRadius: 12,
@@ -389,14 +391,16 @@ class _TerrainBookingScreenState extends State<TerrainBookingScreen> {
                   GestureDetector(
                     onTap: _canConfirm
                         ? () {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text(
-                                    'Réservation confirmée · ${_selectedDay!.day}/${_selectedDay!.month} · ${_fmt(_startMin!)} → ${_fmt(_endMin!)} · $_totalPrice F'),
-                                backgroundColor: kGreen,
+                            Navigator.push(context, MaterialPageRoute(
+                              builder: (_) => PaymentScreen(
+                                terrain: widget.terrain,
+                                date: _selectedDay!,
+                                startSlot: _fmt(_startMin!),
+                                endSlot: _fmt(_endMin!),
+                                totalPrice: _totalPrice,
+                                intervals: _intervals,
                               ),
-                            );
-                            Navigator.popUntil(context, (r) => r.isFirst);
+                            ));
                           }
                         : null,
                     child: AnimatedContainer(

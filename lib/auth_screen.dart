@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'home_screen.dart';
 
 const Color kGreen = Color(0xFF006F39);
+const Color kBeige = Color(0xFFF5F0E8);
 
 // ---------------------------------------------------------------------------
 // AUTH SCREEN
@@ -77,7 +78,7 @@ class _AuthScreenState extends State<AuthScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: kBeige,
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
@@ -469,9 +470,9 @@ class _OtpScreenState extends State<OtpScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: kBeige,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: kBeige,
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new_rounded, color: kGreen),

@@ -8,6 +8,7 @@ import 'terrain_map_screen.dart';
 
 const Color kGreen = Color(0xFF006F39);
 const Color kDark = Color(0xFF1A1A1A);
+const Color kBeige = Color(0xFFF5F0E8);
 
 class TerrainDetailScreen extends StatefulWidget {
   final Terrain terrain;
@@ -28,9 +29,9 @@ class _TerrainDetailScreenState extends State<TerrainDetailScreen> {
     final currentImage = t.imageUrls[_selectedImageIndex];
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: kBeige,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: kBeige,
         elevation: 0,
         centerTitle: true,
         automaticallyImplyLeading: false,

@@ -5,6 +5,7 @@ import 'terrain_detail_screen.dart';
 import 'terrain_map_screen.dart';
 
 const Color kGreen = Color(0xFF006F39);
+const Color kBeige = Color(0xFFF5F0E8);
 
 class TerrainListScreen extends StatefulWidget {
   const TerrainListScreen({super.key});
@@ -28,7 +29,7 @@ class _TerrainListScreenState extends State<TerrainListScreen> {
     final nearby = filtered.take(2).toList();
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: kBeige,
       body: SafeArea(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
