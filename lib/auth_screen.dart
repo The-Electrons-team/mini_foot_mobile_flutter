@@ -27,6 +27,7 @@ class _AuthScreenState extends State<AuthScreen>
   final _phoneController = TextEditingController();
   final _prenomController = TextEditingController();
   final _nomController = TextEditingController();
+  DateTime? _birthDate;
 
   @override
   void initState() {
@@ -54,8 +55,39 @@ class _AuthScreenState extends State<AuthScreen>
     _prenomController.clear();
     _nomController.clear();
     _animController.reset();
-    setState(() => _isLogin = !_isLogin);
+    setState(() {
+      _isLogin = !_isLogin;
+      _birthDate = null;
+    });
     _animController.forward();
+  }
+
+  Future<void> _pickBirthDate() async {
+    final now = DateTime.now();
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _birthDate ?? DateTime(now.year - 18),
+      firstDate: DateTime(1950),
+      lastDate: DateTime(now.year - 5),
+      helpText: 'Date de naissance',
+      builder: (ctx, child) => Theme(
+        data: Theme.of(ctx).copyWith(
+          colorScheme: const ColorScheme.light(
+            primary: kGreen,
+            onPrimary: Colors.white,
+          ),
+        ),
+        child: child!,
+      ),
+    );
+    if (picked != null) setState(() => _birthDate = picked);
+  }
+
+  String get _birthDateLabel {
+    if (_birthDate == null) return 'Date de naissance';
+    return '${_birthDate!.day.toString().padLeft(2, '0')}/'
+        '${_birthDate!.month.toString().padLeft(2, '0')}/'
+        '${_birthDate!.year}';
   }
 
   void _submit() {
@@ -165,6 +197,43 @@ class _AuthScreenState extends State<AuthScreen>
                           }
                           return null;
                         },
+                      ),
+                      const SizedBox(height: 14),
+                      // Champ date de naissance
+                      GestureDetector(
+                        onTap: _pickBirthDate,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 16),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF4F4F4),
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(
+                              color: _birthDate != null ? kGreen : Colors.transparent,
+                              width: 1.5,
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(Icons.cake_rounded,
+                                  color: _birthDate != null ? kGreen : kGreen.withValues(alpha: 0.6),
+                                  size: 22),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Text(
+                                  _birthDateLabel,
+                                  style: TextStyle(
+                                    fontSize: 15,
+                                    color: _birthDate != null
+                                        ? Colors.black87
+                                        : Colors.black.withValues(alpha: 0.45),
+                                  ),
+                                ),
+                              ),
+                              Icon(Icons.keyboard_arrow_down_rounded,
+                                  color: kGreen.withValues(alpha: 0.7), size: 20),
+                            ],
+                          ),
+                        ),
                       ),
                       const SizedBox(height: 14),
                     ],

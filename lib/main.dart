@@ -3,6 +3,7 @@ import 'splash_screen.dart';
 
 // ─── Notifier global ───────────────────────────────────────────────────────
 final themeNotifier = ValueNotifier<ThemeMode>(ThemeMode.light);
+final unreadNotifNotifier = ValueNotifier<int>(3); // notifications non lues
 
 void main() {
   runApp(const MinifootApp());

@@ -11,6 +11,15 @@ const Color _kBeige = Color(0xFFF5F0E8);
 const Color _kGreen = Color(0xFF006F39);
 const Color _kDark  = Color(0xFF1A1A1A);
 
+// ── Helpers thème ──
+bool _isDark(BuildContext c) => Theme.of(c).brightness == Brightness.dark;
+Color _bg(BuildContext c)   => Theme.of(c).scaffoldBackgroundColor;
+Color _card(BuildContext c) => Theme.of(c).cardColor;
+Color _txt(BuildContext c)  => Theme.of(c).colorScheme.onSurface;
+Color _sub(BuildContext c)  => _isDark(c)
+    ? const Color(0xFFF0EBE0).withValues(alpha: 0.5)
+    : Colors.black.withValues(alpha: 0.45);
+
 // ─────────────────────────────────────────────────────────────────────────────
 // PROFILE SCREEN
 // ─────────────────────────────────────────────────────────────────────────────
@@ -49,8 +58,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
       backgroundColor: Colors.transparent,
       builder: (_) => Container(
         padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
-        decoration: const BoxDecoration(
-          color: Colors.white,
+        decoration: BoxDecoration(
+          color: _card(context),
           borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
         ),
         child: Column(
@@ -59,8 +68,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
             Container(width: 36, height: 4,
                 decoration: BoxDecoration(color: Colors.black12, borderRadius: BorderRadius.circular(2))),
             const SizedBox(height: 20),
-            const Text('Photo de profil',
-                style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16, color: _kDark)),
+            Text('Photo de profil',
+                style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16, color: _txt(context))),
             const SizedBox(height: 20),
             Row(
               children: [
@@ -101,7 +110,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: _kBeige,
+      backgroundColor: _bg(context),
       body: SafeArea(
         child: SingleChildScrollView(
           child: Column(
@@ -113,7 +122,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 padding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
                 child: Text('Mon Profil',
                     style: GoogleFonts.orbitron(
-                        fontSize: 22, fontWeight: FontWeight.w900, color: _kDark)),
+                        fontSize: 22, fontWeight: FontWeight.w900, color: _txt(context))),
               ),
 
               // ── AVATAR + INFOS ──
@@ -147,7 +156,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               width: 26, height: 26,
                               decoration: BoxDecoration(
                                 color: _kGreen, shape: BoxShape.circle,
-                                border: Border.all(color: _kBeige, width: 2),
+                                border: Border.all(color: _bg(context), width: 2),
                               ),
                               child: const Icon(Icons.camera_alt_rounded, color: Colors.white, size: 13),
                             ),
@@ -164,16 +173,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           const SizedBox(height: 4),
                           Text('Mamadou Diallo',
                               style: GoogleFonts.orbitron(
-                                  fontSize: 15, fontWeight: FontWeight.w900, color: _kDark)),
+                                  fontSize: 15, fontWeight: FontWeight.w900, color: _txt(context))),
                           const SizedBox(height: 4),
                           Text('mamadou.d@gmail.com',
-                              style: TextStyle(fontSize: 12, color: Colors.black.withValues(alpha: 0.45))),
+                              style: TextStyle(fontSize: 12, color: _sub(context))),
                           const SizedBox(height: 10),
                           Wrap(
                             spacing: 6, runSpacing: 6,
                             children: const [
-                              _PosBadge(label: 'Attaquant',   color: _kGreen),
+                              _PosBadge(label: 'Attaquant',    color: _kGreen),
                               _PosBadge(label: 'Les Lions FC', color: Color(0xFF1565C0)),
+                              _PosBadge(label: '24 ans',       color: Color(0xFF6A1B9A)),
                             ],
                           ),
                         ],
@@ -188,7 +198,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 margin: const EdgeInsets.fromLTRB(20, 20, 20, 0),
                 padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 16),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: _card(context),
                   borderRadius: BorderRadius.circular(20),
                   boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.06), blurRadius: 12, offset: const Offset(0, 4))],
                 ),
@@ -208,7 +218,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               Padding(
                 padding: const EdgeInsets.fromLTRB(24, 22, 24, 10),
                 child: Text('Prochains matchs',
-                    style: GoogleFonts.orbitron(fontSize: 13, fontWeight: FontWeight.w800, color: _kDark)),
+                    style: GoogleFonts.orbitron(fontSize: 13, fontWeight: FontWeight.w800, color: _txt(context))),
               ),
               SizedBox(
                 height: 110,
@@ -278,15 +288,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
-        backgroundColor: Colors.white,
+        backgroundColor: Theme.of(context).cardColor,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('Se déconnecter', style: TextStyle(fontWeight: FontWeight.w800, color: _kDark)),
+        title: Text('Se déconnecter', style: TextStyle(fontWeight: FontWeight.w800, color: _txt(context))),
         content: Text('Voulez-vous vraiment vous déconnecter ?',
-            style: TextStyle(color: Colors.black.withValues(alpha: 0.55))),
+            style: TextStyle(color: _sub(context))),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: Text('Annuler', style: TextStyle(color: Colors.black.withValues(alpha: 0.4), fontWeight: FontWeight.w600)),
+            child: Text('Annuler', style: TextStyle(color: _sub(context), fontWeight: FontWeight.w600)),
           ),
           GestureDetector(
             onTap: () {
@@ -369,10 +379,10 @@ class _StatItem extends StatelessWidget {
   Widget build(BuildContext context) => Column(
     children: [
       Text(value,
-          style: GoogleFonts.orbitron(fontSize: 18, fontWeight: FontWeight.w900, color: _kDark)),
+          style: GoogleFonts.orbitron(fontSize: 18, fontWeight: FontWeight.w900, color: _txt(context))),
       const SizedBox(height: 4),
       Text(label,
-          style: TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: Colors.black.withValues(alpha: 0.4))),
+          style: TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: _sub(context))),
     ],
   );
 }
@@ -480,7 +490,7 @@ class _MenuCard extends StatelessWidget {
   Widget build(BuildContext context) => Container(
     margin: const EdgeInsets.symmetric(horizontal: 20),
     decoration: BoxDecoration(
-      color: Colors.white,
+      color: _card(context),
       borderRadius: BorderRadius.circular(20),
       boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10, offset: const Offset(0, 2))],
     ),
@@ -513,10 +523,10 @@ class _MenuCard extends StatelessWidget {
                       child: Text(item.label,
                           style: TextStyle(
                               fontSize: 14, fontWeight: FontWeight.w600,
-                              color: item.isDestructive ? Colors.red.shade600 : _kDark)),
+                              color: item.isDestructive ? Colors.red.shade600 : _txt(context))),
                     ),
                     Icon(Icons.arrow_forward_ios_rounded, size: 13,
-                        color: Colors.black.withValues(alpha: 0.25)),
+                        color: _sub(context).withValues(alpha: 0.5)),
                   ],
                 ),
               ),
@@ -555,6 +565,7 @@ class _AccountSettingsScreenState extends State<_AccountSettingsScreen> {
   final _phoneCtrl  = TextEditingController(text: '77 123 45 67');
   String _poste         = 'Attaquant';
   bool   _phoneModified = false;
+  DateTime? _birthDate;
 
   static const _postes = [
     'Attaquant', 'Milieu offensif', 'Milieu défensif',
@@ -569,13 +580,52 @@ class _AccountSettingsScreenState extends State<_AccountSettingsScreen> {
     super.dispose();
   }
 
+  Future<void> _pickBirthDate() async {
+    final now = DateTime.now();
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _birthDate ?? DateTime(now.year - 20),
+      firstDate: DateTime(1950),
+      lastDate: DateTime(now.year - 5),
+      helpText: 'Date de naissance',
+      builder: (ctx, child) => Theme(
+        data: Theme.of(ctx).copyWith(
+          colorScheme: ColorScheme.dark(
+            primary: _kGreen,
+            onPrimary: Colors.white,
+            surface: _card(ctx),
+            onSurface: _txt(ctx),
+          ),
+        ),
+        child: child!,
+      ),
+    );
+    if (picked != null) setState(() => _birthDate = picked);
+  }
+
+  int? get _age {
+    if (_birthDate == null) return null;
+    final now = DateTime.now();
+    int age = now.year - _birthDate!.year;
+    if (now.month < _birthDate!.month ||
+        (now.month == _birthDate!.month && now.day < _birthDate!.day)) age--;
+    return age;
+  }
+
+  String get _birthDateLabel {
+    if (_birthDate == null) return 'Sélectionner';
+    return '${_birthDate!.day.toString().padLeft(2, '0')}/'
+        '${_birthDate!.month.toString().padLeft(2, '0')}/'
+        '${_birthDate!.year}';
+  }
+
   void _showPosteSheet() {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
       builder: (_) => Container(
-        decoration: const BoxDecoration(
-          color: Colors.white,
+        decoration: BoxDecoration(
+          color: _card(context),
           borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
         ),
         child: Column(
@@ -586,12 +636,12 @@ class _AccountSettingsScreenState extends State<_AccountSettingsScreen> {
               width: 36, height: 4,
               decoration: BoxDecoration(color: Colors.black12, borderRadius: BorderRadius.circular(2)),
             ),
-            const Padding(
-              padding: EdgeInsets.fromLTRB(20, 12, 20, 8),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 12, 20, 8),
               child: Align(
                 alignment: Alignment.centerLeft,
                 child: Text('Choisir un poste',
-                    style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16, color: _kDark)),
+                    style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16, color: _txt(context))),
               ),
             ),
             ..._postes.map((p) => GestureDetector(
@@ -607,11 +657,11 @@ class _AccountSettingsScreenState extends State<_AccountSettingsScreen> {
                     Container(
                       width: 36, height: 36,
                       decoration: BoxDecoration(
-                        color: _poste == p ? _kGreen.withValues(alpha: 0.1) : Colors.black.withValues(alpha: 0.04),
+                        color: _poste == p ? _kGreen.withValues(alpha: 0.1) : _sub(context).withValues(alpha: 0.08),
                         borderRadius: BorderRadius.circular(10),
                       ),
                       child: Icon(Icons.sports_soccer_rounded, size: 18,
-                          color: _poste == p ? _kGreen : Colors.black38),
+                          color: _poste == p ? _kGreen : _sub(context)),
                     ),
                     const SizedBox(width: 14),
                     Expanded(
@@ -675,8 +725,8 @@ class _AccountSettingsScreenState extends State<_AccountSettingsScreen> {
           return Padding(
             padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
             child: Container(
-              decoration: const BoxDecoration(
-                color: Colors.white,
+              decoration: BoxDecoration(
+                color: _card(context),
                 borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
               ),
               padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
@@ -696,12 +746,12 @@ class _AccountSettingsScreenState extends State<_AccountSettingsScreen> {
                     child: const Icon(Icons.sms_rounded, color: _kGreen, size: 28),
                   ),
                   const SizedBox(height: 14),
-                  const Text('Vérification',
-                      style: TextStyle(fontWeight: FontWeight.w800, fontSize: 18, color: _kDark)),
+                  Text('Vérification',
+                      style: TextStyle(fontWeight: FontWeight.w800, fontSize: 18, color: _txt(context))),
                   const SizedBox(height: 6),
                   Text('Code envoyé au  +221 $phone',
                       textAlign: TextAlign.center,
-                      style: TextStyle(fontSize: 13, color: Colors.black.withValues(alpha: 0.45))),
+                      style: TextStyle(fontSize: 13, color: _sub(context))),
                   const SizedBox(height: 28),
                   // Cases OTP espacées
                   Row(
@@ -709,7 +759,7 @@ class _AccountSettingsScreenState extends State<_AccountSettingsScreen> {
                     children: List.generate(6, (i) => Container(
                       width: 46, height: 56,
                       decoration: BoxDecoration(
-                        color: _kBeige,
+                        color: _bg(context),
                         borderRadius: BorderRadius.circular(14),
                         border: Border.all(
                           color: controllers[i].text.isNotEmpty
@@ -724,7 +774,7 @@ class _AccountSettingsScreenState extends State<_AccountSettingsScreen> {
                         keyboardType: TextInputType.number,
                         textAlign: TextAlign.center,
                         maxLength: 1,
-                        style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: _kDark),
+                        style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: _txt(context)),
                         decoration: const InputDecoration(
                           counterText: '',
                           border: InputBorder.none,
@@ -757,11 +807,11 @@ class _AccountSettingsScreenState extends State<_AccountSettingsScreen> {
                           child: Container(
                             padding: const EdgeInsets.symmetric(vertical: 14),
                             decoration: BoxDecoration(
-                              color: Colors.black.withValues(alpha: 0.05),
+                              color: _sub(context).withValues(alpha: 0.08),
                               borderRadius: BorderRadius.circular(14),
                             ),
-                            child: const Text('Annuler', textAlign: TextAlign.center,
-                                style: TextStyle(fontWeight: FontWeight.w700, color: _kDark)),
+                            child: Text('Annuler', textAlign: TextAlign.center,
+                                style: TextStyle(fontWeight: FontWeight.w700, color: _txt(context))),
                           ),
                         ),
                       ),
@@ -777,13 +827,13 @@ class _AccountSettingsScreenState extends State<_AccountSettingsScreen> {
                           child: Container(
                             padding: const EdgeInsets.symmetric(vertical: 14),
                             decoration: BoxDecoration(
-                              color: getCode().length == 6 ? _kGreen : Colors.black12,
+                              color: getCode().length == 6 ? _kGreen : _sub(context).withValues(alpha: 0.15),
                               borderRadius: BorderRadius.circular(14),
                             ),
                             child: Text('Valider', textAlign: TextAlign.center,
                                 style: TextStyle(
                                     fontWeight: FontWeight.w800,
-                                    color: getCode().length == 6 ? Colors.white : Colors.black38)),
+                                    color: getCode().length == 6 ? Colors.white : _sub(context))),
                           ),
                         ),
                       ),
@@ -808,17 +858,17 @@ class _AccountSettingsScreenState extends State<_AccountSettingsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: _kBeige,
+      backgroundColor: _bg(context),
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: _card(context),
         elevation: 0,
         surfaceTintColor: Colors.transparent,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: _kDark, size: 18),
+          icon: Icon(Icons.arrow_back_ios_new_rounded, color: _txt(context), size: 18),
           onPressed: () => Navigator.pop(context),
         ),
         title: Text('Paramètres du compte',
-            style: GoogleFonts.orbitron(fontSize: 14, fontWeight: FontWeight.w800, color: _kDark)),
+            style: GoogleFonts.orbitron(fontSize: 14, fontWeight: FontWeight.w800, color: _txt(context))),
       ),
       body: Center(
         child: SingleChildScrollView(
@@ -835,11 +885,11 @@ class _AccountSettingsScreenState extends State<_AccountSettingsScreen> {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Téléphone', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.black.withValues(alpha: 0.5))),
+                  Text('Téléphone', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: _sub(context))),
                   const SizedBox(height: 6),
                   Container(
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: _card(context),
                       borderRadius: BorderRadius.circular(14),
                       boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 8)],
                     ),
@@ -868,17 +918,17 @@ class _AccountSettingsScreenState extends State<_AccountSettingsScreen> {
                           child: TextField(
                             controller: _phoneCtrl,
                             keyboardType: TextInputType.phone,
-                            style: const TextStyle(fontSize: 14, color: _kDark, fontWeight: FontWeight.w500),
+                            style: TextStyle(fontSize: 14, color: _txt(context), fontWeight: FontWeight.w500),
                             onTap: () => _phoneCtrl.selection = TextSelection(
                               baseOffset: 0,
                               extentOffset: _phoneCtrl.text.length,
                             ),
                             onChanged: (_) => _phoneModified = true,
-                            decoration: const InputDecoration(
+                            decoration: InputDecoration(
                               border: InputBorder.none,
                               hintText: '77 123 45 67',
-                              hintStyle: TextStyle(color: Colors.black26),
-                              contentPadding: EdgeInsets.symmetric(vertical: 14),
+                              hintStyle: TextStyle(color: _sub(context)),
+                              contentPadding: const EdgeInsets.symmetric(vertical: 14),
                             ),
                           ),
                         ),
@@ -893,14 +943,14 @@ class _AccountSettingsScreenState extends State<_AccountSettingsScreen> {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Poste', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.black.withValues(alpha: 0.5))),
+                  Text('Poste', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: _sub(context))),
                   const SizedBox(height: 6),
                   GestureDetector(
                     onTap: () => _showPosteSheet(),
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 15),
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: _card(context),
                         borderRadius: BorderRadius.circular(14),
                         boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 8)],
                       ),
@@ -910,7 +960,46 @@ class _AccountSettingsScreenState extends State<_AccountSettingsScreen> {
                           const SizedBox(width: 12),
                           Expanded(
                             child: Text(_poste,
-                                style: const TextStyle(fontSize: 14, color: _kDark, fontWeight: FontWeight.w500)),
+                                style: TextStyle(fontSize: 14, color: _txt(context), fontWeight: FontWeight.w500)),
+                          ),
+                          const Icon(Icons.keyboard_arrow_down_rounded, color: _kGreen, size: 20),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 14),
+
+              // Date de naissance
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Date de naissance', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: _sub(context))),
+                  const SizedBox(height: 6),
+                  GestureDetector(
+                    onTap: _pickBirthDate,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 15),
+                      decoration: BoxDecoration(
+                        color: _card(context),
+                        borderRadius: BorderRadius.circular(14),
+                        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 8)],
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.cake_rounded, size: 18, color: _kGreen),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              _birthDate == null ? 'Sélectionner' : '$_birthDateLabel  ·  $_age ans',
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: _birthDate == null ? _sub(context) : _txt(context),
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
                           ),
                           const Icon(Icons.keyboard_arrow_down_rounded, color: _kGreen, size: 20),
                         ],
@@ -955,11 +1044,11 @@ class _SettingsField extends StatelessWidget {
   Widget build(BuildContext context) => Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
-      Text(label, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.black.withValues(alpha: 0.5))),
+      Text(label, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: _sub(context))),
       const SizedBox(height: 6),
       Container(
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: _card(context),
           borderRadius: BorderRadius.circular(14),
           boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 8)],
         ),
@@ -973,7 +1062,7 @@ class _SettingsField extends StatelessWidget {
               child: TextField(
                 controller: controller,
                 onTap: _selectAll,
-                style: const TextStyle(fontSize: 14, color: _kDark, fontWeight: FontWeight.w500),
+                style: TextStyle(fontSize: 14, color: _txt(context), fontWeight: FontWeight.w500),
                 decoration: const InputDecoration(
                     border: InputBorder.none,
                     contentPadding: EdgeInsets.symmetric(vertical: 14)),
@@ -1004,17 +1093,17 @@ class _FavoriteTerrainsScreenState extends State<_FavoriteTerrainsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: _kBeige,
+      backgroundColor: _bg(context),
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: _card(context),
         elevation: 0,
         surfaceTintColor: Colors.transparent,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: _kDark, size: 18),
+          icon: Icon(Icons.arrow_back_ios_new_rounded, color: _txt(context), size: 18),
           onPressed: () => Navigator.pop(context),
         ),
         title: Text('Terrains favoris',
-            style: GoogleFonts.orbitron(fontSize: 14, fontWeight: FontWeight.w800, color: _kDark)),
+            style: GoogleFonts.orbitron(fontSize: 14, fontWeight: FontWeight.w800, color: _txt(context))),
       ),
       body: favs.isEmpty
           ? Center(
@@ -1025,7 +1114,7 @@ class _FavoriteTerrainsScreenState extends State<_FavoriteTerrainsScreen> {
                   const SizedBox(height: 12),
                   Text('Aucun favori',
                       style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700,
-                          color: Colors.black.withValues(alpha: 0.35))),
+                          color: _sub(context))),
                 ],
               ),
             )
@@ -1053,7 +1142,7 @@ class _FavoriteTerrainsScreenState extends State<_FavoriteTerrainsScreen> {
                     child: Container(
                       margin: const EdgeInsets.only(bottom: 14),
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: _card(context),
                         borderRadius: BorderRadius.circular(18),
                         boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.06), blurRadius: 10, offset: const Offset(0, 3))],
                       ),
@@ -1070,9 +1159,9 @@ class _FavoriteTerrainsScreenState extends State<_FavoriteTerrainsScreen> {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text(t.name, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14, color: _kDark)),
+                                  Text(t.name, style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14, color: _txt(context))),
                                   const SizedBox(height: 4),
-                                  Text(t.address, style: TextStyle(fontSize: 12, color: Colors.black.withValues(alpha: 0.4))),
+                                  Text(t.address, style: TextStyle(fontSize: 12, color: _sub(context))),
                                   const SizedBox(height: 6),
                                   Text(t.price,
                                       style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: _kGreen)),
@@ -1146,8 +1235,8 @@ class _PaymentsScreenState extends State<_PaymentsScreen> {
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
       builder: (_) => Container(
-        decoration: const BoxDecoration(
-          color: Colors.white,
+        decoration: BoxDecoration(
+          color: _card(context),
           borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
         ),
         padding: const EdgeInsets.fromLTRB(24, 16, 24, 36),
@@ -1164,7 +1253,7 @@ class _PaymentsScreenState extends State<_PaymentsScreen> {
               children: [
                 Expanded(
                   child: Text(r.terrain,
-                      style: GoogleFonts.orbitron(fontSize: 15, fontWeight: FontWeight.w900, color: _kDark)),
+                      style: GoogleFonts.orbitron(fontSize: 15, fontWeight: FontWeight.w900, color: _txt(context))),
                 ),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
@@ -1231,17 +1320,17 @@ class _PaymentsScreenState extends State<_PaymentsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: _kBeige,
+      backgroundColor: _bg(context),
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: _card(context),
         elevation: 0,
         surfaceTintColor: Colors.transparent,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: _kDark, size: 18),
+          icon: Icon(Icons.arrow_back_ios_new_rounded, color: _txt(context), size: 18),
           onPressed: () => Navigator.pop(context),
         ),
         title: Text('Paiements',
-            style: GoogleFonts.orbitron(fontSize: 14, fontWeight: FontWeight.w800, color: _kDark)),
+            style: GoogleFonts.orbitron(fontSize: 14, fontWeight: FontWeight.w800, color: _txt(context))),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
@@ -1249,10 +1338,10 @@ class _PaymentsScreenState extends State<_PaymentsScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text('Méthodes de paiement',
-                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Colors.black.withValues(alpha: 0.5))),
+                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: _sub(context))),
             const SizedBox(height: 8),
             Text('Appuyez pour définir par défaut',
-                style: TextStyle(fontSize: 11, color: Colors.black.withValues(alpha: 0.35))),
+                style: TextStyle(fontSize: 11, color: _sub(context))),
             const SizedBox(height: 12),
             ..._methods.map((m) {
               final isDefault = _defaultMethod == m.$2;
@@ -1262,7 +1351,7 @@ class _PaymentsScreenState extends State<_PaymentsScreen> {
                   margin: const EdgeInsets.only(bottom: 10),
                   padding: const EdgeInsets.all(14),
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: _card(context),
                     borderRadius: BorderRadius.circular(16),
                     border: isDefault ? Border.all(color: _kGreen, width: 1.5) : Border.all(color: Colors.transparent),
                     boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 8)],
@@ -1278,9 +1367,9 @@ class _PaymentsScreenState extends State<_PaymentsScreen> {
                       const SizedBox(width: 14),
                       Expanded(
                         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                          Text(m.$2, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14, color: _kDark)),
+                          Text(m.$2, style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14, color: _txt(context))),
                           const SizedBox(height: 2),
-                          Text(m.$3, style: TextStyle(fontSize: 12, color: Colors.black.withValues(alpha: 0.4))),
+                          Text(m.$3, style: TextStyle(fontSize: 12, color: _sub(context))),
                         ]),
                       ),
                       if (isDefault)
@@ -1290,7 +1379,7 @@ class _PaymentsScreenState extends State<_PaymentsScreen> {
                           child: const Text('Défaut', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: _kGreen)),
                         )
                       else
-                        Icon(Icons.radio_button_unchecked_rounded, color: Colors.black.withValues(alpha: 0.2), size: 20),
+                        Icon(Icons.radio_button_unchecked_rounded, color: _sub(context).withValues(alpha: 0.4), size: 20),
                     ],
                   ),
                 ),
@@ -1298,7 +1387,7 @@ class _PaymentsScreenState extends State<_PaymentsScreen> {
             }),
             const SizedBox(height: 20),
             Text('Historique',
-                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Colors.black.withValues(alpha: 0.5))),
+                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: _sub(context))),
             const SizedBox(height: 12),
             ..._kHistory.map((r) {
               final color = r.status == _PayStatus.confirme ? _kGreen
@@ -1313,7 +1402,7 @@ class _PaymentsScreenState extends State<_PaymentsScreen> {
                   margin: const EdgeInsets.only(bottom: 10),
                   padding: const EdgeInsets.all(14),
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: _card(context),
                     borderRadius: BorderRadius.circular(14),
                     boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 6)],
                   ),
@@ -1323,16 +1412,16 @@ class _PaymentsScreenState extends State<_PaymentsScreen> {
                       const SizedBox(width: 12),
                       Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                         Text('${r.terrain} · ${r.duration}',
-                            style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: _kDark)),
+                            style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: _txt(context))),
                         const SizedBox(height: 2),
-                        Text(r.date, style: TextStyle(fontSize: 11, color: Colors.black.withValues(alpha: 0.4))),
+                        Text(r.date, style: TextStyle(fontSize: 11, color: _sub(context))),
                       ])),
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.end,
                         children: [
                           Text(r.amount, style: TextStyle(fontWeight: FontWeight.w800, fontSize: 14, color: color)),
                           const SizedBox(height: 2),
-                          const Icon(Icons.chevron_right_rounded, size: 16, color: Colors.black26),
+                          Icon(Icons.chevron_right_rounded, size: 16, color: _sub(context)),
                         ],
                       ),
                     ],
@@ -1365,10 +1454,10 @@ class _DetailRow extends StatelessWidget {
         ),
         const SizedBox(width: 12),
         Expanded(child: Text(label,
-            style: TextStyle(fontSize: 13, color: Colors.black.withValues(alpha: 0.45)))),
+            style: TextStyle(fontSize: 13, color: _sub(context)))),
         Text(value,
             style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700,
-                color: valueColor ?? _kDark)),
+                color: valueColor ?? _txt(context))),
       ],
     ),
   );
@@ -1384,17 +1473,17 @@ class _PrivacyScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: _kBeige,
+      backgroundColor: _bg(context),
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: _card(context),
         elevation: 0,
         surfaceTintColor: Colors.transparent,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: _kDark, size: 18),
+          icon: Icon(Icons.arrow_back_ios_new_rounded, color: _txt(context), size: 18),
           onPressed: () => Navigator.pop(context),
         ),
         title: Text('Confidentialité & CGU',
-            style: GoogleFonts.orbitron(fontSize: 13, fontWeight: FontWeight.w800, color: _kDark)),
+            style: GoogleFonts.orbitron(fontSize: 13, fontWeight: FontWeight.w800, color: _txt(context))),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
@@ -1442,9 +1531,9 @@ class _PrivacySection extends StatelessWidget {
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(title, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14, color: _kDark)),
+        Text(title, style: TextStyle(fontWeight: FontWeight.w800, fontSize: 14, color: _txt(context))),
         const SizedBox(height: 8),
-        Text(body, style: TextStyle(fontSize: 13, color: Colors.black.withValues(alpha: 0.55), height: 1.6)),
+        Text(body, style: TextStyle(fontSize: 13, color: _sub(context), height: 1.6)),
       ],
     ),
   );
@@ -1468,17 +1557,17 @@ class _HelpScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: _kBeige,
+      backgroundColor: _bg(context),
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: _card(context),
         elevation: 0,
         surfaceTintColor: Colors.transparent,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: _kDark, size: 18),
+          icon: Icon(Icons.arrow_back_ios_new_rounded, color: _txt(context), size: 18),
           onPressed: () => Navigator.pop(context),
         ),
         title: Text('Aide & Support',
-            style: GoogleFonts.orbitron(fontSize: 14, fontWeight: FontWeight.w800, color: _kDark)),
+            style: GoogleFonts.orbitron(fontSize: 14, fontWeight: FontWeight.w800, color: _txt(context))),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
@@ -1530,7 +1619,7 @@ class _HelpScreen extends StatelessWidget {
             ),
             const SizedBox(height: 24),
             Text('Questions fréquentes',
-                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Colors.black.withValues(alpha: 0.5))),
+                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: _sub(context))),
             const SizedBox(height: 12),
             ..._faqs.map((faq) => _FaqTile(question: faq.$1, answer: faq.$2)),
           ],
@@ -1556,7 +1645,7 @@ class _FaqTileState extends State<_FaqTile> {
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: _card(context),
         borderRadius: BorderRadius.circular(16),
         boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 8)],
       ),
@@ -1567,7 +1656,7 @@ class _FaqTileState extends State<_FaqTile> {
             children: [
               Expanded(
                 child: Text(widget.question,
-                    style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13, color: _kDark)),
+                    style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13, color: _txt(context))),
               ),
               Icon(_open ? Icons.keyboard_arrow_up_rounded : Icons.keyboard_arrow_down_rounded,
                   color: _kGreen, size: 20),
@@ -1576,10 +1665,18 @@ class _FaqTileState extends State<_FaqTile> {
           if (_open) ...[
             const SizedBox(height: 10),
             Text(widget.answer,
-                style: TextStyle(fontSize: 12, color: Colors.black.withValues(alpha: 0.55), height: 1.5)),
+                style: TextStyle(fontSize: 12, color: _sub(context), height: 1.5)),
           ],
         ],
       ),
     ),
   );
 }
+
+
+
+
+
+
+
+

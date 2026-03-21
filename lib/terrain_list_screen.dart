@@ -2,10 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'terrain_data.dart';
 import 'terrain_detail_screen.dart';
-import 'terrain_map_screen.dart';
+import 'home_screen.dart';
 
 const Color kGreen = Color(0xFF006F39);
-const Color kBeige = Color(0xFFF5F0E8);
+
+bool _isDark(BuildContext c) => Theme.of(c).brightness == Brightness.dark;
+Color _bg(BuildContext c)   => Theme.of(c).scaffoldBackgroundColor;
+Color _card(BuildContext c) => Theme.of(c).cardColor;
+Color _txt(BuildContext c)  => Theme.of(c).colorScheme.onSurface;
+Color _sub(BuildContext c)  => _isDark(c)
+    ? const Color(0xFFF0EBE0).withValues(alpha: 0.5)
+    : Colors.black.withValues(alpha: 0.45);
 
 class TerrainListScreen extends StatefulWidget {
   const TerrainListScreen({super.key});
@@ -29,7 +36,7 @@ class _TerrainListScreenState extends State<TerrainListScreen> {
     final nearby = filtered.take(2).toList();
 
     return Scaffold(
-      backgroundColor: kBeige,
+      backgroundColor: _bg(context),
       body: SafeArea(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -44,17 +51,18 @@ class _TerrainListScreenState extends State<TerrainListScreen> {
                   Text('Localisation',
                       style: TextStyle(
                           fontSize: 11,
-                          color: Colors.black.withValues(alpha: 0.4))),
+                          color: _sub(context))),
                   const SizedBox(height: 3),
                   Row(children: [
                     const Icon(Icons.location_on_rounded,
                         color: kGreen, size: 16),
                     const SizedBox(width: 4),
-                    const Text('Dakar, Sénégal',
+                    Text('Dakar, Sénégal',
                         style: TextStyle(
-                            fontWeight: FontWeight.w700, fontSize: 14)),
-                    const Icon(Icons.keyboard_arrow_down_rounded,
-                        size: 18, color: Colors.black54),
+                            fontWeight: FontWeight.w700, fontSize: 14,
+                            color: _txt(context))),
+                    Icon(Icons.keyboard_arrow_down_rounded,
+                        size: 18, color: _sub(context)),
                   ]),
 
                   const SizedBox(height: 16),
@@ -63,24 +71,24 @@ class _TerrainListScreenState extends State<TerrainListScreen> {
                   Container(
                     height: 48,
                     decoration: BoxDecoration(
-                      color: const Color(0xFFF5F5F5),
+                      color: _card(context),
                       borderRadius: BorderRadius.circular(14),
                     ),
                     child: Row(
                       children: [
-                        const Padding(
-                          padding: EdgeInsets.symmetric(horizontal: 12),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 12),
                           child: Icon(Icons.search_rounded,
-                              color: Colors.black38, size: 22),
+                              color: _sub(context), size: 22),
                         ),
                         Expanded(
                           child: TextField(
                             onChanged: (v) => setState(() => _query = v),
+                            style: TextStyle(color: _txt(context)),
                             decoration: InputDecoration(
                               hintText: 'Rechercher un terrain...',
                               hintStyle: TextStyle(
-                                  color:
-                                      Colors.black.withValues(alpha: 0.35),
+                                  color: _sub(context),
                                   fontSize: 14),
                               border: InputBorder.none,
                               contentPadding:
@@ -93,17 +101,16 @@ class _TerrainListScreenState extends State<TerrainListScreen> {
                           width: 32,
                           height: 32,
                           decoration: BoxDecoration(
-                            color: Colors.white,
+                            color: _bg(context),
                             borderRadius: BorderRadius.circular(8),
                             boxShadow: [
                               BoxShadow(
-                                  color:
-                                      Colors.black.withValues(alpha: 0.06),
+                                  color: Colors.black.withValues(alpha: 0.06),
                                   blurRadius: 4)
                             ],
                           ),
-                          child: const Icon(Icons.tune_rounded,
-                              size: 18, color: Colors.black54),
+                          child: Icon(Icons.tune_rounded,
+                              size: 18, color: _sub(context)),
                         ),
                       ],
                     ),
@@ -225,20 +232,6 @@ class _TerrainListScreenState extends State<TerrainListScreen> {
           ],
         ),
       ),
-
-      // ── BARRE DE NAVIGATION ──
-      bottomNavigationBar: _NavBar(
-        onTap: (i) {
-          if (i == 2) {
-            Navigator.push(
-                context,
-                MaterialPageRoute(
-                    builder: (_) => const TerrainMapScreen()));
-          } else if (i == 0) {
-            Navigator.pop(context);
-          }
-        },
-      ),
     );
   }
 }
@@ -298,10 +291,10 @@ class _NearbyItem extends StatelessWidget {
             children: [
               Expanded(
                 child: Text(terrain.name,
-                    style: const TextStyle(
+                    style: TextStyle(
                         fontWeight: FontWeight.w700,
                         fontSize: 12,
-                        color: Color(0xFF1A1A1A)),
+                        color: _txt(context)),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis),
               ),
@@ -320,8 +313,8 @@ class _NearbyItem extends StatelessWidget {
             const SizedBox(width: 2),
             Expanded(
               child: Text(terrain.address,
-                  style: const TextStyle(
-                      fontSize: 10, color: Colors.black38),
+                  style: TextStyle(
+                      fontSize: 10, color: _sub(context)),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis),
             ),
@@ -368,17 +361,18 @@ class _PopularItem extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(terrain.name,
-                      style: const TextStyle(
-                          fontWeight: FontWeight.w700, fontSize: 14)),
+                      style: TextStyle(
+                          fontWeight: FontWeight.w700, fontSize: 14,
+                          color: _txt(context))),
                   const SizedBox(height: 4),
                   Row(children: [
-                    const Icon(Icons.location_on_rounded,
-                        color: Colors.black38, size: 13),
+                    Icon(Icons.location_on_rounded,
+                        color: _sub(context), size: 13),
                     const SizedBox(width: 2),
                     Expanded(
                       child: Text(terrain.address,
-                          style: const TextStyle(
-                              fontSize: 12, color: Colors.black38),
+                          style: TextStyle(
+                              fontSize: 12, color: _sub(context)),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis),
                     ),
@@ -409,101 +403,4 @@ class _PopularItem extends StatelessWidget {
   }
 }
 
-// ── BARRE DE NAVIGATION ──
-class _NavBar extends StatelessWidget {
-  final ValueChanged<int> onTap;
-  const _NavBar({required this.onTap});
 
-  @override
-  Widget build(BuildContext context) {
-    return SafeArea(
-      child: SizedBox(
-        height: 80,
-        child: Stack(
-          clipBehavior: Clip.none,
-          alignment: Alignment.bottomCenter,
-          children: [
-            Positioned(
-              bottom: 0,
-              left: 16,
-              right: 16,
-              child: Container(
-                height: 68,
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(36),
-                  boxShadow: [
-                    BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.10),
-                        blurRadius: 20,
-                        offset: const Offset(0, 4)),
-                  ],
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
-                  children: [
-                    _NavIcon(icon: Icons.home_rounded, onTap: () => onTap(0), active: true),
-                    _NavIcon(icon: Icons.chat_bubble_outline_rounded, onTap: () => onTap(1)),
-                    const SizedBox(width: 64),
-                    _NavIcon(icon: Icons.notifications_none_rounded, onTap: () => onTap(3)),
-                    _NavIcon(icon: Icons.person_outline_rounded, onTap: () => onTap(4)),
-                  ],
-                ),
-              ),
-            ),
-            Positioned(
-              bottom: 20,
-              child: GestureDetector(
-                onTap: () => onTap(2),
-                child: Container(
-                  width: 64,
-                  height: 64,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    shape: BoxShape.circle,
-                    border: Border.all(color: kGreen, width: 2),
-                    boxShadow: [
-                      BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.12),
-                          blurRadius: 12,
-                          offset: const Offset(0, 4)),
-                    ],
-                  ),
-                  child: Padding(
-                    padding: const EdgeInsets.all(12),
-                    child: Image.asset('assets/images/ballon.png',
-                        fit: BoxFit.contain),
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _NavIcon extends StatelessWidget {
-  final IconData icon;
-  final VoidCallback onTap;
-  final bool active;
-  const _NavIcon({required this.icon, required this.onTap, this.active = false});
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 250),
-        width: 44,
-        height: 44,
-        decoration: BoxDecoration(
-          color: active ? kGreen : Colors.transparent,
-          borderRadius: BorderRadius.circular(14),
-        ),
-        child: Icon(icon, size: 22, color: active ? Colors.white : Colors.black38),
-      ),
-    );
-  }
-}
