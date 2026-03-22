@@ -2,6 +2,7 @@
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -527,8 +528,12 @@ class _LocationPickerPageState extends State<_LocationPickerPage> {
           options: MapOptions(initialCenter: _picked, initialZoom: 14,
               onTap: (_, ll) => setState(() => _picked = ll)),
           children: [
-            TileLayer(urlTemplate: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png',
-                subdomains: const ['a', 'b', 'c', 'd']),
+            TileLayer(
+                urlTemplate: 'https://api.mapbox.com/styles/v1/mapbox/streets-v12/tiles/{z}/{x}/{y}?access_token=${dotenv.env['MAPBOX_ACCESS_TOKEN']}',
+                userAgentPackageName: 'com.minifoot.app',
+                tileSize: 512,
+                zoomOffset: -1,
+            ),
             MarkerLayer(markers: [Marker(point: _picked, width: 48, height: 48,
               child: Column(children: [
                 Container(width: 32, height: 32,
