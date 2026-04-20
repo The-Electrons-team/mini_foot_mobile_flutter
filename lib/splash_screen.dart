@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
+import 'providers/auth_provider.dart';
+import 'home_screen.dart';
 import 'onboarding_screen.dart';
+
 
 const Color kGreen = Color(0xFF006F39);
 const Color kBeige = Color(0xFFF5F0E8);
@@ -55,18 +59,41 @@ class _SplashScreenState extends State<SplashScreen>
       });
     _dotsController.forward();
 
-    Future.delayed(const Duration(seconds: 2), () {
-      if (mounted) {
-        Navigator.of(context).pushReplacement(
-          PageRouteBuilder(
-            pageBuilder: (_, _, _) => const OnboardingScreen(),
-            transitionsBuilder: (_, animation, _, child) =>
-                FadeTransition(opacity: animation, child: child),
-            transitionDuration: const Duration(milliseconds: 600),
-          ),
-        );
+    Future.delayed(const Duration(seconds: 2), () async {
+      debugPrint('Splash delay finished, checking auth...');
+      try {
+        if (mounted) {
+          final authProvider = context.read<AuthProvider>();
+          final isLoggedIn = await authProvider.tryAutoLogin()
+              .timeout(const Duration(seconds: 5), onTimeout: () {
+                debugPrint('Auto login timed out!');
+                return false;
+              });
+
+          debugPrint('Auth status: $isLoggedIn');
+          if (mounted) {
+            Navigator.of(context).pushReplacement(
+              PageRouteBuilder(
+                pageBuilder: (_, _, _) =>
+                    isLoggedIn ? const HomeScreen() : const OnboardingScreen(),
+                transitionsBuilder: (_, animation, _, child) =>
+                    FadeTransition(opacity: animation, child: child),
+                transitionDuration: const Duration(milliseconds: 600),
+              ),
+            );
+          }
+        }
+      } catch (e) {
+        debugPrint('Error in splash screen: $e');
+        if (mounted) {
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(builder: (_) => const OnboardingScreen()),
+          );
+        }
       }
     });
+
+
   }
 
   @override

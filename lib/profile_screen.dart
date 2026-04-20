@@ -2,7 +2,10 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'providers/auth_provider.dart';
+
 import 'terrain_data.dart';
 import 'terrain_detail_screen.dart';
 import 'auth_screen.dart';
@@ -109,7 +112,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final auth = context.watch<AuthProvider>();
+    final user = auth.user;
+
     return Scaffold(
+
       backgroundColor: _bg(context),
       body: SafeArea(
         child: SingleChildScrollView(
@@ -171,19 +178,25 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           const SizedBox(height: 4),
-                          Text('Mamadou Diallo',
+                          Text(user != null ? '${user.firstName} ${user.lastName}' : 'Utilisateur',
                               style: GoogleFonts.orbitron(
                                   fontSize: 15, fontWeight: FontWeight.w900, color: _txt(context))),
                           const SizedBox(height: 4),
-                          Text('mamadou.d@gmail.com',
+                          Text(user?.phone ?? '',
                               style: TextStyle(fontSize: 12, color: _sub(context))),
+
                           const SizedBox(height: 10),
                           Wrap(
                             spacing: 6, runSpacing: 6,
-                            children: const [
+                            children: [
                               _PosBadge(label: 'Attaquant',    color: _kGreen),
-                              _PosBadge(label: 'Les Lions FC', color: Color(0xFF1565C0)),
-                              _PosBadge(label: '24 ans',       color: Color(0xFF6A1B9A)),
+                              _PosBadge(label: 'Les Lions FC', color: const Color(0xFF1565C0)),
+                              if (user?.birthDate != null)
+                                _PosBadge(
+                                  label: '${DateTime.now().year - DateTime.parse(user!.birthDate!).year} ans',
+                                  color: const Color(0xFF6A1B9A),
+                                ),
+
                             ],
                           ),
                         ],
@@ -299,11 +312,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
             child: Text('Annuler', style: TextStyle(color: _sub(context), fontWeight: FontWeight.w600)),
           ),
           GestureDetector(
-            onTap: () {
-              Navigator.of(context).pushAndRemoveUntil(
-                MaterialPageRoute(builder: (_) => const AuthScreen()),
-                (r) => false,
-              );
+            onTap: () async {
+              await context.read<AuthProvider>().logout();
+              if (mounted) {
+                Navigator.of(context).pushAndRemoveUntil(
+                  MaterialPageRoute(builder: (_) => const AuthScreen()),
+                  (r) => false,
+                );
+              }
             },
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -311,9 +327,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 color: Colors.red.shade600,
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: const Text('Déconnecter', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 13)),
+              child: const Text('Déconnecter',
+                  style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 13)),
             ),
           ),
+
           const SizedBox(width: 4),
         ],
       ),

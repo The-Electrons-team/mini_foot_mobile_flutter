@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
+import 'providers/auth_provider.dart';
 import 'home_screen.dart';
+
 
 const Color kGreen = Color(0xFF006F39);
 const Color kBeige = Color(0xFFF5F0E8);
@@ -90,22 +93,70 @@ class _AuthScreenState extends State<AuthScreen>
         '${_birthDate!.year}';
   }
 
-  void _submit() {
+  void _submit() async {
     if (!(_formKey.currentState?.validate() ?? false)) return;
-    Navigator.of(context).push(
-      PageRouteBuilder(
-        pageBuilder: (_, _, _) => OtpScreen(phone: _phoneController.text.trim()),
-        transitionsBuilder: (_, animation, _, child) => SlideTransition(
-          position: Tween<Offset>(
-            begin: const Offset(1, 0),
-            end: Offset.zero,
-          ).animate(CurvedAnimation(parent: animation, curve: Curves.easeOut)),
-          child: child,
-        ),
-        transitionDuration: const Duration(milliseconds: 450),
-      ),
-    );
+
+    final phone = '+221${_phoneController.text.trim()}';
+    final authProvider = context.read<AuthProvider>();
+
+    try {
+      if (_isLogin) {
+        // --- MODE CONNEXION ---
+        await authProvider.login(phone);
+        if (!mounted) return;
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (_) => const HomeScreen()),
+          (route) => false,
+        );
+      } else {
+        // --- MODE INSCRIPTION ---
+        if (_birthDate == null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Veuillez sélectionner votre date de naissance')),
+          );
+          return;
+        }
+
+        await authProvider.signup(phone);
+        if (!mounted) return;
+
+        // Go OTP avec toutes les infos pour finaliser après
+        Navigator.of(context).push(
+          PageRouteBuilder(
+            pageBuilder: (_, _, _) => OtpScreen(
+              phone: phone,
+              firstName: _prenomController.text.trim(),
+              lastName: _nomController.text.trim(),
+              birthDate: _birthDate,
+              isNewUser: true,
+            ),
+            transitionsBuilder: (_, animation, _, child) => SlideTransition(
+              position: Tween<Offset>(
+                begin: const Offset(1, 0),
+                end: Offset.zero,
+              ).animate(CurvedAnimation(parent: animation, curve: Curves.easeOut)),
+              child: child,
+            ),
+            transitionDuration: const Duration(milliseconds: 450),
+          ),
+        );
+      }
+    } catch (e) {
+      String message = 'Une erreur est survenue';
+      if (e.toString().contains('COMPTE_NON_TROUVE')) {
+        message = 'Compte non trouvé. Veuillez vous inscrire.';
+      } else if (e.toString().contains('déjà utilisé')) {
+        message = 'Ce numéro est déjà utilisé par un autre compte.';
+      } else {
+        message = e.toString().replaceAll('Exception: ', '');
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(message)),
+      );
+    }
   }
+
+
 
   @override
   Widget build(BuildContext context) {
@@ -255,36 +306,43 @@ class _AuthScreenState extends State<AuthScreen>
                     const SizedBox(height: 28),
 
                     // Bouton principal
-                    SizedBox(
-                      width: double.infinity,
-                      height: 56,
-                      child: ElevatedButton(
-                        onPressed: _submit,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: kGreen,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(14),
-                          ),
-                          elevation: 0,
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Text(
-                              _isLogin ? 'Recevoir le code' : 'S\'inscrire',
-                              style: GoogleFonts.orbitron(
-                                color: Colors.white,
-                                fontSize: 14,
-                                fontWeight: FontWeight.w700,
+                    Consumer<AuthProvider>(
+                      builder: (context, auth, _) {
+                        return SizedBox(
+                          width: double.infinity,
+                          height: 56,
+                          child: ElevatedButton(
+                            onPressed: auth.isLoading ? null : _submit,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: kGreen,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(14),
                               ),
+                              elevation: 0,
                             ),
-                            const SizedBox(width: 10),
-                            const Icon(Icons.arrow_forward_rounded,
-                                color: Colors.white, size: 20),
-                          ],
-                        ),
-                      ),
+                            child: auth.isLoading
+                                ? const CircularProgressIndicator(color: Colors.white)
+                                : Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Text(
+                                        _isLogin ? 'Recevoir le code' : 'S\'inscrire',
+                                        style: GoogleFonts.orbitron(
+                                          color: Colors.white,
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w700,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 10),
+                                      const Icon(Icons.arrow_forward_rounded,
+                                          color: Colors.white, size: 20),
+                                    ],
+                                  ),
+                          ),
+                        );
+                      },
                     ),
+
 
                     const SizedBox(height: 22),
 
@@ -458,7 +516,21 @@ class _PhoneField extends StatelessWidget {
 
 class OtpScreen extends StatefulWidget {
   final String phone;
-  const OtpScreen({super.key, required this.phone});
+  final String firstName;
+  final String lastName;
+  final DateTime? birthDate;
+  final bool isNewUser;
+
+  const OtpScreen({
+    super.key,
+    required this.phone,
+    this.firstName = '',
+    this.lastName = '',
+    this.birthDate,
+    this.isNewUser = false,
+  });
+
+
 
   @override
   State<OtpScreen> createState() => _OtpScreenState();
@@ -512,22 +584,59 @@ class _OtpScreenState extends State<OtpScreen> {
     setState(() => _errorMessage = null);
   }
 
-  void _validate() {
+  void _validate() async {
     final code = _controllers.map((c) => c.text).join();
     if (code.length < 6) {
       setState(() => _errorMessage = 'Saisis les 6 chiffres du code');
       return;
     }
-    Navigator.of(context).pushAndRemoveUntil(
-      PageRouteBuilder(
-        pageBuilder: (_, _, _) => const HomeScreen(),
-        transitionsBuilder: (_, animation, _, child) =>
-            FadeTransition(opacity: animation, child: child),
-        transitionDuration: const Duration(milliseconds: 500),
-      ),
-      (_) => false,
-    );
+
+    final authProvider = context.read<AuthProvider>();
+
+    try {
+      final verified = await authProvider.verifyOtp(widget.phone, code);
+
+      if (!mounted) return;
+
+      if (verified) {
+        if (widget.isNewUser) {
+          // Si nouveau, on doit appeler register
+          if (widget.firstName.isEmpty || widget.lastName.isEmpty) {
+            // Cas où l'utilisateur a essayé de se connecter sans passer par inscription
+            // On pourrait rediriger vers un écran de complément de profil
+            // Pour l'instant, on affiche une erreur ou on force le retour
+            setState(() => _errorMessage = 'Informations de profil manquantes');
+            return;
+          }
+
+          await authProvider.register(
+            phone: widget.phone,
+            firstName: widget.firstName,
+            lastName: widget.lastName,
+            birthDate: widget.birthDate?.toIso8601String(),
+          );
+
+        }
+
+        if (!mounted) return;
+
+        Navigator.of(context).pushAndRemoveUntil(
+          PageRouteBuilder(
+            pageBuilder: (_, _, _) => const HomeScreen(),
+            transitionsBuilder: (_, animation, _, child) =>
+                FadeTransition(opacity: animation, child: child),
+            transitionDuration: const Duration(milliseconds: 500),
+          ),
+          (_) => false,
+        );
+      } else {
+        setState(() => _errorMessage = 'Code invalide');
+      }
+    } catch (e) {
+      setState(() => _errorMessage = e.toString());
+    }
   }
+
 
   @override
   void dispose() {
@@ -595,7 +704,7 @@ class _OtpScreenState extends State<OtpScreen> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: List.generate(6, (i) {
                   return Container(
-                    width: 48,
+                    width: 44,
                     height: 60,
                     margin: const EdgeInsets.symmetric(horizontal: 4),
                     child: TextFormField(
@@ -645,28 +754,35 @@ class _OtpScreenState extends State<OtpScreen> {
               const SizedBox(height: 36),
 
               // Bouton valider
-              SizedBox(
-                width: double.infinity,
-                height: 56,
-                child: ElevatedButton(
-                  onPressed: _validate,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: kGreen,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
+              Consumer<AuthProvider>(
+                builder: (context, auth, _) {
+                  return SizedBox(
+                    width: double.infinity,
+                    height: 56,
+                    child: ElevatedButton(
+                      onPressed: auth.isLoading ? null : _validate,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: kGreen,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        elevation: 0,
+                      ),
+                      child: auth.isLoading
+                          ? const CircularProgressIndicator(color: Colors.white)
+                          : Text(
+                              'Valider le code',
+                              style: GoogleFonts.orbitron(
+                                color: Colors.white,
+                                fontSize: 15,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
                     ),
-                    elevation: 0,
-                  ),
-                  child: Text(
-                    'Valider le code',
-                    style: GoogleFonts.orbitron(
-                      color: Colors.white,
-                      fontSize: 15,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ),
+                  );
+                },
               ),
+
 
               const SizedBox(height: 24),
 
