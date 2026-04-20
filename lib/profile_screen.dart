@@ -189,12 +189,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           Wrap(
                             spacing: 6, runSpacing: 6,
                             children: [
-                              _PosBadge(label: 'Attaquant',    color: _kGreen),
+                              _PosBadge(label: 'Attaquant', color: _kGreen),
                               _PosBadge(label: 'Les Lions FC', color: const Color(0xFF1565C0)),
                               if (user?.birthDate != null)
-                                _PosBadge(
-                                  label: '${DateTime.now().year - DateTime.parse(user!.birthDate!).year} ans',
-                                  color: const Color(0xFF6A1B9A),
+                                Builder(
+                                  builder: (context) {
+                                    final birth = DateTime.tryParse(user!.birthDate!);
+                                    if (birth == null) return const SizedBox.shrink();
+                                    final age = DateTime.now().year - birth.year;
+                                    return _PosBadge(
+                                      label: '$age ans',
+                                      color: const Color(0xFF6A1B9A),
+                                    );
+                                  },
                                 ),
 
                             ],

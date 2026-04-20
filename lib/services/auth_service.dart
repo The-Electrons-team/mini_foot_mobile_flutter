@@ -5,11 +5,14 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 class AuthService {
   final String _baseUrl = dotenv.get('API_URL');
 
-  Future<Map<String, dynamic>> login(String phone) async {
+  Future<Map<String, dynamic>> login(String phone, String password) async {
     final response = await http.post(
       Uri.parse('$_baseUrl/auth/login'),
       headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({'phone': phone}),
+      body: jsonEncode({
+        'phone': phone,
+        'password': password,
+      }),
     );
 
     if (response.statusCode == 200 || response.statusCode == 201) {
@@ -52,6 +55,7 @@ class AuthService {
 
   Future<Map<String, dynamic>> register({
     required String phone,
+    required String password,
     required String firstName,
     required String lastName,
     String? birthDate,
@@ -61,6 +65,7 @@ class AuthService {
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({
         'phone': phone,
+        'password': password,
         'firstName': firstName,
         'lastName': lastName,
         if (birthDate != null) 'birthDate': birthDate,

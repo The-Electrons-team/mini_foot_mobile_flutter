@@ -65,11 +65,11 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
-  Future<void> login(String phone) async {
+  Future<void> login(String phone, String password) async {
     _isLoading = true;
     notifyListeners();
     try {
-      final result = await _authService.login(phone);
+      final result = await _authService.login(phone, password);
       _token = result['token'];
       _user = User.fromJson(result['user']);
       final prefs = await SharedPreferences.getInstance();
@@ -106,6 +106,7 @@ class AuthProvider with ChangeNotifier {
 
   Future<void> register({
     required String phone,
+    required String password,
     required String firstName,
     required String lastName,
     String? birthDate,
@@ -115,6 +116,7 @@ class AuthProvider with ChangeNotifier {
     try {
       final result = await _authService.register(
         phone: phone,
+        password: password,
         firstName: firstName,
         lastName: lastName,
         birthDate: birthDate,

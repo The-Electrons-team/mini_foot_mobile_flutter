@@ -30,7 +30,10 @@ class _AuthScreenState extends State<AuthScreen>
   final _phoneController = TextEditingController();
   final _prenomController = TextEditingController();
   final _nomController = TextEditingController();
+  final _passwordController = TextEditingController();
+  final _confirmPasswordController = TextEditingController();
   DateTime? _birthDate;
+  bool _obscurePassword = true;
 
   @override
   void initState() {
@@ -49,6 +52,8 @@ class _AuthScreenState extends State<AuthScreen>
     _phoneController.dispose();
     _prenomController.dispose();
     _nomController.dispose();
+    _passwordController.dispose();
+    _confirmPasswordController.dispose();
     super.dispose();
   }
 
@@ -57,6 +62,8 @@ class _AuthScreenState extends State<AuthScreen>
     _phoneController.clear();
     _prenomController.clear();
     _nomController.clear();
+    _passwordController.clear();
+    _confirmPasswordController.clear();
     _animController.reset();
     setState(() {
       _isLogin = !_isLogin;
@@ -102,7 +109,15 @@ class _AuthScreenState extends State<AuthScreen>
     try {
       if (_isLogin) {
         // --- MODE CONNEXION ---
-        await authProvider.login(phone);
+        final password = _passwordController.text.trim();
+        if (password.isEmpty) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Veuillez saisir votre mot de passe')),
+          );
+          return;
+        }
+
+        await authProvider.login(phone, password);
         if (!mounted) return;
         Navigator.of(context).pushAndRemoveUntil(
           MaterialPageRoute(builder: (_) => const HomeScreen()),
@@ -127,6 +142,7 @@ class _AuthScreenState extends State<AuthScreen>
               phone: phone,
               firstName: _prenomController.text.trim(),
               lastName: _nomController.text.trim(),
+              password: _passwordController.text.trim(),
               birthDate: _birthDate,
               isNewUser: true,
             ),
@@ -206,7 +222,7 @@ class _AuthScreenState extends State<AuthScreen>
                       alignment: Alignment.centerLeft,
                       child: Text(
                         _isLogin
-                            ? 'Entre ton numéro pour recevoir un code OTP'
+                            ? 'Entre tes identifiants pour te connecter'
                             : 'Remplis les informations pour créer ton compte',
                         style: TextStyle(
                           color: Colors.black.withValues(alpha: 0.50),
@@ -303,6 +319,45 @@ class _AuthScreenState extends State<AuthScreen>
                       },
                     ),
 
+                    const SizedBox(height: 14),
+
+                    // Champ Mot de Passe
+                    _InputField(
+                      controller: _passwordController,
+                      label: 'Mot de passe',
+                      icon: Icons.lock_outline_rounded,
+                      isPassword: true,
+                      obscureText: _obscurePassword,
+                      onToggleVisibility: () => setState(() => _obscurePassword = !_obscurePassword),
+                      validator: (v) {
+                        if (v == null || v.trim().isEmpty) {
+                          return 'Le mot de passe est requis';
+                        }
+                        if (v.trim().length < 6) {
+                          return 'Minimum 6 caractères';
+                        }
+                        return null;
+                      },
+                    ),
+
+                    if (!_isLogin) ...[
+                      const SizedBox(height: 14),
+                      _InputField(
+                        controller: _confirmPasswordController,
+                        label: 'Confirmer le mot de passe',
+                        icon: Icons.lock_reset_rounded,
+                        isPassword: true,
+                        obscureText: _obscurePassword,
+                        onToggleVisibility: () => setState(() => _obscurePassword = !_obscurePassword),
+                        validator: (v) {
+                          if (v != _passwordController.text) {
+                            return 'Les mots de passe ne correspondent pas';
+                          }
+                          return null;
+                        },
+                      ),
+                    ],
+
                     const SizedBox(height: 28),
 
                     // Bouton principal
@@ -326,7 +381,7 @@ class _AuthScreenState extends State<AuthScreen>
                                     mainAxisAlignment: MainAxisAlignment.center,
                                     children: [
                                       Text(
-                                        _isLogin ? 'Recevoir le code' : 'S\'inscrire',
+                                        _isLogin ? 'Se connecter' : 'S\'inscrire',
                                         style: GoogleFonts.orbitron(
                                           color: Colors.white,
                                           fontSize: 14,
@@ -390,12 +445,18 @@ class _InputField extends StatelessWidget {
   final TextEditingController controller;
   final String label;
   final IconData icon;
+  final bool isPassword;
+  final bool obscureText;
+  final VoidCallback? onToggleVisibility;
   final String? Function(String?)? validator;
 
   const _InputField({
     required this.controller,
     required this.label,
     required this.icon,
+    this.isPassword = false,
+    this.obscureText = false,
+    this.onToggleVisibility,
     this.validator,
   });
 
@@ -404,11 +465,21 @@ class _InputField extends StatelessWidget {
     return TextFormField(
       controller: controller,
       validator: validator,
+      obscureText: isPassword ? obscureText : false,
       autovalidateMode: AutovalidateMode.onUserInteraction,
       decoration: InputDecoration(
         labelText: label,
         labelStyle: TextStyle(color: Colors.black.withValues(alpha: 0.45)),
         prefixIcon: Icon(icon, color: kGreen),
+        suffixIcon: isPassword
+            ? IconButton(
+                icon: Icon(
+                  obscureText ? Icons.visibility_off_rounded : Icons.visibility_rounded,
+                  color: kGreen.withValues(alpha: 0.6),
+                ),
+                onPressed: onToggleVisibility,
+              )
+            : null,
         filled: true,
         fillColor: const Color(0xFFF4F4F4),
         border: OutlineInputBorder(
@@ -518,6 +589,7 @@ class OtpScreen extends StatefulWidget {
   final String phone;
   final String firstName;
   final String lastName;
+  final String password;
   final DateTime? birthDate;
   final bool isNewUser;
 
@@ -526,6 +598,7 @@ class OtpScreen extends StatefulWidget {
     required this.phone,
     this.firstName = '',
     this.lastName = '',
+    this.password = '',
     this.birthDate,
     this.isNewUser = false,
   });
@@ -611,6 +684,7 @@ class _OtpScreenState extends State<OtpScreen> {
 
           await authProvider.register(
             phone: widget.phone,
+            password: widget.password,
             firstName: widget.firstName,
             lastName: widget.lastName,
             birthDate: widget.birthDate?.toIso8601String(),
