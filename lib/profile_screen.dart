@@ -1114,7 +1114,11 @@ class _FavoriteTerrainsScreen extends StatefulWidget {
 }
 
 class _FavoriteTerrainsScreenState extends State<_FavoriteTerrainsScreen> {
-  late final List favs = terrains.take(3).toList();
+  final List<Terrain> favs = const [
+    Terrain(id: '1', name: 'Terrain Dakar Arena', address: 'Diamniadio, Dakar', zone: 'DAKAR', pricePerHour: 5000, rating: 4.8, lat: 14.7645, lng: -17.3660, imageUrl: 'https://images.pexels.com/photos/12486370/pexels-photo-12486370.jpeg?auto=compress&cs=tinysrgb&w=800'),
+    Terrain(id: '2', name: 'Stade Léopold Sédar', address: 'Plateau, Dakar', zone: 'DAKAR', pricePerHour: 8000, rating: 4.5, lat: 14.6760, lng: -17.4469, imageUrl: 'https://images.pexels.com/photos/13783930/pexels-photo-13783930.jpeg?auto=compress&cs=tinysrgb&w=800'),
+    Terrain(id: '3', name: 'Terrain Point E', address: 'Point E, Dakar', zone: 'DAKAR', pricePerHour: 6500, rating: 4.3, lat: 14.6928, lng: -17.4571, imageUrl: 'https://images.pexels.com/photos/7160121/pexels-photo-7160121.jpeg?auto=compress&cs=tinysrgb&w=800'),
+  ];
 
   void _remove(int i) => setState(() => favs.removeAt(i));
 
@@ -1191,7 +1195,7 @@ class _FavoriteTerrainsScreenState extends State<_FavoriteTerrainsScreen> {
                                   const SizedBox(height: 4),
                                   Text(t.address, style: TextStyle(fontSize: 12, color: _sub(context))),
                                   const SizedBox(height: 6),
-                                  Text(t.price,
+                                  Text(t.priceLabel,
                                       style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: _kGreen)),
                                 ],
                               ),

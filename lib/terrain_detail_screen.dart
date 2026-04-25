@@ -241,7 +241,7 @@ class _TerrainDetailScreenState extends State<TerrainDetailScreen> {
                 Text('par heure',
                     style: TextStyle(fontSize: 11, color: _sub(context))),
                 const SizedBox(height: 2),
-                Text(t.price,
+                Text(t.priceLabel,
                     style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.w900,
@@ -347,7 +347,7 @@ class _AboutTab extends StatelessWidget {
           crossAxisSpacing: 10,
           mainAxisSpacing: 10,
           childAspectRatio: 3.2,
-          children: terrain.features.map((f) => Container(
+          children: terrain.featureIcons.map((f) => Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             decoration: BoxDecoration(
               color: _card(context),
@@ -443,7 +443,7 @@ class _ReviewTab extends StatelessWidget {
                             size: 20)),
                 ),
                 const SizedBox(height: 4),
-                Text('${terrain.booked}+ avis',
+                Text('100+ avis',
                     style: TextStyle(fontSize: 13, color: _sub(context))),
               ],
             ),

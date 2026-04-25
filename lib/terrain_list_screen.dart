@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
 import 'terrain_data.dart';
 import 'terrain_detail_screen.dart';
-import 'home_screen.dart';
+import 'providers/terrain_provider.dart';
 
 const Color kGreen = Color(0xFF006F39);
 
@@ -24,7 +25,15 @@ class TerrainListScreen extends StatefulWidget {
 class _TerrainListScreenState extends State<TerrainListScreen> {
   String _query = '';
 
-  List<Terrain> get _filtered => terrains
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<TerrainProvider>().loadTerrains();
+    });
+  }
+
+  List<Terrain> _filtered(List<Terrain> all) => all
       .where((t) =>
           t.name.toLowerCase().contains(_query.toLowerCase()) ||
           t.address.toLowerCase().contains(_query.toLowerCase()))
@@ -32,7 +41,8 @@ class _TerrainListScreenState extends State<TerrainListScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final filtered = _filtered;
+    final provider = context.watch<TerrainProvider>();
+    final filtered = _filtered(provider.terrains);
     final nearby = filtered.take(2).toList();
 
     return Scaffold(
@@ -166,7 +176,27 @@ class _TerrainListScreenState extends State<TerrainListScreen> {
 
             // ── CONTENU SCROLLABLE ──
             Expanded(
-              child: CustomScrollView(
+              child: provider.isLoading
+                  ? const Center(child: CircularProgressIndicator())
+                  : provider.error != null
+                      ? Center(
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.wifi_off_rounded,
+                                  size: 48, color: Colors.black26),
+                              const SizedBox(height: 12),
+                              Text('Impossible de charger les terrains',
+                                  style: TextStyle(color: _sub(context))),
+                              const SizedBox(height: 12),
+                              TextButton(
+                                onPressed: () => context.read<TerrainProvider>().loadTerrains(),
+                                child: const Text('Réessayer'),
+                              ),
+                            ],
+                          ),
+                        )
+                      : CustomScrollView(
                 slivers: [
                   // Grille 2 colonnes (image arrondie + texte dessous)
                   SliverPadding(
@@ -180,11 +210,8 @@ class _TerrainListScreenState extends State<TerrainListScreen> {
                         childAspectRatio: 0.78,
                       ),
                       delegate: SliverChildBuilderDelegate(
-                        (_, i) => _NearbyItem(
-                            terrain: nearby.length > i
-                                ? nearby[i]
-                                : terrains[i % terrains.length]),
-                        childCount: 2,
+                        (_, i) => _NearbyItem(terrain: nearby[i]),
+                        childCount: nearby.length < 2 ? nearby.length : 2,
                       ),
                     ),
                   ),

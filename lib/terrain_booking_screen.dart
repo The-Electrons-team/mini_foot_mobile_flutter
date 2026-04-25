@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'terrain_data.dart';
+import 'services/terrain_service.dart';
 import 'payment_screen.dart';
 
 const Color kGreen = Color(0xFF006F39);
@@ -16,6 +17,8 @@ class TerrainBookingScreen extends StatefulWidget {
 }
 
 class _TerrainBookingScreenState extends State<TerrainBookingScreen> {
+  final TerrainService _service = TerrainService();
+
   DateTime _focusedMonth = DateTime.now();
   DateTime? _selectedDay;
 
@@ -23,7 +26,10 @@ class _TerrainBookingScreenState extends State<TerrainBookingScreen> {
   int? _startMin;
   int? _endMin;
 
-  static const List<int> _minutes = [0, 15, 30, 45];
+  List<TerrainSlot> _slots = [];
+  bool _slotsLoading = false;
+
+  static const List<int> _minutes = [0, 30];
 
   // Convertit heure+min en minutes (0 = minuit → 1440)
   int _toMin(int hour, int min) => hour == 0 ? 1440 + min : hour * 60 + min;
@@ -35,28 +41,41 @@ class _TerrainBookingScreenState extends State<TerrainBookingScreen> {
     return '${h.toString().padLeft(2,'0')}h${m.toString().padLeft(2,'0')}';
   }
 
-  // Slot grisé ?
-  bool _isBooked(int hour, int min) {
-    final label = '${hour.toString().padLeft(2,'0')}h${min.toString().padLeft(2,'0')}';
-    return widget.terrain.bookedSlots.contains(label);
+  Future<void> _loadSlots(DateTime day) async {
+    setState(() { _slotsLoading = true; _slots = []; });
+    try {
+      final date = '${day.year}-${day.month.toString().padLeft(2, '0')}-${day.day.toString().padLeft(2, '0')}';
+      _slots = await _service.fetchSlots(widget.terrain.id, date);
+    } catch (_) {
+      // si l'API échoue, on laisse tous les créneaux libres
+    } finally {
+      if (mounted) setState(() => _slotsLoading = false);
+    }
   }
 
-  // Prix par 15 min
-  int get _pricePerSlot {
-    final raw = int.tryParse(
-        widget.terrain.price.replaceAll(RegExp(r'[^0-9]'), '')) ?? 0;
-    return raw ~/ 4;
+  // Slot grisé ?
+  bool _isBooked(int hour, int min) {
+    if (_slots.isEmpty) return false;
+    final label = '${hour.toString().padLeft(2,'0')}h${min.toString().padLeft(2,'0')}';
+    final slot = _slots.firstWhere(
+      (s) => s.slot == label,
+      orElse: () => TerrainSlot(slot: label, available: true),
+    );
+    return !slot.available;
   }
+
+  // Prix par 30 min
+  int get _pricePerSlot => widget.terrain.pricePerHour ~/ 2;
 
   int get _intervals =>
       _startMin != null && _endMin != null
-          ? (_endMin! - _startMin!) ~/ 15
+          ? (_endMin! - _startMin!) ~/ 30
           : 0;
 
   int get _totalPrice => _intervals * _pricePerSlot;
 
   String get _durationLabel {
-    final m = _intervals * 15;
+    final m = _intervals * 30;
     final h = m ~/ 60;
     final min = m % 60;
     if (h == 0) return '${m}min';
@@ -212,11 +231,14 @@ class _TerrainBookingScreenState extends State<TerrainBookingScreen> {
                                   day.month == DateTime.now().month &&
                                   day.year == DateTime.now().year;
                               return GestureDetector(
-                                onTap: past ? null : () => setState(() {
-                                  _selectedDay = day;
-                                  _startMin = null;
-                                  _endMin = null;
-                                }),
+                                onTap: past ? null : () {
+                                  setState(() {
+                                    _selectedDay = day;
+                                    _startMin = null;
+                                    _endMin = null;
+                                  });
+                                  _loadSlots(day);
+                                },
                                 child: AnimatedContainer(
                                   duration: const Duration(milliseconds: 180),
                                   margin: const EdgeInsets.all(2),
@@ -303,16 +325,18 @@ class _TerrainBookingScreenState extends State<TerrainBookingScreen> {
                         border: Border.all(color: const Color(0xFFEEEEEE)),
                         borderRadius: BorderRadius.circular(14),
                       ),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(14),
-                        child: SingleChildScrollView(
-                          padding: const EdgeInsets.symmetric(
-                              vertical: 8, horizontal: 10),
-                          child: Column(
-                            children: _buildTimeRows(),
-                          ),
-                        ),
-                      ),
+                      child: _slotsLoading
+                          ? const Center(child: CircularProgressIndicator())
+                          : ClipRRect(
+                              borderRadius: BorderRadius.circular(14),
+                              child: SingleChildScrollView(
+                                padding: const EdgeInsets.symmetric(
+                                    vertical: 8, horizontal: 10),
+                                child: Column(
+                                  children: _buildTimeRows(),
+                                ),
+                              ),
+                            ),
                     ),
 
                     if (_startMin != null)

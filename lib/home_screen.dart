@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
 import 'terrain_map_screen.dart';
 import 'terrain_list_screen.dart';
 import 'terrain_detail_screen.dart';
 import 'terrain_data.dart';
+import 'providers/terrain_provider.dart';
 import 'reservations_screen.dart';
 import 'chat_screen.dart';
 import 'profile_screen.dart';
@@ -594,17 +596,40 @@ class _QuickAction extends StatelessWidget {
 // TERRAIN HORIZONTAL LIST
 // ---------------------------------------------------------------------------
 
-class _TerrainHorizontalList extends StatelessWidget {
+class _TerrainHorizontalList extends StatefulWidget {
+  @override
+  State<_TerrainHorizontalList> createState() => _TerrainHorizontalListState();
+}
+
+class _TerrainHorizontalListState extends State<_TerrainHorizontalList> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<TerrainProvider>().loadTerrains();
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
+    final terrainList = context.watch<TerrainProvider>().terrains;
+    final isLoading = context.watch<TerrainProvider>().isLoading;
+
+    if (isLoading && terrainList.isEmpty) {
+      return const SizedBox(
+        height: 190,
+        child: Center(child: CircularProgressIndicator()),
+      );
+    }
+
     return SizedBox(
       height: 190,
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 16),
-        itemCount: terrains.length,
+        itemCount: terrainList.length,
         itemBuilder: (_, i) {
-          final t = terrains[i];
+          final t = terrainList[i];
           return GestureDetector(
             onTap: () => Navigator.push(context,
                 MaterialPageRoute(builder: (_) => TerrainDetailScreen(terrain: t))),
@@ -672,23 +697,15 @@ class _TerrainHorizontalList extends StatelessWidget {
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(color: Colors.white.withValues(alpha: 0.7), fontSize: 10.5)),
                           const SizedBox(height: 6),
-                          Row(
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                decoration: BoxDecoration(
-                                  color: kGreen,
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: Text(t.price,
-                                    style: const TextStyle(
-                                        color: Colors.white, fontSize: 10, fontWeight: FontWeight.w800)),
-                              ),
-                              const SizedBox(width: 6),
-                              Text(t.distance,
-                                  style: TextStyle(
-                                      color: Colors.white.withValues(alpha: 0.7), fontSize: 10)),
-                            ],
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: kGreen,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text(t.priceLabel,
+                                style: const TextStyle(
+                                    color: Colors.white, fontSize: 10, fontWeight: FontWeight.w800)),
                           ),
                         ],
                       ),
@@ -1352,9 +1369,11 @@ class _BannerCard extends StatelessWidget {
     return GestureDetector(
       onTap: () {
         if (data.type == 'terrain') {
-          final t = terrains.firstWhere(
+          final list = context.read<TerrainProvider>().terrains;
+          if (list.isEmpty) return;
+          final t = list.firstWhere(
             (t) => t.name == data.title,
-            orElse: () => terrains[0],
+            orElse: () => list.first,
           );
           Navigator.push(context,
               MaterialPageRoute(builder: (_) => TerrainDetailScreen(terrain: t)));

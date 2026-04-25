@@ -3,6 +3,12 @@ import 'package:google_fonts/google_fonts.dart';
 import 'terrain_data.dart';
 import 'booking_confirmation_screen.dart';
 
+// Données mock pour l'affichage des réservations (à remplacer par l'API)
+const _mockT1 = Terrain(id: '1', name: 'Terrain Dakar Arena', address: 'Diamniadio, Dakar', zone: 'DAKAR', pricePerHour: 5000, rating: 4.8, lat: 14.7645, lng: -17.3660, imageUrl: 'https://images.pexels.com/photos/12486370/pexels-photo-12486370.jpeg?auto=compress&cs=tinysrgb&w=800');
+const _mockT2 = Terrain(id: '2', name: 'Stade Léopold Sédar', address: 'Plateau, Dakar', zone: 'DAKAR', pricePerHour: 8000, rating: 4.5, lat: 14.6760, lng: -17.4469, imageUrl: 'https://images.pexels.com/photos/13783930/pexels-photo-13783930.jpeg?auto=compress&cs=tinysrgb&w=800');
+const _mockT3 = Terrain(id: '3', name: 'Terrain Point E', address: 'Point E, Dakar', zone: 'DAKAR', pricePerHour: 6500, rating: 4.3, lat: 14.6928, lng: -17.4571, imageUrl: 'https://images.pexels.com/photos/7160121/pexels-photo-7160121.jpeg?auto=compress&cs=tinysrgb&w=800');
+const _mockT4 = Terrain(id: '4', name: 'Terrain HLM', address: 'HLM Grand Yoff, Dakar', zone: 'DAKAR', pricePerHour: 4000, rating: 4.1, lat: 14.7120, lng: -17.4620, imageUrl: 'https://images.pexels.com/photos/13890306/pexels-photo-13890306.jpeg?auto=compress&cs=tinysrgb&w=800');
+
 const Color kGreen = Color(0xFF006F39);
 const Color kDark = Color(0xFF1A1A1A);
 const Color kBeige = Color(0xFFF5F0E8);
@@ -47,49 +53,49 @@ final _now = DateTime.now();
 List<Reservation> buildFakeReservations() => [
   Reservation(
     id: '1',
-    terrain: terrains[0],
+    terrain: _mockT1,
     date: _now,
     startSlot: '10h00', endSlot: '11h30',
     price: 7500, reference: 'MF-1A4892',
   ),
   Reservation(
     id: '2',
-    terrain: terrains[1],
+    terrain: _mockT2,
     date: _now.add(const Duration(days: 2)),
     startSlot: '13h00', endSlot: '14h00',
     price: 8000, reference: 'MF-2B5123',
   ),
   Reservation(
     id: '3',
-    terrain: terrains[2],
+    terrain: _mockT3,
     date: _now.add(const Duration(days: 4)),
     startSlot: '16h00', endSlot: '17h30',
     price: 9750, reference: 'MF-3C6074',
   ),
   Reservation(
     id: '4',
-    terrain: terrains[3],
+    terrain: _mockT4,
     date: _now.add(const Duration(days: 6)),
     startSlot: '08h00', endSlot: '09h00',
     price: 4000, reference: 'MF-4D7238',
   ),
   Reservation(
     id: '5',
-    terrain: terrains[0],
+    terrain: _mockT1,
     date: _now.add(const Duration(days: 9)),
     startSlot: '18h00', endSlot: '19h30',
     price: 7500, reference: 'MF-5E8341',
   ),
   Reservation(
     id: '6',
-    terrain: terrains[1],
+    terrain: _mockT2,
     date: _now.subtract(const Duration(days: 3)),
     startSlot: '11h00', endSlot: '12h00',
     price: 8000, reference: 'MF-6F9102',
   ),
   Reservation(
     id: '7',
-    terrain: terrains[2],
+    terrain: _mockT3,
     date: _now.subtract(const Duration(days: 8)),
     startSlot: '09h00', endSlot: '10h00',
     price: 6500, reference: 'MF-7G0215',

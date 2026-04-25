@@ -8,7 +8,9 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:http/http.dart' as http;
 import 'package:url_launcher/url_launcher.dart';
+import 'package:provider/provider.dart';
 import 'terrain_data.dart';
+import 'providers/terrain_provider.dart';
 import 'terrain_detail_screen.dart';
 
 const Color kGreen = Color(0xFF006F39);
@@ -385,9 +387,11 @@ class _TerrainMapScreenState extends State<TerrainMapScreen>
                 isDark: isDark,
                 onNavigate: () => _openNavigation(_selectedTerrain!),
                 onDetail: () {
-                  final t = terrains.firstWhere(
+                  final list = context.read<TerrainProvider>().terrains;
+                  if (list.isEmpty) return;
+                  final t = list.firstWhere(
                     (t) => t.name == _selectedTerrain!.name,
-                    orElse: () => terrains.first,
+                    orElse: () => list.first,
                   );
                   Navigator.push(context, MaterialPageRoute(builder: (_) => TerrainDetailScreen(terrain: t)));
                 },

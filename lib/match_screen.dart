@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
 import 'terrain_data.dart';
+import 'providers/terrain_provider.dart';
 
 const Color _kGreen  = Color(0xFF006F39);
 const Color _kDark   = Color(0xFF1A1A1A);
@@ -1338,20 +1340,10 @@ int _playersForFormat(String fmt) {
   }
 }
 
-// Vérifie si un terrain a la plage [startMin, startMin+durationMin[ entièrement libre
-bool _isTerrainAvailable(Terrain t, int startMin, int durationMin) {
-  for (int m = startMin; m < startMin + durationMin; m += 15) {
-    final hh = (m ~/ 60).toString().padLeft(2, '0');
-    final mm = (m % 60).toString().padLeft(2, '0');
-    if (t.bookedSlots.contains('${hh}h$mm')) return false;
-  }
-  return true;
-}
-
 // Capacité max extraite du label feature '14 joueurs max'
 int _terrainCapacity(Terrain t) {
   for (final f in t.features) {
-    final m = RegExp(r'(\d+) joueurs').firstMatch(f.label);
+    final m = RegExp(r'(\d+) joueurs').firstMatch(f);
     if (m != null) return int.parse(m.group(1)!);
   }
   return 22;
@@ -1400,18 +1392,17 @@ class _ChallengeSheetState extends State<_ChallengeSheet> {
     return '${(end ~/ 60).toString().padLeft(2,'0')}:${(end % 60).toString().padLeft(2,'0')}';
   }
 
-  // Terrains filtrés : disponibles sur la plage, capacité suffisante, nom contient query
-  List<Terrain> get _availableTerrains {
+  // Terrains filtrés par capacité et nom
+  List<Terrain> _getAvailableTerrains(List<Terrain> allTerrains) {
     final needed = _playersForFormat(_format);
-    return terrains.where((t) {
-      final cap       = _terrainCapacity(t);
-      final available = _isTerrainAvailable(t, _startMinutes, _durationMin);
-      final query     = _terrainQuery.isEmpty ||
+    return allTerrains.where((t) {
+      final cap   = _terrainCapacity(t);
+      final query = _terrainQuery.isEmpty ||
           t.name.toLowerCase().contains(_terrainQuery.toLowerCase()) ||
           t.address.toLowerCase().contains(_terrainQuery.toLowerCase());
-      return cap >= needed && available && query;
+      return cap >= needed && query;
     }).toList()
-      ..sort((a, b) => a.distance.compareTo(b.distance));
+      ..sort((a, b) => b.rating.compareTo(a.rating));
   }
 
   @override
@@ -1441,7 +1432,8 @@ class _ChallengeSheetState extends State<_ChallengeSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final available = _availableTerrains;
+    final allTerrains = context.read<TerrainProvider>().terrains;
+    final available = _getAvailableTerrains(allTerrains);
 
     return DraggableScrollableSheet(
       initialChildSize: 0.88,
@@ -1664,7 +1656,7 @@ class _ChallengeSheetState extends State<_ChallengeSheet> {
                       Text(_selectedTerrain!.address,
                           style: TextStyle(fontSize: 11, color: _sub(context))),
                       const SizedBox(height: 2),
-                      Text(_selectedTerrain!.price,
+                      Text(_selectedTerrain!.priceLabel,
                           style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: _kGreen)),
                     ])),
                     const Icon(Icons.check_circle_rounded, color: _kGreen, size: 20),
@@ -1781,18 +1773,12 @@ class _ChallengeSheetState extends State<_ChallengeSheet> {
                               style: TextStyle(fontSize: 11, color: _sub(context))),
                           const SizedBox(height: 4),
                           Row(children: [
-                            Icon(Icons.location_on_rounded, size: 11, color: _kGreen),
-                            const SizedBox(width: 2),
-                            Text(t.distance,
-                                style: const TextStyle(fontSize: 10,
-                                    fontWeight: FontWeight.w600, color: _kGreen)),
-                            const SizedBox(width: 10),
                             Icon(Icons.group_rounded, size: 11, color: _sub(context)),
                             const SizedBox(width: 2),
                             Text('${_terrainCapacity(t)} max',
                                 style: TextStyle(fontSize: 10, color: _sub(context))),
                             const SizedBox(width: 10),
-                            Text(t.price,
+                            Text(t.priceLabel,
                                 style: const TextStyle(fontSize: 10,
                                     fontWeight: FontWeight.w700, color: _kGreen)),
                           ]),
