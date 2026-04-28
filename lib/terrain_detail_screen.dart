@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:latlong2/latlong.dart';
@@ -9,6 +10,15 @@ import 'terrain_map_screen.dart';
 const Color kGreen = Color(0xFF006F39);
 const Color kDark = Color(0xFF1A1A1A);
 const Color kBeige = Color(0xFFF5F0E8);
+
+// ── Helpers thème ──
+bool _isDark(BuildContext c) => Theme.of(c).brightness == Brightness.dark;
+Color _bg(BuildContext c)   => Theme.of(c).scaffoldBackgroundColor;
+Color _card(BuildContext c) => Theme.of(c).cardColor;
+Color _txt(BuildContext c)  => Theme.of(c).colorScheme.onSurface;
+Color _sub(BuildContext c)  => _isDark(c)
+    ? const Color(0xFFF0EBE0).withValues(alpha: 0.5)
+    : Colors.black.withValues(alpha: 0.45);
 
 class TerrainDetailScreen extends StatefulWidget {
   final Terrain terrain;
@@ -29,20 +39,19 @@ class _TerrainDetailScreenState extends State<TerrainDetailScreen> {
     final currentImage = t.imageUrls[_selectedImageIndex];
 
     return Scaffold(
-      backgroundColor: kBeige,
+      backgroundColor: _bg(context),
       appBar: AppBar(
-        backgroundColor: kBeige,
+        backgroundColor: _bg(context),
         elevation: 0,
         centerTitle: true,
         automaticallyImplyLeading: false,
         leading: GestureDetector(
           onTap: () => Navigator.pop(context),
-          child: const Icon(Icons.arrow_back_ios_new_rounded,
-              color: kDark, size: 18),
+          child: Icon(Icons.arrow_back_ios_new_rounded, color: _txt(context), size: 18),
         ),
         title: Text('Détail',
             style: GoogleFonts.orbitron(
-                fontSize: 14, fontWeight: FontWeight.w800, color: kDark)),
+                fontSize: 14, fontWeight: FontWeight.w800, color: _txt(context))),
         actions: [
           Padding(
             padding: const EdgeInsets.only(right: 16),
@@ -50,7 +59,7 @@ class _TerrainDetailScreenState extends State<TerrainDetailScreen> {
               onTap: () => setState(() => _isSaved = !_isSaved),
               child: Icon(
                 _isSaved ? Icons.bookmark_rounded : Icons.bookmark_border_rounded,
-                color: _isSaved ? kGreen : kDark,
+                color: _isSaved ? kGreen : _txt(context),
                 size: 22,
               ),
             ),
@@ -143,10 +152,10 @@ class _TerrainDetailScreenState extends State<TerrainDetailScreen> {
                     children: [
                       Expanded(
                         child: Text(t.name,
-                            style: const TextStyle(
+                            style: TextStyle(
                                 fontSize: 20,
                                 fontWeight: FontWeight.w900,
-                                color: kDark,
+                                color: _txt(context),
                                 height: 1.2)),
                       ),
                       const SizedBox(width: 8),
@@ -155,10 +164,10 @@ class _TerrainDetailScreenState extends State<TerrainDetailScreen> {
                             color: Color(0xFFFFB300), size: 18),
                         const SizedBox(width: 3),
                         Text('${t.rating}',
-                            style: const TextStyle(
+                            style: TextStyle(
                                 fontWeight: FontWeight.w800,
                                 fontSize: 15,
-                                color: kDark)),
+                                color: _txt(context))),
                       ]),
                     ],
                   ),
@@ -167,14 +176,12 @@ class _TerrainDetailScreenState extends State<TerrainDetailScreen> {
 
                   // Adresse
                   Row(children: [
-                    const Icon(Icons.location_on_rounded,
-                        color: Colors.black38, size: 14),
+                    Icon(Icons.location_on_rounded,
+                        color: _sub(context), size: 14),
                     const SizedBox(width: 4),
                     Expanded(
                       child: Text(t.address,
-                          style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.black.withValues(alpha: 0.45))),
+                          style: TextStyle(fontSize: 12, color: _sub(context))),
                     ),
                   ]),
 
@@ -217,7 +224,7 @@ class _TerrainDetailScreenState extends State<TerrainDetailScreen> {
         padding: EdgeInsets.fromLTRB(
             20, 12, 20, MediaQuery.of(context).padding.bottom + 12),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: _card(context),
           boxShadow: [
             BoxShadow(
                 color: Colors.black.withValues(alpha: 0.06),
@@ -232,15 +239,13 @@ class _TerrainDetailScreenState extends State<TerrainDetailScreen> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text('par heure',
-                    style: TextStyle(
-                        fontSize: 11,
-                        color: Colors.black.withValues(alpha: 0.4))),
+                    style: TextStyle(fontSize: 11, color: _sub(context))),
                 const SizedBox(height: 2),
-                Text(t.price,
-                    style: const TextStyle(
+                Text(t.priceLabel,
+                    style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.w900,
-                        color: kDark)),
+                        color: _txt(context))),
               ],
             ),
             const Spacer(),
@@ -301,7 +306,7 @@ class _Tab extends StatelessWidget {
             style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w700,
-                color: selected ? kDark : Colors.black38)),
+                color: selected ? _txt(context) : _sub(context))),
       ),
     );
   }
@@ -317,21 +322,21 @@ class _AboutTab extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text('Description',
+        Text('Description',
             style: TextStyle(
-                fontSize: 14, fontWeight: FontWeight.w800, color: kDark)),
+                fontSize: 14, fontWeight: FontWeight.w800, color: _txt(context))),
         const SizedBox(height: 8),
         Text(terrain.description,
             style: TextStyle(
                 fontSize: 13,
                 height: 1.65,
-                color: Colors.black.withValues(alpha: 0.55))),
+                color: _sub(context))),
 
         const SizedBox(height: 20),
 
-        const Text('Équipements',
+        Text('Équipements',
             style: TextStyle(
-                fontSize: 14, fontWeight: FontWeight.w800, color: kDark)),
+                fontSize: 14, fontWeight: FontWeight.w800, color: _txt(context))),
         const SizedBox(height: 12),
 
         // Grille 2 colonnes de cards
@@ -342,10 +347,10 @@ class _AboutTab extends StatelessWidget {
           crossAxisSpacing: 10,
           mainAxisSpacing: 10,
           childAspectRatio: 3.2,
-          children: terrain.features.map((f) => Container(
+          children: terrain.featureIcons.map((f) => Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             decoration: BoxDecoration(
-              color: const Color(0xFFF7F7F7),
+              color: _card(context),
               borderRadius: BorderRadius.circular(10),
             ),
             child: Row(
@@ -354,10 +359,10 @@ class _AboutTab extends StatelessWidget {
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(f.label,
-                      style: const TextStyle(
+                      style: TextStyle(
                           fontSize: 11,
                           fontWeight: FontWeight.w600,
-                          color: kDark),
+                          color: _txt(context)),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis),
                 ),
@@ -419,10 +424,10 @@ class _ReviewTab extends StatelessWidget {
         Row(
           children: [
             Text('${terrain.rating}',
-                style: const TextStyle(
+                style: TextStyle(
                     fontSize: 48,
                     fontWeight: FontWeight.w900,
-                    color: kDark)),
+                    color: _txt(context))),
             const SizedBox(width: 16),
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -438,10 +443,8 @@ class _ReviewTab extends StatelessWidget {
                             size: 20)),
                 ),
                 const SizedBox(height: 4),
-                Text('${terrain.booked}+ avis',
-                    style: TextStyle(
-                        fontSize: 13,
-                        color: Colors.black.withValues(alpha: 0.45))),
+                Text('100+ avis',
+                    style: TextStyle(fontSize: 13, color: _sub(context))),
               ],
             ),
           ],
@@ -483,7 +486,7 @@ class _ReviewCard extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 14),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: const Color(0xFFF8F8F8),
+        color: _card(context),
         borderRadius: BorderRadius.circular(14),
       ),
       child: Column(
@@ -506,12 +509,11 @@ class _ReviewCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(review.name,
-                        style: const TextStyle(
-                            fontWeight: FontWeight.w700, fontSize: 13)),
-                    Text(review.date,
                         style: TextStyle(
-                            fontSize: 11,
-                            color: Colors.black.withValues(alpha: 0.4))),
+                            fontWeight: FontWeight.w700, fontSize: 13,
+                            color: _txt(context))),
+                    Text(review.date,
+                        style: TextStyle(fontSize: 11, color: _sub(context))),
                   ],
                 ),
               ),
@@ -532,7 +534,7 @@ class _ReviewCard extends StatelessWidget {
               style: TextStyle(
                   fontSize: 12,
                   height: 1.5,
-                  color: Colors.black.withValues(alpha: 0.6))),
+                  color: _sub(context))),
         ],
       ),
     );
@@ -549,9 +551,9 @@ class _MapTab extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text('Localisation',
+        Text('Localisation',
             style: TextStyle(
-                fontSize: 14, fontWeight: FontWeight.w800, color: kDark)),
+                fontSize: 14, fontWeight: FontWeight.w800, color: _txt(context))),
         const SizedBox(height: 12),
 
         // Mini carte
@@ -570,8 +572,10 @@ class _MapTab extends StatelessWidget {
               children: [
                 TileLayer(
                   urlTemplate:
-                      'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                      'https://api.mapbox.com/styles/v1/mapbox/streets-v12/tiles/{z}/{x}/{y}?access_token=${dotenv.env['MAPBOX_ACCESS_TOKEN']}',
                   userAgentPackageName: 'com.minifoot.app',
+                  tileSize: 512,
+                  zoomOffset: -1,
                 ),
                 MarkerLayer(
                   markers: [
@@ -610,7 +614,7 @@ class _MapTab extends StatelessWidget {
         Container(
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
-            color: const Color(0xFFF7F7F7),
+            color: _card(context),
             borderRadius: BorderRadius.circular(12),
           ),
           child: Row(
@@ -619,8 +623,8 @@ class _MapTab extends StatelessWidget {
               const SizedBox(width: 10),
               Expanded(
                 child: Text(terrain.address,
-                    style: const TextStyle(
-                        fontSize: 13, fontWeight: FontWeight.w600, color: kDark)),
+                    style: TextStyle(
+                        fontSize: 13, fontWeight: FontWeight.w600, color: _txt(context))),
               ),
             ],
           ),

@@ -132,6 +132,18 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                               color: _unreadCount > 0 ? _kGreen : _sub(context))),
                     ),
                   ),
+                  const SizedBox(width: 8),
+                  GestureDetector(
+                    onTap: () => Navigator.pop(context),
+                    child: Container(
+                      width: 36, height: 36,
+                      decoration: BoxDecoration(
+                        color: _sub(context).withValues(alpha: 0.1),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(Icons.close_rounded, size: 18, color: _sub(context)),
+                    ),
+                  ),
                 ],
               ),
             ),

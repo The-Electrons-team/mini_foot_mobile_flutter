@@ -3,9 +3,24 @@ import 'package:google_fonts/google_fonts.dart';
 import 'terrain_data.dart';
 import 'booking_confirmation_screen.dart';
 
+// Données mock pour l'affichage des réservations (à remplacer par l'API)
+const _mockT1 = Terrain(id: '1', name: 'Terrain Dakar Arena', address: 'Diamniadio, Dakar', zone: 'DAKAR', pricePerHour: 5000, rating: 4.8, lat: 14.7645, lng: -17.3660, imageUrl: 'https://images.pexels.com/photos/12486370/pexels-photo-12486370.jpeg?auto=compress&cs=tinysrgb&w=800');
+const _mockT2 = Terrain(id: '2', name: 'Stade Léopold Sédar', address: 'Plateau, Dakar', zone: 'DAKAR', pricePerHour: 8000, rating: 4.5, lat: 14.6760, lng: -17.4469, imageUrl: 'https://images.pexels.com/photos/13783930/pexels-photo-13783930.jpeg?auto=compress&cs=tinysrgb&w=800');
+const _mockT3 = Terrain(id: '3', name: 'Terrain Point E', address: 'Point E, Dakar', zone: 'DAKAR', pricePerHour: 6500, rating: 4.3, lat: 14.6928, lng: -17.4571, imageUrl: 'https://images.pexels.com/photos/7160121/pexels-photo-7160121.jpeg?auto=compress&cs=tinysrgb&w=800');
+const _mockT4 = Terrain(id: '4', name: 'Terrain HLM', address: 'HLM Grand Yoff, Dakar', zone: 'DAKAR', pricePerHour: 4000, rating: 4.1, lat: 14.7120, lng: -17.4620, imageUrl: 'https://images.pexels.com/photos/13890306/pexels-photo-13890306.jpeg?auto=compress&cs=tinysrgb&w=800');
+
 const Color kGreen = Color(0xFF006F39);
 const Color kDark = Color(0xFF1A1A1A);
 const Color kBeige = Color(0xFFF5F0E8);
+
+// ── Helpers thème ──
+bool _isDark(BuildContext c) => Theme.of(c).brightness == Brightness.dark;
+Color _bg(BuildContext c)   => Theme.of(c).scaffoldBackgroundColor;
+Color _card(BuildContext c) => Theme.of(c).cardColor;
+Color _txt(BuildContext c)  => Theme.of(c).colorScheme.onSurface;
+Color _sub(BuildContext c)  => _isDark(c)
+    ? const Color(0xFFF0EBE0).withValues(alpha: 0.5)
+    : Colors.black.withValues(alpha: 0.45);
 
 // ── MODÈLE ──
 class Reservation {
@@ -38,49 +53,49 @@ final _now = DateTime.now();
 List<Reservation> buildFakeReservations() => [
   Reservation(
     id: '1',
-    terrain: terrains[0],
+    terrain: _mockT1,
     date: _now,
     startSlot: '10h00', endSlot: '11h30',
     price: 7500, reference: 'MF-1A4892',
   ),
   Reservation(
     id: '2',
-    terrain: terrains[1],
+    terrain: _mockT2,
     date: _now.add(const Duration(days: 2)),
     startSlot: '13h00', endSlot: '14h00',
     price: 8000, reference: 'MF-2B5123',
   ),
   Reservation(
     id: '3',
-    terrain: terrains[2],
+    terrain: _mockT3,
     date: _now.add(const Duration(days: 4)),
     startSlot: '16h00', endSlot: '17h30',
     price: 9750, reference: 'MF-3C6074',
   ),
   Reservation(
     id: '4',
-    terrain: terrains[3],
+    terrain: _mockT4,
     date: _now.add(const Duration(days: 6)),
     startSlot: '08h00', endSlot: '09h00',
     price: 4000, reference: 'MF-4D7238',
   ),
   Reservation(
     id: '5',
-    terrain: terrains[0],
+    terrain: _mockT1,
     date: _now.add(const Duration(days: 9)),
     startSlot: '18h00', endSlot: '19h30',
     price: 7500, reference: 'MF-5E8341',
   ),
   Reservation(
     id: '6',
-    terrain: terrains[1],
+    terrain: _mockT2,
     date: _now.subtract(const Duration(days: 3)),
     startSlot: '11h00', endSlot: '12h00',
     price: 8000, reference: 'MF-6F9102',
   ),
   Reservation(
     id: '7',
-    terrain: terrains[2],
+    terrain: _mockT3,
     date: _now.subtract(const Duration(days: 8)),
     startSlot: '09h00', endSlot: '10h00',
     price: 6500, reference: 'MF-7G0215',
@@ -155,30 +170,30 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        backgroundColor: Colors.white,
-        title: const Text('Annuler la réservation',
-            style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16, color: kDark)),
+        backgroundColor: Theme.of(ctx).cardColor,
+        title: Text('Annuler la réservation',
+            style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16, color: Theme.of(ctx).colorScheme.onSurface)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text('Vous êtes sur le point d\'annuler :',
-                style: TextStyle(fontSize: 13, color: Colors.black.withValues(alpha: 0.5))),
+                style: TextStyle(fontSize: 13, color: _sub(ctx))),
             const SizedBox(height: 10),
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: kBeige,
+                color: Theme.of(ctx).scaffoldBackgroundColor,
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(r.terrain.name,
-                      style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13, color: kDark)),
+                      style: TextStyle(fontWeight: FontWeight.w800, fontSize: 13, color: Theme.of(ctx).colorScheme.onSurface)),
                   const SizedBox(height: 4),
                   Text('${r.startSlot} → ${r.endSlot}  ·  ${r.price} F',
-                      style: TextStyle(fontSize: 12, color: Colors.black.withValues(alpha: 0.55))),
+                      style: TextStyle(fontSize: 12, color: _sub(ctx))),
                 ],
               ),
             ),
@@ -190,7 +205,7 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: Text('Garder', style: TextStyle(color: Colors.black.withValues(alpha: 0.5), fontWeight: FontWeight.w600)),
+            child: Text('Garder', style: TextStyle(color: _sub(ctx), fontWeight: FontWeight.w600)),
           ),
           GestureDetector(
             onTap: () => Navigator.pop(ctx, true),
@@ -230,7 +245,7 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
     final others = _otherFiltered;
 
     return Scaffold(
-      backgroundColor: kBeige,
+      backgroundColor: _bg(context),
       body: SafeArea(
         child: Column(
           children: [
@@ -244,17 +259,17 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
                     child: Container(
                       width: 40, height: 40,
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: _card(context),
                         shape: BoxShape.circle,
                         boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.07), blurRadius: 8)],
                       ),
-                      child: const Icon(Icons.arrow_back_ios_new_rounded, size: 16, color: kDark),
+                      child: Icon(Icons.arrow_back_ios_new_rounded, size: 16, color: _txt(context)),
                     ),
                   ),
                   Expanded(
                     child: Center(
                       child: Text('Mes Réservations',
-                          style: GoogleFonts.orbitron(fontSize: 14, fontWeight: FontWeight.w800, color: kDark)),
+                          style: GoogleFonts.orbitron(fontSize: 14, fontWeight: FontWeight.w800, color: _txt(context))),
                     ),
                   ),
                   const SizedBox(width: 40),
@@ -270,7 +285,7 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
               child: Container(
                 height: 44,
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: _card(context),
                   borderRadius: BorderRadius.circular(14),
                   boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 6)],
                 ),
@@ -300,7 +315,7 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
               margin: const EdgeInsets.symmetric(horizontal: 20),
               padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: _card(context),
                 borderRadius: BorderRadius.circular(20),
                 boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10)],
               ),
@@ -309,7 +324,7 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
                   Row(
                     children: [
                       Text(_monthLabel(_weekStart),
-                          style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15, color: kDark)),
+                          style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15, color: _txt(context))),
                       const Spacer(),
                       _ArrowBtn(
                         icon: Icons.chevron_left_rounded,
@@ -336,7 +351,7 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
                           width: 40,
                           padding: const EdgeInsets.symmetric(vertical: 8),
                           decoration: BoxDecoration(
-                            color: isSelected ? kDark : Colors.transparent,
+                            color: isSelected ? kGreen : Colors.transparent,
                             borderRadius: BorderRadius.circular(14),
                           ),
                           child: Column(
@@ -345,7 +360,7 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
                                   style: TextStyle(
                                       fontSize: 15,
                                       fontWeight: FontWeight.w800,
-                                      color: isSelected ? Colors.white : isToday ? kGreen : kDark)),
+                                      color: isSelected ? Colors.white : isToday ? kGreen : _txt(context))),
                               const SizedBox(height: 3),
                               Text(_dayName(day.weekday),
                                   style: TextStyle(
@@ -353,7 +368,7 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
                                       fontWeight: FontWeight.w500,
                                       color: isSelected
                                           ? Colors.white.withValues(alpha: 0.7)
-                                          : Colors.black.withValues(alpha: 0.4))),
+                                          : _sub(context))),
                               const SizedBox(height: 5),
                               Container(
                                 width: 5, height: 5,
@@ -384,13 +399,13 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Icon(Icons.event_busy_rounded,
-                              size: 48, color: Colors.black.withValues(alpha: 0.15)),
+                              size: 48, color: _sub(context).withValues(alpha: 0.4)),
                           const SizedBox(height: 10),
                           Text(
                             _filterIndex == 0
                                 ? 'Aucune réservation en cours'
                                 : 'Aucune réservation terminée',
-                            style: TextStyle(fontSize: 13, color: Colors.black.withValues(alpha: 0.35)),
+                            style: TextStyle(fontSize: 13, color: _sub(context)),
                           ),
                         ],
                       ),
@@ -431,7 +446,7 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
                               Text(
                                 selected != null ? 'Autres' : (_filterIndex == 0 ? 'En cours' : 'Terminées'),
                                 style: GoogleFonts.orbitron(
-                                    fontSize: 13, fontWeight: FontWeight.w800, color: kDark),
+                                    fontSize: 13, fontWeight: FontWeight.w800, color: _txt(context)),
                               ),
                               const SizedBox(width: 8),
                               Container(
@@ -537,7 +552,7 @@ class _ReservationCard extends StatelessWidget {
         opacity: dimmed ? 0.65 : 1.0,
         child: Container(
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: _card(context),
           borderRadius: BorderRadius.circular(18),
           boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: dimmed ? 0.03 : 0.05), blurRadius: 10)],
           border: highlight
@@ -606,14 +621,14 @@ class _ReservationCard extends StatelessWidget {
                         ),
                         const SizedBox(height: 7),
                         Text(reservation.terrain.name,
-                            style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13, color: kDark)),
+                            style: TextStyle(fontWeight: FontWeight.w800, fontSize: 13, color: _txt(context))),
                         const SizedBox(height: 4),
                         Row(children: [
-                          const Icon(Icons.location_on_rounded, size: 11, color: Colors.black38),
+                          Icon(Icons.location_on_rounded, size: 11, color: _sub(context)),
                           const SizedBox(width: 2),
                           Expanded(
                             child: Text(reservation.terrain.address,
-                                style: const TextStyle(fontSize: 11, color: Colors.black38),
+                                style: TextStyle(fontSize: 11, color: _sub(context)),
                                 maxLines: 1, overflow: TextOverflow.ellipsis),
                           ),
                         ]),
@@ -622,7 +637,7 @@ class _ReservationCard extends StatelessWidget {
                             style: TextStyle(
                                 fontSize: 15,
                                 fontWeight: FontWeight.w900,
-                                color: highlight ? kGreen : kDark)),
+                                color: highlight ? kGreen : _txt(context))),
                       ],
                     ),
                   ),
@@ -642,8 +657,8 @@ class _ReservationCard extends StatelessWidget {
                           : Icons.lock_outline_rounded,
                       size: 13,
                       color: _canViewQr
-                          ? (highlight ? Colors.white : Colors.black38)
-                          : Colors.black26,
+                          ? (highlight ? Colors.white : _sub(context))
+                          : _sub(context).withValues(alpha: 0.5),
                     ),
                   ),
                 ],
@@ -703,7 +718,7 @@ class _FilterTab extends StatelessWidget {
         duration: const Duration(milliseconds: 200),
         margin: const EdgeInsets.all(4),
         decoration: BoxDecoration(
-          color: selected ? kDark : Colors.transparent,
+          color: selected ? _txt(context) : Colors.transparent,
           borderRadius: BorderRadius.circular(11),
         ),
         child: Row(
@@ -713,19 +728,19 @@ class _FilterTab extends StatelessWidget {
                 style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w700,
-                    color: selected ? Colors.white : Colors.black.withValues(alpha: 0.4))),
+                    color: selected ? _card(context) : _sub(context))),
             const SizedBox(width: 6),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
               decoration: BoxDecoration(
-                color: selected ? kGreen : Colors.black.withValues(alpha: 0.08),
+                color: selected ? kGreen : _sub(context).withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Text('$count',
                   style: TextStyle(
                       fontSize: 11,
                       fontWeight: FontWeight.w800,
-                      color: selected ? Colors.white : Colors.black.withValues(alpha: 0.4))),
+                      color: selected ? Colors.white : _sub(context))),
             ),
           ],
         ),
@@ -744,12 +759,12 @@ class _SmallChip extends StatelessWidget {
   Widget build(BuildContext context) => Container(
     padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
     decoration: BoxDecoration(
-      color: dark ? kDark : const Color(0xFFF0F0F0),
+      color: dark ? _txt(context) : _card(context),
       borderRadius: BorderRadius.circular(6),
     ),
     child: Text(label,
         style: TextStyle(fontSize: 9, fontWeight: FontWeight.w700,
-            color: dark ? Colors.white : kDark)),
+            color: dark ? _card(context) : _txt(context))),
   );
 }
 
@@ -765,10 +780,10 @@ class _ArrowBtn extends StatelessWidget {
     child: Container(
       width: 34, height: 34,
       decoration: BoxDecoration(
-        color: const Color(0xFFF0F0F0),
+        color: _card(context),
         borderRadius: BorderRadius.circular(10),
       ),
-      child: Icon(icon, size: 20, color: kDark),
+      child: Icon(icon, size: 20, color: _txt(context)),
     ),
   );
 }

@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
+import 'providers/auth_provider.dart';
 import 'home_screen.dart';
+
 
 const Color kGreen = Color(0xFF006F39);
 const Color kBeige = Color(0xFFF5F0E8);
@@ -27,6 +30,10 @@ class _AuthScreenState extends State<AuthScreen>
   final _phoneController = TextEditingController();
   final _prenomController = TextEditingController();
   final _nomController = TextEditingController();
+  final _passwordController = TextEditingController();
+  final _confirmPasswordController = TextEditingController();
+  DateTime? _birthDate;
+  bool _obscurePassword = true;
 
   @override
   void initState() {
@@ -45,6 +52,8 @@ class _AuthScreenState extends State<AuthScreen>
     _phoneController.dispose();
     _prenomController.dispose();
     _nomController.dispose();
+    _passwordController.dispose();
+    _confirmPasswordController.dispose();
     super.dispose();
   }
 
@@ -53,27 +62,117 @@ class _AuthScreenState extends State<AuthScreen>
     _phoneController.clear();
     _prenomController.clear();
     _nomController.clear();
+    _passwordController.clear();
+    _confirmPasswordController.clear();
     _animController.reset();
-    setState(() => _isLogin = !_isLogin);
+    setState(() {
+      _isLogin = !_isLogin;
+      _birthDate = null;
+    });
     _animController.forward();
   }
 
-  void _submit() {
-    if (!(_formKey.currentState?.validate() ?? false)) return;
-    Navigator.of(context).push(
-      PageRouteBuilder(
-        pageBuilder: (_, _, _) => OtpScreen(phone: _phoneController.text.trim()),
-        transitionsBuilder: (_, animation, _, child) => SlideTransition(
-          position: Tween<Offset>(
-            begin: const Offset(1, 0),
-            end: Offset.zero,
-          ).animate(CurvedAnimation(parent: animation, curve: Curves.easeOut)),
-          child: child,
+  Future<void> _pickBirthDate() async {
+    final now = DateTime.now();
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _birthDate ?? DateTime(now.year - 18),
+      firstDate: DateTime(1950),
+      lastDate: DateTime(now.year - 5),
+      helpText: 'Date de naissance',
+      builder: (ctx, child) => Theme(
+        data: Theme.of(ctx).copyWith(
+          colorScheme: const ColorScheme.light(
+            primary: kGreen,
+            onPrimary: Colors.white,
+          ),
         ),
-        transitionDuration: const Duration(milliseconds: 450),
+        child: child!,
       ),
     );
+    if (picked != null) setState(() => _birthDate = picked);
   }
+
+  String get _birthDateLabel {
+    if (_birthDate == null) return 'Date de naissance';
+    return '${_birthDate!.day.toString().padLeft(2, '0')}/'
+        '${_birthDate!.month.toString().padLeft(2, '0')}/'
+        '${_birthDate!.year}';
+  }
+
+  void _submit() async {
+    if (!(_formKey.currentState?.validate() ?? false)) return;
+
+    final phone = '+221${_phoneController.text.trim()}';
+    final authProvider = context.read<AuthProvider>();
+
+    try {
+      if (_isLogin) {
+        // --- MODE CONNEXION ---
+        final password = _passwordController.text.trim();
+        if (password.isEmpty) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Veuillez saisir votre mot de passe')),
+          );
+          return;
+        }
+
+        await authProvider.login(phone, password);
+        if (!mounted) return;
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (_) => const HomeScreen()),
+          (route) => false,
+        );
+      } else {
+        // --- MODE INSCRIPTION ---
+        if (_birthDate == null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Veuillez sélectionner votre date de naissance')),
+          );
+          return;
+        }
+
+        await authProvider.signup(phone);
+        if (!mounted) return;
+
+        // Go OTP avec toutes les infos pour finaliser après
+        Navigator.of(context).push(
+          PageRouteBuilder(
+            pageBuilder: (_, _, _) => OtpScreen(
+              phone: phone,
+              firstName: _prenomController.text.trim(),
+              lastName: _nomController.text.trim(),
+              password: _passwordController.text.trim(),
+              birthDate: _birthDate,
+              isNewUser: true,
+            ),
+            transitionsBuilder: (_, animation, _, child) => SlideTransition(
+              position: Tween<Offset>(
+                begin: const Offset(1, 0),
+                end: Offset.zero,
+              ).animate(CurvedAnimation(parent: animation, curve: Curves.easeOut)),
+              child: child,
+            ),
+            transitionDuration: const Duration(milliseconds: 450),
+          ),
+        );
+      }
+    } catch (e) {
+      String message = 'Une erreur est survenue';
+      if (e.toString().contains('COMPTE_NON_TROUVE')) {
+        message = 'Compte non trouvé. Veuillez vous inscrire.';
+      } else if (e.toString().contains('déjà utilisé')) {
+        message = 'Ce numéro est déjà utilisé par un autre compte.';
+      } else {
+        message = e.toString().replaceAll('Exception: ', '');
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(message)),
+      );
+    }
+  }
+
+
 
   @override
   Widget build(BuildContext context) {
@@ -123,7 +222,7 @@ class _AuthScreenState extends State<AuthScreen>
                       alignment: Alignment.centerLeft,
                       child: Text(
                         _isLogin
-                            ? 'Entre ton numéro pour recevoir un code OTP'
+                            ? 'Entre tes identifiants pour te connecter'
                             : 'Remplis les informations pour créer ton compte',
                         style: TextStyle(
                           color: Colors.black.withValues(alpha: 0.50),
@@ -167,6 +266,43 @@ class _AuthScreenState extends State<AuthScreen>
                         },
                       ),
                       const SizedBox(height: 14),
+                      // Champ date de naissance
+                      GestureDetector(
+                        onTap: _pickBirthDate,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 16),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF4F4F4),
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(
+                              color: _birthDate != null ? kGreen : Colors.transparent,
+                              width: 1.5,
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(Icons.cake_rounded,
+                                  color: _birthDate != null ? kGreen : kGreen.withValues(alpha: 0.6),
+                                  size: 22),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Text(
+                                  _birthDateLabel,
+                                  style: TextStyle(
+                                    fontSize: 15,
+                                    color: _birthDate != null
+                                        ? Colors.black87
+                                        : Colors.black.withValues(alpha: 0.45),
+                                  ),
+                                ),
+                              ),
+                              Icon(Icons.keyboard_arrow_down_rounded,
+                                  color: kGreen.withValues(alpha: 0.7), size: 20),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 14),
                     ],
 
                     // Champ téléphone Sénégal
@@ -183,39 +319,85 @@ class _AuthScreenState extends State<AuthScreen>
                       },
                     ),
 
+                    const SizedBox(height: 14),
+
+                    // Champ Mot de Passe
+                    _InputField(
+                      controller: _passwordController,
+                      label: 'Mot de passe',
+                      icon: Icons.lock_outline_rounded,
+                      isPassword: true,
+                      obscureText: _obscurePassword,
+                      onToggleVisibility: () => setState(() => _obscurePassword = !_obscurePassword),
+                      validator: (v) {
+                        if (v == null || v.trim().isEmpty) {
+                          return 'Le mot de passe est requis';
+                        }
+                        if (v.trim().length < 6) {
+                          return 'Minimum 6 caractères';
+                        }
+                        return null;
+                      },
+                    ),
+
+                    if (!_isLogin) ...[
+                      const SizedBox(height: 14),
+                      _InputField(
+                        controller: _confirmPasswordController,
+                        label: 'Confirmer le mot de passe',
+                        icon: Icons.lock_reset_rounded,
+                        isPassword: true,
+                        obscureText: _obscurePassword,
+                        onToggleVisibility: () => setState(() => _obscurePassword = !_obscurePassword),
+                        validator: (v) {
+                          if (v != _passwordController.text) {
+                            return 'Les mots de passe ne correspondent pas';
+                          }
+                          return null;
+                        },
+                      ),
+                    ],
+
                     const SizedBox(height: 28),
 
                     // Bouton principal
-                    SizedBox(
-                      width: double.infinity,
-                      height: 56,
-                      child: ElevatedButton(
-                        onPressed: _submit,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: kGreen,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(14),
-                          ),
-                          elevation: 0,
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Text(
-                              _isLogin ? 'Recevoir le code' : 'S\'inscrire',
-                              style: GoogleFonts.orbitron(
-                                color: Colors.white,
-                                fontSize: 14,
-                                fontWeight: FontWeight.w700,
+                    Consumer<AuthProvider>(
+                      builder: (context, auth, _) {
+                        return SizedBox(
+                          width: double.infinity,
+                          height: 56,
+                          child: ElevatedButton(
+                            onPressed: auth.isLoading ? null : _submit,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: kGreen,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(14),
                               ),
+                              elevation: 0,
                             ),
-                            const SizedBox(width: 10),
-                            const Icon(Icons.arrow_forward_rounded,
-                                color: Colors.white, size: 20),
-                          ],
-                        ),
-                      ),
+                            child: auth.isLoading
+                                ? const CircularProgressIndicator(color: Colors.white)
+                                : Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Text(
+                                        _isLogin ? 'Se connecter' : 'S\'inscrire',
+                                        style: GoogleFonts.orbitron(
+                                          color: Colors.white,
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w700,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 10),
+                                      const Icon(Icons.arrow_forward_rounded,
+                                          color: Colors.white, size: 20),
+                                    ],
+                                  ),
+                          ),
+                        );
+                      },
                     ),
+
 
                     const SizedBox(height: 22),
 
@@ -263,12 +445,18 @@ class _InputField extends StatelessWidget {
   final TextEditingController controller;
   final String label;
   final IconData icon;
+  final bool isPassword;
+  final bool obscureText;
+  final VoidCallback? onToggleVisibility;
   final String? Function(String?)? validator;
 
   const _InputField({
     required this.controller,
     required this.label,
     required this.icon,
+    this.isPassword = false,
+    this.obscureText = false,
+    this.onToggleVisibility,
     this.validator,
   });
 
@@ -277,11 +465,21 @@ class _InputField extends StatelessWidget {
     return TextFormField(
       controller: controller,
       validator: validator,
+      obscureText: isPassword ? obscureText : false,
       autovalidateMode: AutovalidateMode.onUserInteraction,
       decoration: InputDecoration(
         labelText: label,
         labelStyle: TextStyle(color: Colors.black.withValues(alpha: 0.45)),
         prefixIcon: Icon(icon, color: kGreen),
+        suffixIcon: isPassword
+            ? IconButton(
+                icon: Icon(
+                  obscureText ? Icons.visibility_off_rounded : Icons.visibility_rounded,
+                  color: kGreen.withValues(alpha: 0.6),
+                ),
+                onPressed: onToggleVisibility,
+              )
+            : null,
         filled: true,
         fillColor: const Color(0xFFF4F4F4),
         border: OutlineInputBorder(
@@ -389,7 +587,23 @@ class _PhoneField extends StatelessWidget {
 
 class OtpScreen extends StatefulWidget {
   final String phone;
-  const OtpScreen({super.key, required this.phone});
+  final String firstName;
+  final String lastName;
+  final String password;
+  final DateTime? birthDate;
+  final bool isNewUser;
+
+  const OtpScreen({
+    super.key,
+    required this.phone,
+    this.firstName = '',
+    this.lastName = '',
+    this.password = '',
+    this.birthDate,
+    this.isNewUser = false,
+  });
+
+
 
   @override
   State<OtpScreen> createState() => _OtpScreenState();
@@ -443,22 +657,60 @@ class _OtpScreenState extends State<OtpScreen> {
     setState(() => _errorMessage = null);
   }
 
-  void _validate() {
+  void _validate() async {
     final code = _controllers.map((c) => c.text).join();
     if (code.length < 6) {
       setState(() => _errorMessage = 'Saisis les 6 chiffres du code');
       return;
     }
-    Navigator.of(context).pushAndRemoveUntil(
-      PageRouteBuilder(
-        pageBuilder: (_, _, _) => const HomeScreen(),
-        transitionsBuilder: (_, animation, _, child) =>
-            FadeTransition(opacity: animation, child: child),
-        transitionDuration: const Duration(milliseconds: 500),
-      ),
-      (_) => false,
-    );
+
+    final authProvider = context.read<AuthProvider>();
+
+    try {
+      final verified = await authProvider.verifyOtp(widget.phone, code);
+
+      if (!mounted) return;
+
+      if (verified) {
+        if (widget.isNewUser) {
+          // Si nouveau, on doit appeler register
+          if (widget.firstName.isEmpty || widget.lastName.isEmpty) {
+            // Cas où l'utilisateur a essayé de se connecter sans passer par inscription
+            // On pourrait rediriger vers un écran de complément de profil
+            // Pour l'instant, on affiche une erreur ou on force le retour
+            setState(() => _errorMessage = 'Informations de profil manquantes');
+            return;
+          }
+
+          await authProvider.register(
+            phone: widget.phone,
+            password: widget.password,
+            firstName: widget.firstName,
+            lastName: widget.lastName,
+            birthDate: widget.birthDate?.toIso8601String(),
+          );
+
+        }
+
+        if (!mounted) return;
+
+        Navigator.of(context).pushAndRemoveUntil(
+          PageRouteBuilder(
+            pageBuilder: (_, _, _) => const HomeScreen(),
+            transitionsBuilder: (_, animation, _, child) =>
+                FadeTransition(opacity: animation, child: child),
+            transitionDuration: const Duration(milliseconds: 500),
+          ),
+          (_) => false,
+        );
+      } else {
+        setState(() => _errorMessage = 'Code invalide');
+      }
+    } catch (e) {
+      setState(() => _errorMessage = e.toString());
+    }
   }
+
 
   @override
   void dispose() {
@@ -526,7 +778,7 @@ class _OtpScreenState extends State<OtpScreen> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: List.generate(6, (i) {
                   return Container(
-                    width: 48,
+                    width: 44,
                     height: 60,
                     margin: const EdgeInsets.symmetric(horizontal: 4),
                     child: TextFormField(
@@ -576,28 +828,35 @@ class _OtpScreenState extends State<OtpScreen> {
               const SizedBox(height: 36),
 
               // Bouton valider
-              SizedBox(
-                width: double.infinity,
-                height: 56,
-                child: ElevatedButton(
-                  onPressed: _validate,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: kGreen,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
+              Consumer<AuthProvider>(
+                builder: (context, auth, _) {
+                  return SizedBox(
+                    width: double.infinity,
+                    height: 56,
+                    child: ElevatedButton(
+                      onPressed: auth.isLoading ? null : _validate,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: kGreen,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        elevation: 0,
+                      ),
+                      child: auth.isLoading
+                          ? const CircularProgressIndicator(color: Colors.white)
+                          : Text(
+                              'Valider le code',
+                              style: GoogleFonts.orbitron(
+                                color: Colors.white,
+                                fontSize: 15,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
                     ),
-                    elevation: 0,
-                  ),
-                  child: Text(
-                    'Valider le code',
-                    style: GoogleFonts.orbitron(
-                      color: Colors.white,
-                      fontSize: 15,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ),
+                  );
+                },
               ),
+
 
               const SizedBox(height: 24),
 
