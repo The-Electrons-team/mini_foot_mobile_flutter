@@ -10,6 +10,17 @@ Fichier de suivi pour savoir exactement où on en est pour chaque partie de l'ap
 
 ---
 
+## 🚨 BUGS CRITIQUES À CORRIGER EN PRIORITÉ
+
+Ces bugs bloquent des fonctionnalités clés. À traiter avant de connecter de nouveaux modules.
+
+| # | Bug | Fichiers concernés | Ticket ClickUp |
+|---|-----|--------------------|----------------|
+| 1 | Payment screen ne crée **pas** de réservation en base | `payment_screen.dart` | [86c9gz7d1](https://app.clickup.com/t/86c9gz7d1) |
+| 2 | Webhooks Wave/Orange/Free ne mettent **pas à jour** les réservations après paiement | `minifoot_backend/src/modules/webhooks/` | [86c9gz7da](https://app.clickup.com/t/86c9gz7da) |
+
+---
+
 ## 1. AUTHENTIFICATION
 
 | Écran / Action | État | Fichiers Flutter | Endpoint Backend |
@@ -172,7 +183,23 @@ Fichier de suivi pour savoir exactement où on en est pour chaque partie de l'ap
 
 ---
 
-## 11. BOUTIQUE
+## 11. TOURNOIS
+
+| Écran / Action | État | Fichiers Flutter | Endpoint Backend |
+|---|---|---|---|
+| Liste des tournois | ❌ MOCK | `tournaments_screen.dart` | `GET /tournaments` |
+| Détail d'un tournoi (bracket) | ❌ MOCK | `tournaments_screen.dart` | `GET /tournaments/:id` |
+| Inscrire mon équipe | ❌ MOCK | `tournaments_screen.dart` | `POST /tournaments/:id/register` |
+| Résultats & scores | ❌ MOCK | `tournaments_screen.dart` | `GET /tournaments/:id/matches` |
+
+**Ticket ClickUp :** [86c9gz7bh](https://app.clickup.com/t/86c9gz7bh)
+
+**Ce qu'il faut créer :**
+- `services/tournament_service.dart`
+
+---
+
+## 12. BOUTIQUE
 
 | Écran / Action | État | Fichiers Flutter | Endpoint Backend |
 |---|---|---|---|
@@ -192,17 +219,19 @@ Fichier de suivi pour savoir exactement où on en est pour chaque partie de l'ap
 Voici l'ordre logique pour connecter les modules, du plus important au moins urgent :
 
 ```
-1. ✅ AUTH           — déjà fait
-2. ✅ TERRAINS        — connecté (liste, détail, créneaux, home)
-3. ⏳ RÉSERVATIONS    — suit directement les terrains (booking flow)
-4. ⏳ PROFIL          — simple à finir (PATCH users/me)
-5. ⏳ NOTIFICATIONS   — important pour l'engagement utilisateur
-6. ⏳ ÉQUIPES         — fonctionnalité sociale centrale
-7. ⏳ MATCHS          — dépend des équipes
-8. ⏳ CLASSEMENT      — dépend des matchs/équipes
-9. ⏳ FEED SOCIAL     — dépend des équipes
-10. ⏳ CHAT           — le plus complexe (WebSocket)
-11. ⏳ BOUTIQUE       — le moins urgent
+0. 🚨 BUGS CRITIQUES  — corriger payment + webhooks en premier
+1. ✅ AUTH            — déjà fait
+2. ✅ TERRAINS         — connecté (liste, détail, créneaux, home)
+3. ⏳ RÉSERVATIONS     — suit directement les terrains (booking flow)
+4. ⏳ PROFIL           — simple à finir (PATCH users/me)
+5. ⏳ NOTIFICATIONS    — important pour l'engagement utilisateur
+6. ⏳ ÉQUIPES          — fonctionnalité sociale centrale
+7. ⏳ MATCHS           — dépend des équipes
+8. ⏳ CLASSEMENT       — dépend des matchs/équipes
+9. ⏳ FEED SOCIAL      — dépend des équipes
+10. ⏳ TOURNOIS        — backend prêt, front à connecter
+11. ⏳ CHAT            — le plus complexe (WebSocket)
+12. ⏳ BOUTIQUE        — le moins urgent
 ```
 
 ---
@@ -235,4 +264,4 @@ Le token se récupère toujours via `context.read<AuthProvider>().token`.
 
 ---
 
-*Dernière mise à jour : 25 avril 2026*
+*Dernière mise à jour : 27 avril 2026 — synchronisé avec ClickUp (liste 901523025992)*
