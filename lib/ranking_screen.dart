@@ -11,8 +11,8 @@ Color _bg(BuildContext c)    => Theme.of(c).scaffoldBackgroundColor;
 Color _card(BuildContext c)  => Theme.of(c).cardColor;
 Color _txt(BuildContext c)   => Theme.of(c).colorScheme.onSurface;
 Color _sub(BuildContext c)   => _isDark(c)
-    ? const Color(0xFFF0EBE0).withValues(alpha: 0.5)
-    : Colors.black.withValues(alpha: 0.45);
+    ? const Color(0xFFF0EBE0).withOpacity(0.5)
+    : Colors.black.withOpacity(0.45);
 
 // ── MODÈLE ───────────────────────────────────────────────────────────────────
 
@@ -121,7 +121,7 @@ class _RankingScreenState extends State<RankingScreen>
             decoration: BoxDecoration(
               color: _card(context),
               borderRadius: BorderRadius.circular(14),
-              boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.06), blurRadius: 8)],
+              boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.06), blurRadius: 8)],
             ),
             child: TabBar(
               controller: _tabCtrl,
@@ -178,9 +178,9 @@ class _HeroHeader extends StatelessWidget {
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 colors: [
-                  Colors.black.withValues(alpha: 0.75),
-                  Colors.black.withValues(alpha: 0.50),
-                  Colors.black.withValues(alpha: 0.72),
+                  Colors.black.withOpacity(0.75),
+                  Colors.black.withOpacity(0.50),
+                  Colors.black.withOpacity(0.72),
                 ],
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
@@ -199,9 +199,9 @@ class _HeroHeader extends StatelessWidget {
                 child: Container(
                   width: 38, height: 38,
                   decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.15),
+                    color: Colors.white.withOpacity(0.15),
                     shape: BoxShape.circle,
-                    border: Border.all(color: Colors.white.withValues(alpha: 0.3)),
+                    border: Border.all(color: Colors.white.withOpacity(0.3)),
                   ),
                   child: const Icon(Icons.arrow_back_ios_new_rounded, size: 15, color: Colors.white),
                 ),
@@ -219,15 +219,15 @@ class _HeroHeader extends StatelessWidget {
                   ),
                   const SizedBox(height: 2),
                   Text('Région de Dakar · Saison 2026',
-                      style: TextStyle(fontSize: 11, color: Colors.white.withValues(alpha: 0.6))),
+                      style: TextStyle(fontSize: 11, color: Colors.white.withOpacity(0.6))),
                 ]),
               ),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
                 decoration: BoxDecoration(
-                  color: _kGold.withValues(alpha: 0.18),
+                  color: _kGold.withOpacity(0.18),
                   borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: _kGold.withValues(alpha: 0.45)),
+                  border: Border.all(color: _kGold.withOpacity(0.45)),
                 ),
                 child: Row(mainAxisSize: MainAxisSize.min, children: [
                   const Icon(Icons.emoji_events_rounded, color: _kGold, size: 16),
@@ -262,15 +262,15 @@ class _StatPill extends StatelessWidget {
     child: Container(
       padding: const EdgeInsets.symmetric(vertical: 11, horizontal: 12),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.1),
+        color: Colors.white.withOpacity(0.1),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.18)),
+        border: Border.all(color: Colors.white.withOpacity(0.18)),
       ),
       child: Row(children: [
         Container(
           width: 28, height: 28,
           decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.15),
+            color: Colors.white.withOpacity(0.15),
             shape: BoxShape.circle,
           ),
           child: Icon(icon, color: Colors.white, size: 14),
@@ -278,7 +278,7 @@ class _StatPill extends StatelessWidget {
         const SizedBox(width: 8),
         Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Text(value, style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w900, height: 1)),
-          Text(label, style: TextStyle(color: Colors.white.withValues(alpha: 0.6), fontSize: 9, fontWeight: FontWeight.w600)),
+          Text(label, style: TextStyle(color: Colors.white.withOpacity(0.6), fontSize: 9, fontWeight: FontWeight.w600)),
         ]),
       ]),
     ),
@@ -329,7 +329,7 @@ class _DeptRanking extends StatelessWidget {
           Container(
             margin: const EdgeInsets.symmetric(horizontal: 20),
             height: 1,
-            color: _sub(context).withValues(alpha: 0.1),
+            color: _sub(context).withOpacity(0.1),
           ),
           const SizedBox(height: 4),
           ...rest.asMap().entries.map((e) => _TeamRow(rank: e.key + 4, team: e.value)),
@@ -375,9 +375,9 @@ class _Podium extends StatelessWidget {
           end: Alignment.bottomCenter,
         ),
         borderRadius: BorderRadius.circular(28),
-        border: Border.all(color: _kGreen.withValues(alpha: dark ? 0.2 : 0.15)),
+        border: Border.all(color: _kGreen.withOpacity(dark ? 0.2 : 0.15)),
         boxShadow: [BoxShadow(
-          color: _kGreen.withValues(alpha: dark ? 0.12 : 0.08),
+          color: _kGreen.withOpacity(dark ? 0.12 : 0.08),
           blurRadius: 20, offset: const Offset(0, 4),
         )],
       ),
@@ -395,9 +395,9 @@ class _Podium extends StatelessWidget {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
               decoration: BoxDecoration(
-                color: _kGreen.withValues(alpha: 0.1),
+                color: _kGreen.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: _kGreen.withValues(alpha: 0.25)),
+                border: Border.all(color: _kGreen.withOpacity(0.25)),
               ),
               child: Text('Meilleurs de la zone',
                   style: TextStyle(fontSize: 9, fontWeight: FontWeight.w700, color: _kGreen)),
@@ -448,10 +448,10 @@ class _PodiumItem extends StatelessWidget {
           width: avatarSize, height: avatarSize,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: team.color.withValues(alpha: 0.12),
+            color: team.color.withOpacity(0.12),
             border: Border.all(color: medalColor, width: rank == 1 ? 3 : 2.5),
             boxShadow: [BoxShadow(
-              color: medalColor.withValues(alpha: 0.5),
+              color: medalColor.withOpacity(0.5),
               blurRadius: rank == 1 ? 18 : 12,
               spreadRadius: rank == 1 ? 2 : 0,
             )],
@@ -473,7 +473,7 @@ class _PodiumItem extends StatelessWidget {
             decoration: BoxDecoration(
               color: medalColor, shape: BoxShape.circle,
               border: Border.all(color: dark ? const Color(0xFF111E11) : Colors.white, width: 2),
-              boxShadow: [BoxShadow(color: medalColor.withValues(alpha: 0.4), blurRadius: 6)],
+              boxShadow: [BoxShadow(color: medalColor.withOpacity(0.4), blurRadius: 6)],
             ),
             child: Center(child: Text('$rank',
                 style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: Colors.white))),
@@ -499,7 +499,7 @@ class _PodiumItem extends StatelessWidget {
         decoration: BoxDecoration(
           color: medalColor,
           borderRadius: BorderRadius.circular(20),
-          boxShadow: [BoxShadow(color: medalColor.withValues(alpha: 0.4), blurRadius: 8)],
+          boxShadow: [BoxShadow(color: medalColor.withOpacity(0.4), blurRadius: 8)],
         ),
         child: Text('${team.pts} pts',
             style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: Colors.white)),
@@ -511,17 +511,17 @@ class _PodiumItem extends StatelessWidget {
         decoration: BoxDecoration(
           gradient: LinearGradient(
             colors: [
-              medalColor.withValues(alpha: dark ? 0.35 : 0.25),
-              medalColor.withValues(alpha: dark ? 0.15 : 0.08),
+              medalColor.withOpacity(dark ? 0.35 : 0.25),
+              medalColor.withOpacity(dark ? 0.15 : 0.08),
             ],
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
           ),
           borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
           border: Border(
-            top:   BorderSide(color: medalColor.withValues(alpha: 0.6), width: 2),
-            left:  BorderSide(color: medalColor.withValues(alpha: 0.3), width: 1),
-            right: BorderSide(color: medalColor.withValues(alpha: 0.3), width: 1),
+            top:   BorderSide(color: medalColor.withOpacity(0.6), width: 2),
+            left:  BorderSide(color: medalColor.withOpacity(0.3), width: 1),
+            right: BorderSide(color: medalColor.withOpacity(0.3), width: 1),
           ),
         ),
         child: Center(child: Text(
@@ -558,12 +558,12 @@ class _TeamRow extends StatelessWidget {
       margin: const EdgeInsets.fromLTRB(16, 0, 16, 4),
       decoration: BoxDecoration(
         color: isMe
-            ? _kGreen.withValues(alpha: dark ? 0.15 : 0.07)
+            ? _kGreen.withOpacity(dark ? 0.15 : 0.07)
             : rank.isEven
-                ? _card(context).withValues(alpha: 0.6)
+                ? _card(context).withOpacity(0.6)
                 : Colors.transparent,
         borderRadius: BorderRadius.circular(14),
-        border: isMe ? Border.all(color: _kGreen.withValues(alpha: 0.35), width: 1.5) : null,
+        border: isMe ? Border.all(color: _kGreen.withOpacity(0.35), width: 1.5) : null,
       ),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
@@ -572,7 +572,7 @@ class _TeamRow extends StatelessWidget {
           Container(
             width: 28, height: 28,
             decoration: BoxDecoration(
-              color: rColor.withValues(alpha: 0.12),
+              color: rColor.withOpacity(0.12),
               shape: BoxShape.circle,
             ),
             child: Center(child: Text('$rank',
@@ -584,8 +584,8 @@ class _TeamRow extends StatelessWidget {
             width: 34, height: 34,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: team.color.withValues(alpha: 0.1),
-              border: Border.all(color: team.color.withValues(alpha: 0.3), width: 1.5),
+              color: team.color.withOpacity(0.1),
+              border: Border.all(color: team.color.withOpacity(0.3), width: 1.5),
             ),
             child: ClipOval(child: Image.network(
               team.logoUrl, fit: BoxFit.cover,
@@ -635,7 +635,7 @@ class _TeamRow extends StatelessWidget {
             width: 34,
             padding: const EdgeInsets.symmetric(vertical: 5),
             decoration: BoxDecoration(
-              color: isMe ? _kGreen : rColor.withValues(alpha: 0.12),
+              color: isMe ? _kGreen : rColor.withOpacity(0.12),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Text('${team.pts}',

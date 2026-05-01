@@ -17,6 +17,7 @@ const List<Map<String, dynamic>> _methods = [
 
 class PaymentScreen extends StatefulWidget {
   final Terrain terrain;
+  final SubTerrain? subTerrain;
   final DateTime date;
   final String startSlot;
   final String endSlot;
@@ -26,6 +27,7 @@ class PaymentScreen extends StatefulWidget {
   const PaymentScreen({
     super.key,
     required this.terrain,
+    this.subTerrain,
     required this.date,
     required this.startSlot,
     required this.endSlot,
@@ -106,7 +108,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
             decoration: BoxDecoration(
               color: Colors.white,
               shape: BoxShape.circle,
-              boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.08), blurRadius: 8)],
+              boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.08), blurRadius: 8)],
             ),
             child: const Icon(Icons.arrow_back_ios_new_rounded, size: 16, color: kDark),
           ),
@@ -127,7 +129,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(18),
-                boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10)],
+                boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10)],
               ),
               child: Row(
                 children: [
@@ -139,7 +141,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
                       fit: BoxFit.cover,
                       errorBuilder: (_, _, _) => Container(
                           width: 72, height: 72,
-                          color: kGreen.withValues(alpha: 0.10)),
+                          color: kGreen.withOpacity(0.10)),
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -159,7 +161,9 @@ class _PaymentScreenState extends State<PaymentScreen> {
                           ],
                         ),
                         const SizedBox(height: 8),
-                        Text(widget.terrain.name,
+                        Text(widget.subTerrain != null 
+                            ? '${widget.terrain.name} - ${widget.subTerrain!.name}' 
+                            : widget.terrain.name,
                             style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14, color: kDark)),
                         const SizedBox(height: 4),
                         Row(children: [
@@ -187,7 +191,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(14),
-                boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 8)],
+                boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 8)],
               ),
               child: Row(
                 children: [
@@ -196,7 +200,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
                       controller: _promoController,
                       decoration: InputDecoration(
                         hintText: 'Code promo',
-                        hintStyle: TextStyle(color: Colors.black.withValues(alpha: 0.3), fontSize: 14),
+                        hintStyle: TextStyle(color: Colors.black.withOpacity(0.3), fontSize: 14),
                         border: InputBorder.none,
                         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
                       ),
@@ -240,7 +244,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(18),
-                boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10)],
+                boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10)],
               ),
               child: Column(
                 children: [
@@ -309,7 +313,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(18),
-                  boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10)],
+                  boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10)],
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -334,7 +338,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
                                       fontSize: 28, fontWeight: FontWeight.w900, color: kDark)),
                               Text('personnes',
                                   style: TextStyle(
-                                      fontSize: 11, color: Colors.black.withValues(alpha: 0.4))),
+                                      fontSize: 11, color: Colors.black.withOpacity(0.4))),
                             ],
                           ),
                         ),
@@ -350,15 +354,15 @@ class _PaymentScreenState extends State<PaymentScreen> {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                       decoration: BoxDecoration(
-                        color: kGreen.withValues(alpha: 0.07),
+                        color: kGreen.withOpacity(0.07),
                         borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: kGreen.withValues(alpha: 0.2)),
+                        border: Border.all(color: kGreen.withOpacity(0.2)),
                       ),
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Text('Part par personne',
-                              style: TextStyle(fontSize: 13, color: Colors.black.withValues(alpha: 0.55))),
+                              style: TextStyle(fontSize: 13, color: Colors.black.withOpacity(0.55))),
                           Text('${(_finalPrice / _nbPersonnes).round()} F',
                               style: const TextStyle(
                                   fontSize: 15, fontWeight: FontWeight.w900, color: kGreen)),
@@ -452,21 +456,21 @@ class _PaymentScreenState extends State<PaymentScreen> {
                               _shareLink!,
                               style: TextStyle(
                                   fontSize: 11,
-                                  color: Colors.black.withValues(alpha: 0.55),
+                                  color: Colors.black.withOpacity(0.55),
                                   fontFamily: 'monospace'),
                             ),
                             const SizedBox(height: 10),
                             Row(
                               children: [
                                 Icon(Icons.info_outline_rounded,
-                                    size: 12, color: Colors.black.withValues(alpha: 0.35)),
+                                    size: 12, color: Colors.black.withOpacity(0.35)),
                                 const SizedBox(width: 4),
                                 Expanded(
                                   child: Text(
                                     'Chaque participant paiera ${(_finalPrice / _nbPersonnes).round()} F via ce lien.',
                                     style: TextStyle(
                                         fontSize: 10,
-                                        color: Colors.black.withValues(alpha: 0.4)),
+                                        color: Colors.black.withOpacity(0.4)),
                                   ),
                                 ),
                               ],
@@ -488,9 +492,9 @@ class _PaymentScreenState extends State<PaymentScreen> {
                                 width: double.infinity,
                                 padding: const EdgeInsets.symmetric(vertical: 10),
                                 decoration: BoxDecoration(
-                                  color: kGreen.withValues(alpha: 0.1),
+                                  color: kGreen.withOpacity(0.1),
                                   borderRadius: BorderRadius.circular(10),
-                                  border: Border.all(color: kGreen.withValues(alpha: 0.3)),
+                                  border: Border.all(color: kGreen.withOpacity(0.3)),
                                 ),
                                 child: Row(
                                   mainAxisAlignment: MainAxisAlignment.center,
@@ -538,10 +542,10 @@ class _PaymentScreenState extends State<PaymentScreen> {
                           color: Colors.white,
                           shape: BoxShape.circle,
                           border: Border.all(
-                            color: selected ? kGreen : Colors.black.withValues(alpha: 0.08),
+                            color: selected ? kGreen : Colors.black.withOpacity(0.08),
                             width: selected ? 2.5 : 1,
                           ),
-                          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.07), blurRadius: 8)],
+                          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.07), blurRadius: 8)],
                         ),
                         child: ClipOval(
                           child: Image.asset(m['asset'] as String, fit: BoxFit.cover),
@@ -554,7 +558,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
                         style: TextStyle(
                           fontSize: 10,
                           fontWeight: FontWeight.w600,
-                          color: selected ? kGreen : Colors.black.withValues(alpha: 0.5),
+                          color: selected ? kGreen : Colors.black.withOpacity(0.5),
                         ),
                       ),
                     ],
@@ -571,7 +575,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
         padding: EdgeInsets.fromLTRB(20, 12, 20, MediaQuery.of(context).padding.bottom + 16),
         decoration: BoxDecoration(
           color: kBeige,
-          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.06), blurRadius: 12, offset: const Offset(0, -3))],
+          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.06), blurRadius: 12, offset: const Offset(0, -3))],
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -588,7 +592,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
                         : _paymentType == 1
                             ? 'Acompte 30%'
                             : 'Ma part (1/$_nbPersonnes)',
-                    style: TextStyle(fontSize: 12, color: Colors.black.withValues(alpha: 0.5), fontWeight: FontWeight.w500),
+                    style: TextStyle(fontSize: 12, color: Colors.black.withOpacity(0.5), fontWeight: FontWeight.w500),
                   ),
                   Text(
                     _amountLabel,
@@ -603,6 +607,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
                 Navigator.push(context, MaterialPageRoute(
                   builder: (_) => BookingConfirmationScreen(
                     terrain: widget.terrain,
+                    subTerrain: widget.subTerrain,
                     date: widget.date,
                     startSlot: widget.startSlot,
                     endSlot: widget.endSlot,
@@ -670,10 +675,10 @@ class _PayTypeCard extends StatelessWidget {
           color: selected ? kGreen : Colors.white,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: selected ? kGreen : Colors.black.withValues(alpha: 0.08),
+            color: selected ? kGreen : Colors.black.withOpacity(0.08),
             width: selected ? 0 : 1,
           ),
-          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 8)],
+          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 8)],
         ),
         child: Column(
           children: [
@@ -691,8 +696,8 @@ class _PayTypeCard extends StatelessWidget {
                     fontSize: 9,
                     fontWeight: FontWeight.w600,
                     color: selected
-                        ? Colors.white.withValues(alpha: 0.8)
-                        : Colors.black.withValues(alpha: 0.4))),
+                        ? Colors.white.withOpacity(0.8)
+                        : Colors.black.withOpacity(0.4))),
           ],
         ),
       ),
@@ -749,7 +754,7 @@ class _SummaryRow extends StatelessWidget {
     child: Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(label, style: TextStyle(fontSize: 13, color: Colors.black.withValues(alpha: 0.5))),
+        Text(label, style: TextStyle(fontSize: 13, color: Colors.black.withOpacity(0.5))),
         Text(value,
             style: TextStyle(
                 fontSize: bold ? 15 : 13,

@@ -12,8 +12,8 @@ Color _bg(BuildContext c)    => Theme.of(c).scaffoldBackgroundColor;
 Color _card(BuildContext c)  => Theme.of(c).cardColor;
 Color _txt(BuildContext c)   => Theme.of(c).colorScheme.onSurface;
 Color _sub(BuildContext c)   => _isDark(c)
-    ? const Color(0xFFF0EBE0).withValues(alpha: 0.5)
-    : Colors.black.withValues(alpha: 0.45);
+    ? const Color(0xFFF0EBE0).withOpacity(0.5)
+    : Colors.black.withOpacity(0.45);
 
 // ── MODÈLES ──────────────────────────────────────────────────────────────────
 
@@ -191,7 +191,7 @@ class _MatchScreenState extends State<MatchScreen>
                       width: 40, height: 40,
                       decoration: BoxDecoration(
                         color: _card(context), shape: BoxShape.circle,
-                        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.07), blurRadius: 8)],
+                        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.07), blurRadius: 8)],
                       ),
                       child: Icon(Icons.arrow_back_ios_new_rounded, size: 16, color: _txt(context)),
                     ),
@@ -211,9 +211,9 @@ class _MatchScreenState extends State<MatchScreen>
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                     decoration: BoxDecoration(
-                      color: Colors.red.withValues(alpha: 0.1),
+                      color: Colors.red.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: Colors.red.withValues(alpha: 0.3)),
+                      border: Border.all(color: Colors.red.withOpacity(0.3)),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
@@ -455,7 +455,7 @@ class _RequestsTabState extends State<_RequestsTab> {
           Padding(
             padding: const EdgeInsets.only(top: 60),
             child: Column(children: [
-              Icon(Icons.inbox_rounded, size: 52, color: _sub(context).withValues(alpha: 0.4)),
+              Icon(Icons.inbox_rounded, size: 52, color: _sub(context).withOpacity(0.4)),
               const SizedBox(height: 12),
               Text('Aucune demande', style: TextStyle(color: _sub(context), fontSize: 14)),
             ]),
@@ -497,10 +497,10 @@ class _RequestCard extends StatelessWidget {
         color: _card(context),
         borderRadius: BorderRadius.circular(18),
         border: isPending
-            ? Border.all(color: _kGreen.withValues(alpha: 0.25), width: 1.5)
+            ? Border.all(color: _kGreen.withOpacity(0.25), width: 1.5)
             : null,
         boxShadow: [BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05), blurRadius: 10)],
+            color: Colors.black.withOpacity(0.05), blurRadius: 10)],
       ),
       child: Column(
         children: [
@@ -538,7 +538,7 @@ class _RequestCard extends StatelessWidget {
             margin: const EdgeInsets.symmetric(horizontal: 14),
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: _sub(context).withValues(alpha: 0.06),
+              color: _sub(context).withOpacity(0.06),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Row(
@@ -568,9 +568,9 @@ class _RequestCard extends StatelessWidget {
                       child: Container(
                         padding: const EdgeInsets.symmetric(vertical: 11),
                         decoration: BoxDecoration(
-                          color: Colors.red.withValues(alpha: 0.08),
+                          color: Colors.red.withOpacity(0.08),
                           borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: Colors.red.withValues(alpha: 0.25)),
+                          border: Border.all(color: Colors.red.withOpacity(0.25)),
                         ),
                         child: const Row(
                           mainAxisAlignment: MainAxisAlignment.center,
@@ -633,7 +633,7 @@ class _StatusBadge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.12),
+        color: color.withOpacity(0.12),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Text(label,
@@ -716,7 +716,7 @@ class _OrganizeTabState extends State<_OrganizeTab> {
             decoration: BoxDecoration(
               color: _card(context),
               borderRadius: BorderRadius.circular(16),
-              boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.06), blurRadius: 10, offset: const Offset(0, 2))],
+              boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.06), blurRadius: 10, offset: const Offset(0, 2))],
             ),
             child: Row(
               children: [
@@ -768,7 +768,7 @@ class _OrganizeTabState extends State<_OrganizeTab> {
                   decoration: BoxDecoration(
                     color: selected ? _kGreen : _card(context),
                     borderRadius: BorderRadius.circular(20),
-                    border: selected ? null : Border.all(color: _sub(context).withValues(alpha: 0.2)),
+                    border: selected ? null : Border.all(color: _sub(context).withOpacity(0.2)),
                   ),
                   child: Text(z,
                     style: TextStyle(
@@ -834,7 +834,7 @@ class _HeroMatchCard extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(22),
-        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.3), blurRadius: 18, offset: const Offset(0, 6))],
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.3), blurRadius: 18, offset: const Offset(0, 6))],
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(22),
@@ -854,9 +854,9 @@ class _HeroMatchCard extends StatelessWidget {
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     colors: [
-                      Colors.black.withValues(alpha: 0.72),
-                      Colors.black.withValues(alpha: 0.55),
-                      Colors.black.withValues(alpha: 0.72),
+                      Colors.black.withOpacity(0.72),
+                      Colors.black.withOpacity(0.55),
+                      Colors.black.withOpacity(0.72),
                     ],
                     begin: Alignment.centerLeft,
                     end: Alignment.centerRight,
@@ -875,7 +875,7 @@ class _HeroMatchCard extends StatelessWidget {
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                         decoration: BoxDecoration(
-                          color: _kGreen.withValues(alpha: 0.85),
+                          color: _kGreen.withOpacity(0.85),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Text(match.zone,
@@ -885,11 +885,11 @@ class _HeroMatchCard extends StatelessWidget {
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                         decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.15),
+                          color: Colors.white.withOpacity(0.15),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Text(match.terrain,
-                            style: TextStyle(color: Colors.white.withValues(alpha: 0.85), fontSize: 10)),
+                            style: TextStyle(color: Colors.white.withOpacity(0.85), fontSize: 10)),
                       ),
                     ],
                   ),
@@ -922,11 +922,11 @@ class _HeroMatchCard extends StatelessWidget {
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
                               decoration: BoxDecoration(
-                                color: Colors.white.withValues(alpha: 0.15),
+                                color: Colors.white.withOpacity(0.15),
                                 borderRadius: BorderRadius.circular(6),
                               ),
                               child: Text(_formatDate(match.date),
-                                  style: TextStyle(color: Colors.white.withValues(alpha: 0.8), fontSize: 10)),
+                                  style: TextStyle(color: Colors.white.withOpacity(0.8), fontSize: 10)),
                             ),
                           ],
                         ],
@@ -950,10 +950,10 @@ class _HeroMatchCard extends StatelessWidget {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(Icons.location_on_rounded, color: Colors.white.withValues(alpha: 0.6), size: 13),
+                      Icon(Icons.location_on_rounded, color: Colors.white.withOpacity(0.6), size: 13),
                       const SizedBox(width: 4),
                       Text(match.terrain,
-                          style: TextStyle(color: Colors.white.withValues(alpha: 0.6), fontSize: 11)),
+                          style: TextStyle(color: Colors.white.withOpacity(0.6), fontSize: 11)),
                     ],
                   ),
                 ],
@@ -983,8 +983,8 @@ class _MatchCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: _card(context),
         borderRadius: BorderRadius.circular(18),
-        border: isLive ? Border.all(color: Colors.red.withValues(alpha: 0.4), width: 1.5) : null,
-        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10, offset: const Offset(0, 2))],
+        border: isLive ? Border.all(color: Colors.red.withOpacity(0.4), width: 1.5) : null,
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 2))],
       ),
       child: Column(
         children: [
@@ -994,7 +994,7 @@ class _MatchCard extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
-                  color: _kGreen.withValues(alpha: 0.1),
+                  color: _kGreen.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(6),
                 ),
                 child: Text(match.zone,
@@ -1044,10 +1044,10 @@ class _MatchCard extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 decoration: BoxDecoration(
                   color: isFinished
-                      ? _kGreen.withValues(alpha: 0.1)
+                      ? _kGreen.withOpacity(0.1)
                       : isLive
-                          ? Colors.red.withValues(alpha: 0.1)
-                          : _sub(context).withValues(alpha: 0.08),
+                          ? Colors.red.withOpacity(0.1)
+                          : _sub(context).withOpacity(0.08),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: isFinished && match.homeScore != null
@@ -1109,7 +1109,7 @@ class _TeamRow extends StatelessWidget {
         decoration: BoxDecoration(
           color: _card(context),
           borderRadius: BorderRadius.circular(16),
-          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 8)],
+          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 8)],
         ),
         child: Row(
           children: [
@@ -1188,7 +1188,7 @@ class _TeamProfilePage extends StatelessWidget {
             child: Container(
               decoration: BoxDecoration(
                 gradient: LinearGradient(
-                  colors: [team.color, team.color.withValues(alpha: 0.6)],
+                  colors: [team.color, team.color.withOpacity(0.6)],
                   begin: Alignment.topLeft, end: Alignment.bottomRight,
                 ),
                 borderRadius: const BorderRadius.vertical(bottom: Radius.circular(28)),
@@ -1203,7 +1203,7 @@ class _TeamProfilePage extends StatelessWidget {
                         child: Container(
                           width: 38, height: 38,
                           decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.2),
+                            color: Colors.white.withOpacity(0.2),
                             shape: BoxShape.circle,
                           ),
                           child: const Icon(Icons.arrow_back_ios_new_rounded, size: 15, color: Colors.white),
@@ -1213,7 +1213,7 @@ class _TeamProfilePage extends StatelessWidget {
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                         decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.2),
+                          color: Colors.white.withOpacity(0.2),
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: Text(team.zone,
@@ -1324,7 +1324,7 @@ class _StatPill extends StatelessWidget {
           style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w900)),
       const SizedBox(height: 2),
       Text(label,
-          style: TextStyle(color: Colors.white.withValues(alpha: 0.7), fontSize: 10)),
+          style: TextStyle(color: Colors.white.withOpacity(0.7), fontSize: 10)),
     ],
   );
 }
@@ -1450,7 +1450,7 @@ class _ChallengeSheetState extends State<_ChallengeSheet> {
           children: [
             // Handle
             Center(child: Container(width: 36, height: 4,
-                decoration: BoxDecoration(color: _sub(context).withValues(alpha: 0.3),
+                decoration: BoxDecoration(color: _sub(context).withOpacity(0.3),
                     borderRadius: BorderRadius.circular(2)))),
             const SizedBox(height: 16),
 
@@ -1486,7 +1486,7 @@ class _ChallengeSheetState extends State<_ChallengeSheet> {
                     margin: const EdgeInsets.only(right: 8),
                     padding: const EdgeInsets.symmetric(vertical: 10),
                     decoration: BoxDecoration(
-                      color: _format == f ? _kGreen : _sub(context).withValues(alpha: 0.08),
+                      color: _format == f ? _kGreen : _sub(context).withOpacity(0.08),
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: Text(f, textAlign: TextAlign.center,
@@ -1518,7 +1518,7 @@ class _ChallengeSheetState extends State<_ChallengeSheet> {
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
                 decoration: BoxDecoration(
-                  color: _sub(context).withValues(alpha: 0.08),
+                  color: _sub(context).withOpacity(0.08),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Row(children: [
@@ -1558,7 +1558,7 @@ class _ChallengeSheetState extends State<_ChallengeSheet> {
                       margin: const EdgeInsets.only(right: 6),
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                       decoration: BoxDecoration(
-                        color: selected ? _kGreen : _sub(context).withValues(alpha: 0.08),
+                        color: selected ? _kGreen : _sub(context).withOpacity(0.08),
                         borderRadius: BorderRadius.circular(10),
                       ),
                       child: Text(s,
@@ -1589,7 +1589,7 @@ class _ChallengeSheetState extends State<_ChallengeSheet> {
                       margin: const EdgeInsets.only(right: 6),
                       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                       decoration: BoxDecoration(
-                        color: selected ? _kGreen : _sub(context).withValues(alpha: 0.08),
+                        color: selected ? _kGreen : _sub(context).withOpacity(0.08),
                         borderRadius: BorderRadius.circular(10),
                       ),
                       child: Text(label,
@@ -1605,7 +1605,7 @@ class _ChallengeSheetState extends State<_ChallengeSheet> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               decoration: BoxDecoration(
-                color: _kGreen.withValues(alpha: 0.08),
+                color: _kGreen.withOpacity(0.08),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Row(children: [
@@ -1636,9 +1636,9 @@ class _ChallengeSheetState extends State<_ChallengeSheet> {
                   padding: const EdgeInsets.all(12),
                   margin: const EdgeInsets.only(bottom: 10),
                   decoration: BoxDecoration(
-                    color: _kGreen.withValues(alpha: 0.08),
+                    color: _kGreen.withOpacity(0.08),
                     borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: _kGreen.withValues(alpha: 0.4)),
+                    border: Border.all(color: _kGreen.withOpacity(0.4)),
                   ),
                   child: Row(children: [
                     ClipRRect(
@@ -1646,7 +1646,7 @@ class _ChallengeSheetState extends State<_ChallengeSheet> {
                       child: Image.network(_selectedTerrain!.imageUrl,
                           width: 52, height: 52, fit: BoxFit.cover,
                           errorBuilder: (_, __, ___) => Container(
-                              width: 52, height: 52, color: _kGreen.withValues(alpha: 0.2))),
+                              width: 52, height: 52, color: _kGreen.withOpacity(0.2))),
                     ),
                     const SizedBox(width: 12),
                     Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -1669,7 +1669,7 @@ class _ChallengeSheetState extends State<_ChallengeSheet> {
               Container(
                 height: 44,
                 decoration: BoxDecoration(
-                  color: _sub(context).withValues(alpha: 0.08),
+                  color: _sub(context).withOpacity(0.08),
                   borderRadius: BorderRadius.circular(12),
                   border: _terrainError
                       ? Border.all(color: Colors.red.shade300)
@@ -1725,7 +1725,7 @@ class _ChallengeSheetState extends State<_ChallengeSheet> {
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: _sub(context).withValues(alpha: 0.06),
+                    color: _sub(context).withOpacity(0.06),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Center(child: Text(
@@ -1750,7 +1750,7 @@ class _ChallengeSheetState extends State<_ChallengeSheet> {
                       color: _card(context),
                       borderRadius: BorderRadius.circular(14),
                       boxShadow: [BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.05), blurRadius: 8)],
+                          color: Colors.black.withOpacity(0.05), blurRadius: 8)],
                     ),
                     child: Row(children: [
                       ClipRRect(
@@ -1759,7 +1759,7 @@ class _ChallengeSheetState extends State<_ChallengeSheet> {
                             width: 52, height: 52, fit: BoxFit.cover,
                             errorBuilder: (_, __, ___) => Container(
                                 width: 52, height: 52,
-                                color: _kGreen.withValues(alpha: 0.15))),
+                                color: _kGreen.withOpacity(0.15))),
                       ),
                       const SizedBox(width: 12),
                       Expanded(child: Column(
@@ -1787,7 +1787,7 @@ class _ChallengeSheetState extends State<_ChallengeSheet> {
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
-                          color: Colors.green.withValues(alpha: 0.1),
+                          color: Colors.green.withOpacity(0.1),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: const Text('Libre',
@@ -1808,7 +1808,7 @@ class _ChallengeSheetState extends State<_ChallengeSheet> {
                 width: double.infinity,
                 padding: const EdgeInsets.symmetric(vertical: 15),
                 decoration: BoxDecoration(
-                  color: _selectedTerrain != null ? _kGreen : _sub(context).withValues(alpha: 0.2),
+                  color: _selectedTerrain != null ? _kGreen : _sub(context).withOpacity(0.2),
                   borderRadius: BorderRadius.circular(14),
                 ),
                 child: Text('Envoyer le challenge ⚡',
@@ -1836,7 +1836,7 @@ class _LogoCircle extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Container(
     width: size, height: size,
-    decoration: BoxDecoration(shape: BoxShape.circle, color: color.withValues(alpha: 0.12)),
+    decoration: BoxDecoration(shape: BoxShape.circle, color: color.withOpacity(0.12)),
     child: ClipOval(
       child: Image.network(url, fit: BoxFit.cover,
           errorBuilder: (_, __, ___) => Center(

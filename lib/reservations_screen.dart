@@ -19,8 +19,8 @@ Color _bg(BuildContext c)   => Theme.of(c).scaffoldBackgroundColor;
 Color _card(BuildContext c) => Theme.of(c).cardColor;
 Color _txt(BuildContext c)  => Theme.of(c).colorScheme.onSurface;
 Color _sub(BuildContext c)  => _isDark(c)
-    ? const Color(0xFFF0EBE0).withValues(alpha: 0.5)
-    : Colors.black.withValues(alpha: 0.45);
+    ? const Color(0xFFF0EBE0).withOpacity(0.5)
+    : Colors.black.withOpacity(0.45);
 
 // ── MODÈLE ──
 class Reservation {
@@ -199,7 +199,7 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
             ),
             const SizedBox(height: 10),
             Text('Cette action est irréversible.',
-                style: TextStyle(fontSize: 12, color: Colors.red.withValues(alpha: 0.7))),
+                style: TextStyle(fontSize: 12, color: Colors.red.withOpacity(0.7))),
           ],
         ),
         actions: [
@@ -261,7 +261,7 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
                       decoration: BoxDecoration(
                         color: _card(context),
                         shape: BoxShape.circle,
-                        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.07), blurRadius: 8)],
+                        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.07), blurRadius: 8)],
                       ),
                       child: Icon(Icons.arrow_back_ios_new_rounded, size: 16, color: _txt(context)),
                     ),
@@ -287,7 +287,7 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
                 decoration: BoxDecoration(
                   color: _card(context),
                   borderRadius: BorderRadius.circular(14),
-                  boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 6)],
+                  boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 6)],
                 ),
                 child: Row(
                   children: [
@@ -317,7 +317,7 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
               decoration: BoxDecoration(
                 color: _card(context),
                 borderRadius: BorderRadius.circular(20),
-                boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10)],
+                boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10)],
               ),
               child: Column(
                 children: [
@@ -367,7 +367,7 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
                                       fontSize: 10,
                                       fontWeight: FontWeight.w500,
                                       color: isSelected
-                                          ? Colors.white.withValues(alpha: 0.7)
+                                          ? Colors.white.withOpacity(0.7)
                                           : _sub(context))),
                               const SizedBox(height: 5),
                               Container(
@@ -399,7 +399,7 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Icon(Icons.event_busy_rounded,
-                              size: 48, color: _sub(context).withValues(alpha: 0.4)),
+                              size: 48, color: _sub(context).withOpacity(0.4)),
                           const SizedBox(height: 10),
                           Text(
                             _filterIndex == 0
@@ -554,9 +554,9 @@ class _ReservationCard extends StatelessWidget {
         decoration: BoxDecoration(
           color: _card(context),
           borderRadius: BorderRadius.circular(18),
-          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: dimmed ? 0.03 : 0.05), blurRadius: 10)],
+          boxShadow: [BoxShadow(color: Colors.black.withOpacity(dimmed ? 0.03 : 0.05), blurRadius: 10)],
           border: highlight
-              ? Border.all(color: kGreen.withValues(alpha: 0.35), width: 1.5)
+              ? Border.all(color: kGreen.withOpacity(0.35), width: 1.5)
               : null,
         ),
         child: Column(
@@ -583,7 +583,7 @@ class _ReservationCard extends StatelessWidget {
                         fit: BoxFit.cover,
                         errorBuilder: (_, _, _) => Container(
                             width: 80, height: 80,
-                            color: kGreen.withValues(alpha: 0.10)),
+                            color: kGreen.withOpacity(0.10)),
                       ),
                     ),
                   ),
@@ -608,7 +608,7 @@ class _ReservationCard extends StatelessWidget {
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
                               decoration: BoxDecoration(
-                                color: _statusColor.withValues(alpha: 0.12),
+                                color: _statusColor.withOpacity(0.12),
                                 borderRadius: BorderRadius.circular(6),
                               ),
                               child: Text(_statusLabel,
@@ -658,7 +658,7 @@ class _ReservationCard extends StatelessWidget {
                       size: 13,
                       color: _canViewQr
                           ? (highlight ? Colors.white : _sub(context))
-                          : _sub(context).withValues(alpha: 0.5),
+                          : _sub(context).withOpacity(0.5),
                     ),
                   ),
                 ],
@@ -673,10 +673,10 @@ class _ReservationCard extends StatelessWidget {
                   width: double.infinity,
                   padding: const EdgeInsets.symmetric(vertical: 11),
                   decoration: BoxDecoration(
-                    color: Colors.red.withValues(alpha: 0.06),
+                    color: Colors.red.withOpacity(0.06),
                     borderRadius: const BorderRadius.vertical(bottom: Radius.circular(18)),
                     border: Border(
-                      top: BorderSide(color: Colors.red.withValues(alpha: 0.12)),
+                      top: BorderSide(color: Colors.red.withOpacity(0.12)),
                     ),
                   ),
                   child: Row(
@@ -733,7 +733,7 @@ class _FilterTab extends StatelessWidget {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
               decoration: BoxDecoration(
-                color: selected ? kGreen : _sub(context).withValues(alpha: 0.15),
+                color: selected ? kGreen : _sub(context).withOpacity(0.15),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Text('$count',

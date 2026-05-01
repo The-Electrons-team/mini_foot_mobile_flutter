@@ -9,8 +9,8 @@ Color _bgShop(BuildContext c)   => Theme.of(c).scaffoldBackgroundColor;
 Color _cardShop(BuildContext c) => Theme.of(c).cardColor;
 Color _txtShop(BuildContext c)  => Theme.of(c).colorScheme.onSurface;
 Color _subShop(BuildContext c)  => _isDarkShop(c)
-    ? const Color(0xFFF0EBE0).withValues(alpha: 0.5)
-    : Colors.black.withValues(alpha: 0.45);
+    ? const Color(0xFFF0EBE0).withOpacity(0.5)
+    : Colors.black.withOpacity(0.45);
 
 class _ShopProduct {
   final String vendor, name, price, category, imageUrl;
@@ -202,7 +202,7 @@ class _ShopScreenState extends State<ShopScreen> {
                 min: 0, max: 40000,
                 divisions: 40,
                 activeColor: _kGreenShop,
-                inactiveColor: _kGreenShop.withValues(alpha: 0.15),
+                inactiveColor: _kGreenShop.withOpacity(0.15),
                 onChanged: (v) => setS(() { tmpMin = v.start; tmpMax = v.end; }),
               ),
               const SizedBox(height: 16),
@@ -248,7 +248,7 @@ class _ShopScreenState extends State<ShopScreen> {
                       child: Container(
                         padding: const EdgeInsets.symmetric(vertical: 14),
                         decoration: BoxDecoration(
-                          color: _subShop(context).withValues(alpha: 0.1),
+                          color: _subShop(context).withOpacity(0.1),
                           borderRadius: BorderRadius.circular(14),
                         ),
                         child: Text('Réinitialiser', textAlign: TextAlign.center,
@@ -319,7 +319,7 @@ class _ShopScreenState extends State<ShopScreen> {
                     child: Container(
                       width: 38, height: 38,
                       decoration: BoxDecoration(
-                        color: _showSearch ? _kGreenShop : _kGreenShop.withValues(alpha: 0.1),
+                        color: _showSearch ? _kGreenShop : _kGreenShop.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(10),
                       ),
                       child: Icon(Icons.search_rounded,
@@ -336,7 +336,7 @@ class _ShopScreenState extends State<ShopScreen> {
                         Container(
                           width: 38, height: 38,
                           decoration: BoxDecoration(
-                            color: hasActiveFilter ? _kGreenShop : _kGreenShop.withValues(alpha: 0.1),
+                            color: hasActiveFilter ? _kGreenShop : _kGreenShop.withOpacity(0.1),
                             borderRadius: BorderRadius.circular(10),
                           ),
                           child: Icon(Icons.tune_rounded,
@@ -368,7 +368,7 @@ class _ShopScreenState extends State<ShopScreen> {
                         decoration: BoxDecoration(
                           color: _cardShop(context),
                           borderRadius: BorderRadius.circular(14),
-                          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.06), blurRadius: 8)],
+                          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.06), blurRadius: 8)],
                         ),
                         child: TextField(
                           controller: _searchCtrl,
@@ -414,7 +414,7 @@ class _ShopScreenState extends State<ShopScreen> {
                       decoration: BoxDecoration(
                         color: selected ? _kGreenShop : _cardShop(context),
                         borderRadius: BorderRadius.circular(20),
-                        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.06), blurRadius: 6)],
+                        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.06), blurRadius: 6)],
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
@@ -446,7 +446,7 @@ class _ShopScreenState extends State<ShopScreen> {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                       decoration: BoxDecoration(
-                        color: _kGreenShop.withValues(alpha: 0.1),
+                        color: _kGreenShop.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Row(
@@ -474,7 +474,7 @@ class _ShopScreenState extends State<ShopScreen> {
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Icons.search_off_rounded, size: 48, color: _subShop(context).withValues(alpha: 0.4)),
+                          Icon(Icons.search_off_rounded, size: 48, color: _subShop(context).withOpacity(0.4)),
                           const SizedBox(height: 12),
                           Text('Aucun résultat',
                               style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: _subShop(context))),
@@ -520,9 +520,9 @@ class _SortChip extends StatelessWidget {
       duration: const Duration(milliseconds: 180),
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       decoration: BoxDecoration(
-        color: selected ? _kGreenShop : _kGreenShop.withValues(alpha: 0.08),
+        color: selected ? _kGreenShop : _kGreenShop.withOpacity(0.08),
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: selected ? _kGreenShop : _kGreenShop.withValues(alpha: 0.2)),
+        border: Border.all(color: selected ? _kGreenShop : _kGreenShop.withOpacity(0.2)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -550,7 +550,7 @@ class _ProductCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(18),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: _isDarkShop(context) ? 0.25 : 0.07),
+            color: Colors.black.withOpacity(_isDarkShop(context) ? 0.25 : 0.07),
             blurRadius: 10, offset: const Offset(0, 3),
           ),
         ],
@@ -564,7 +564,7 @@ class _ProductCard extends StatelessWidget {
               p.imageUrl, width: double.infinity, height: 130, fit: BoxFit.cover,
               errorBuilder: (ctx, err, st) => Container(
                 height: 130,
-                color: p.accentColor.withValues(alpha: 0.15),
+                color: p.accentColor.withOpacity(0.15),
                 child: Center(child: Icon(p.icon, color: p.accentColor, size: 40)),
               ),
             ),
@@ -591,9 +591,9 @@ class _ProductCard extends StatelessWidget {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
                       decoration: BoxDecoration(
-                        color: p.accentColor.withValues(alpha: 0.1),
+                        color: p.accentColor.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: p.accentColor.withValues(alpha: 0.3)),
+                        border: Border.all(color: p.accentColor.withOpacity(0.3)),
                       ),
                       child: Text('Voir',
                           style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: p.accentColor)),
@@ -660,7 +660,7 @@ class _ProductDetailScreenState extends State<_ProductDetailScreen> {
               child: Container(
                 margin: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: Colors.black.withValues(alpha: 0.4),
+                  color: Colors.black.withOpacity(0.4),
                   shape: BoxShape.circle,
                 ),
                 child: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 18),
@@ -677,7 +677,7 @@ class _ProductDetailScreenState extends State<_ProductDetailScreen> {
                     itemBuilder: (_, i) => Image.network(
                       p.gallery[i], fit: BoxFit.cover,
                       errorBuilder: (ctx2, err, st) => Container(
-                        color: p.accentColor.withValues(alpha: 0.2),
+                        color: p.accentColor.withOpacity(0.2),
                         child: Center(child: Icon(p.icon, color: p.accentColor, size: 80)),
                       ),
                     ),
@@ -691,7 +691,7 @@ class _ProductDetailScreenState extends State<_ProductDetailScreen> {
                         gradient: LinearGradient(
                           begin: Alignment.topCenter,
                           end: Alignment.bottomCenter,
-                          colors: [Colors.transparent, _bgShop(context).withValues(alpha: 0.9)],
+                          colors: [Colors.transparent, _bgShop(context).withOpacity(0.9)],
                         ),
                       ),
                     ),
@@ -708,7 +708,7 @@ class _ProductDetailScreenState extends State<_ProductDetailScreen> {
                         width: _galleryIndex == i ? 20 : 6,
                         height: 6,
                         decoration: BoxDecoration(
-                          color: _galleryIndex == i ? p.accentColor : Colors.white.withValues(alpha: 0.5),
+                          color: _galleryIndex == i ? p.accentColor : Colors.white.withOpacity(0.5),
                           borderRadius: BorderRadius.circular(3),
                         ),
                       )),
@@ -731,7 +731,7 @@ class _ProductDetailScreenState extends State<_ProductDetailScreen> {
                       Container(
                         width: 32, height: 32,
                         decoration: BoxDecoration(
-                          color: p.accentColor.withValues(alpha: 0.12),
+                          color: p.accentColor.withOpacity(0.12),
                           shape: BoxShape.circle,
                         ),
                         child: Icon(Icons.storefront_rounded, color: p.accentColor, size: 16),
@@ -778,7 +778,7 @@ class _ProductDetailScreenState extends State<_ProductDetailScreen> {
                             child: Image.network(
                               p.gallery[i], fit: BoxFit.cover,
                               errorBuilder: (ctx3, err, st) => Container(
-                                color: p.accentColor.withValues(alpha: 0.15),
+                                color: p.accentColor.withOpacity(0.15),
                                 child: Icon(p.icon, color: p.accentColor, size: 24),
                               ),
                             ),
@@ -819,7 +819,7 @@ class _ProductDetailScreenState extends State<_ProductDetailScreen> {
                         Container(
                           width: 48, height: 48,
                           decoration: BoxDecoration(
-                            color: p.accentColor.withValues(alpha: 0.12),
+                            color: p.accentColor.withOpacity(0.12),
                             shape: BoxShape.circle,
                           ),
                           child: Icon(Icons.storefront_rounded, color: p.accentColor, size: 24),
@@ -840,7 +840,7 @@ class _ProductDetailScreenState extends State<_ProductDetailScreen> {
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                           decoration: BoxDecoration(
-                            color: const Color(0xFF075E54).withValues(alpha: 0.1),
+                            color: const Color(0xFF075E54).withOpacity(0.1),
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: const Text('Vérifié',
@@ -862,7 +862,7 @@ class _ProductDetailScreenState extends State<_ProductDetailScreen> {
                         borderRadius: BorderRadius.circular(16),
                         boxShadow: [
                           BoxShadow(
-                            color: const Color(0xFF075E54).withValues(alpha: 0.4),
+                            color: const Color(0xFF075E54).withOpacity(0.4),
                             blurRadius: 12, offset: const Offset(0, 4),
                           ),
                         ],
@@ -873,7 +873,7 @@ class _ProductDetailScreenState extends State<_ProductDetailScreen> {
                           Container(
                             width: 28, height: 28,
                             decoration: BoxDecoration(
-                              color: Colors.white.withValues(alpha: 0.15),
+                              color: Colors.white.withOpacity(0.15),
                               shape: BoxShape.circle,
                             ),
                             child: const Icon(Icons.chat_rounded, color: Colors.white, size: 16),

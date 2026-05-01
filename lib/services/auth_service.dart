@@ -38,6 +38,20 @@ class AuthService {
     }
   }
 
+  Future<Map<String, dynamic>> resendOtp(String phone) async {
+    final response = await http.post(
+      Uri.parse('$_baseUrl/auth/resend-otp'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'phone': phone}),
+    );
+
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      return jsonDecode(response.body);
+    } else {
+      throw Exception('Erreur d\'envoi OTP: ${response.body}');
+    }
+  }
+
 
   Future<Map<String, dynamic>> verifyOtp(String phone, String code) async {
     final response = await http.post(
@@ -58,7 +72,6 @@ class AuthService {
     required String password,
     required String firstName,
     required String lastName,
-    String? birthDate,
   }) async {
     final response = await http.post(
       Uri.parse('$_baseUrl/auth/register'),
@@ -68,7 +81,6 @@ class AuthService {
         'password': password,
         'firstName': firstName,
         'lastName': lastName,
-        if (birthDate != null) 'birthDate': birthDate,
       }),
     );
 
@@ -92,6 +104,38 @@ class AuthService {
       return jsonDecode(response.body);
     } else {
       throw Exception('Erreur de récupération du profil: ${response.body}');
+    }
+  }
+
+  Future<Map<String, dynamic>> updateProfile(String token, Map<String, dynamic> data) async {
+    final response = await http.patch(
+      Uri.parse('$_baseUrl/users/me'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+      body: jsonEncode(data),
+    );
+
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      return jsonDecode(response.body);
+    } else {
+      throw Exception('Erreur de mise à jour: ${response.body}');
+    }
+  }
+
+  Future<Map<String, dynamic>> uploadAvatar(String token, List<int> bytes, String filename) async {
+    final request = http.MultipartRequest('POST', Uri.parse('$_baseUrl/users/me/avatar'))
+      ..headers['Authorization'] = 'Bearer $token'
+      ..files.add(http.MultipartFile.fromBytes('file', bytes, filename: filename));
+
+    final streamedResponse = await request.send();
+    final response = await http.Response.fromStream(streamedResponse);
+
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      return jsonDecode(response.body);
+    } else {
+      throw Exception('Erreur d\'upload avatar: ${response.body}');
     }
   }
 }

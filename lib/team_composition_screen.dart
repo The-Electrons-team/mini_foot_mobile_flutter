@@ -9,8 +9,8 @@ Color _bg(BuildContext c) => Theme.of(c).scaffoldBackgroundColor;
 Color _card(BuildContext c) => Theme.of(c).cardColor;
 Color _txt(BuildContext c) => Theme.of(c).colorScheme.onSurface;
 Color _sub(BuildContext c) => Theme.of(c).brightness == Brightness.dark
-    ? const Color(0xFFF0EBE0).withValues(alpha: 0.5)
-    : Colors.black.withValues(alpha: 0.45);
+    ? const Color(0xFFF0EBE0).withOpacity(0.5)
+    : Colors.black.withOpacity(0.45);
 
 // ── PAGE : COMPOSITIONS ───────────────────────────────────────────────────────
 
@@ -163,7 +163,7 @@ class _CompositionPageState extends State<CompositionPage> {
           padding: EdgeInsets.fromLTRB(16, topPad + 14, 16, 14),
           decoration: BoxDecoration(
             color: _bg(context),
-            boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 8, offset: const Offset(0, 2))],
+            boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 8, offset: const Offset(0, 2))],
           ),
           child: Row(children: [
             GestureDetector(
@@ -172,7 +172,7 @@ class _CompositionPageState extends State<CompositionPage> {
                 width: 38, height: 38,
                 decoration: BoxDecoration(
                   color: _card(context), shape: BoxShape.circle,
-                  boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.07), blurRadius: 8)],
+                  boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.07), blurRadius: 8)],
                 ),
                 child: Icon(Icons.arrow_back_ios_new_rounded, size: 15, color: _txt(context)),
               ),
@@ -189,7 +189,7 @@ class _CompositionPageState extends State<CompositionPage> {
                 decoration: BoxDecoration(
                   color: _kGreen,
                   borderRadius: BorderRadius.circular(20),
-                  boxShadow: [BoxShadow(color: _kGreen.withValues(alpha: 0.35), blurRadius: 8)],
+                  boxShadow: [BoxShadow(color: _kGreen.withOpacity(0.35), blurRadius: 8)],
                 ),
                 child: Row(mainAxisSize: MainAxisSize.min, children: [
                   Text(_formation,
@@ -223,7 +223,7 @@ class _CompositionPageState extends State<CompositionPage> {
                         child: Container(
                           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
                           decoration: BoxDecoration(
-                            color: Colors.black.withValues(alpha: 0.65),
+                            color: Colors.black.withOpacity(0.65),
                             borderRadius: BorderRadius.circular(20),
                           ),
                           child: Text('Tape sur un autre joueur pour échanger',
@@ -262,7 +262,7 @@ class _CompositionPageState extends State<CompositionPage> {
           decoration: BoxDecoration(
             color: _card(context),
             borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-            boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.08), blurRadius: 12, offset: const Offset(0, -2))],
+            boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.08), blurRadius: 12, offset: const Offset(0, -2))],
           ),
           child: Column(mainAxisSize: MainAxisSize.min, children: [
             Padding(
@@ -330,7 +330,7 @@ class _CompositionPageState extends State<CompositionPage> {
         padding: EdgeInsets.fromLTRB(20, 12, 20, MediaQuery.of(context).padding.bottom + 20),
         child: Column(mainAxisSize: MainAxisSize.min, children: [
           Center(child: Container(width: 36, height: 4,
-              decoration: BoxDecoration(color: _sub(context).withValues(alpha: 0.3),
+              decoration: BoxDecoration(color: _sub(context).withOpacity(0.3),
                   borderRadius: BorderRadius.circular(2)))),
           const SizedBox(height: 16),
           Text('Choisir une formation',
@@ -357,10 +357,10 @@ class _CompositionPageState extends State<CompositionPage> {
                       color: sel ? _kGreen : _bg(context),
                       borderRadius: BorderRadius.circular(14),
                       border: Border.all(
-                        color: sel ? _kGreen : _sub(context).withValues(alpha: 0.2),
+                        color: sel ? _kGreen : _sub(context).withOpacity(0.2),
                         width: sel ? 2 : 1,
                       ),
-                      boxShadow: sel ? [BoxShadow(color: _kGreen.withValues(alpha: 0.3), blurRadius: 10)] : null,
+                      boxShadow: sel ? [BoxShadow(color: _kGreen.withOpacity(0.3), blurRadius: 10)] : null,
                     ),
                     child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
                       // Mini terrain
@@ -417,12 +417,12 @@ class _PlayerToken extends StatelessWidget {
             boxShadow: [
               if (isSelected)
                 BoxShadow(
-                  color: const Color(0xFFFFD700).withValues(alpha: 0.7),
+                  color: const Color(0xFFFFD700).withOpacity(0.7),
                   blurRadius: 18,
                   spreadRadius: 2,
                 ),
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.4),
+                color: Colors.black.withOpacity(0.4),
                 blurRadius: 8,
                 offset: const Offset(0, 3),
               ),
@@ -447,11 +447,11 @@ class _PlayerToken extends StatelessWidget {
             decoration: BoxDecoration(
               color: isSelected
                   ? const Color(0xFFFFD700)
-                  : Colors.black.withValues(alpha: 0.72),
+                  : Colors.black.withOpacity(0.72),
               borderRadius: BorderRadius.circular(8),
               border: isSelected
                   ? null
-                  : Border.all(color: Colors.white.withValues(alpha: 0.15), width: 0.5),
+                  : Border.all(color: Colors.white.withOpacity(0.15), width: 0.5),
             ),
             child: Text(
               firstName,
@@ -471,7 +471,7 @@ class _PlayerToken extends StatelessWidget {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
               decoration: BoxDecoration(
-                color: posColor.withValues(alpha: 0.85),
+                color: posColor.withOpacity(0.85),
                 borderRadius: BorderRadius.circular(4),
               ),
               child: Text(
@@ -495,7 +495,7 @@ class _PlayerToken extends StatelessWidget {
       gradient: LinearGradient(
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
-        colors: [color.withValues(alpha: 0.3), color.withValues(alpha: 0.15)],
+        colors: [color.withOpacity(0.3), color.withOpacity(0.15)],
       ),
     ),
     child: Center(child: Text(txt,
@@ -530,7 +530,7 @@ class _SubstitutionSheet extends StatelessWidget {
         Center(child: Container(
           width: 36, height: 4,
           decoration: BoxDecoration(
-            color: _sub(context).withValues(alpha: 0.3),
+            color: _sub(context).withOpacity(0.3),
             borderRadius: BorderRadius.circular(2),
           ),
         )),
@@ -540,7 +540,7 @@ class _SubstitutionSheet extends StatelessWidget {
         Row(children: [
           Container(
             width: 36, height: 36,
-            decoration: BoxDecoration(color: _kGreen.withValues(alpha: 0.1), shape: BoxShape.circle),
+            decoration: BoxDecoration(color: _kGreen.withOpacity(0.1), shape: BoxShape.circle),
             child: const Icon(Icons.swap_horiz_rounded, color: _kGreen, size: 20),
           ),
           const SizedBox(width: 10),
@@ -562,7 +562,7 @@ class _SubstitutionSheet extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 24),
             child: Column(children: [
-              Icon(Icons.sports_soccer_rounded, size: 36, color: _sub(context).withValues(alpha: 0.3)),
+              Icon(Icons.sports_soccer_rounded, size: 36, color: _sub(context).withOpacity(0.3)),
               const SizedBox(height: 8),
               Text('Aucun joueur disponible sur le banc',
                   style: TextStyle(color: _sub(context), fontSize: 13)),
@@ -584,7 +584,7 @@ class _SubstitutionSheet extends StatelessWidget {
                     decoration: BoxDecoration(
                       color: _bg(context),
                       borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: _sub(context).withValues(alpha: 0.1)),
+                      border: Border.all(color: _sub(context).withOpacity(0.1)),
                     ),
                     child: Row(children: [
                       // Avatar
@@ -598,7 +598,7 @@ class _SubstitutionSheet extends StatelessWidget {
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
                             decoration: BoxDecoration(
-                              color: m.position.color.withValues(alpha: 0.12),
+                              color: m.position.color.withOpacity(0.12),
                               borderRadius: BorderRadius.circular(6),
                             ),
                             child: Text(m.position.label,
@@ -655,8 +655,8 @@ class _MiniAvatar extends StatelessWidget {
       width: size, height: size,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        border: Border.all(color: member.position.color.withValues(alpha: 0.5), width: 2),
-        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.15), blurRadius: 6)],
+        border: Border.all(color: member.position.color.withOpacity(0.5), width: 2),
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.15), blurRadius: 6)],
       ),
       child: ClipOval(
         child: member.avatarUrl.isNotEmpty
@@ -668,7 +668,7 @@ class _MiniAvatar extends StatelessWidget {
   }
 
   Widget _fallback(String initials) => Container(
-    color: teamColor.withValues(alpha: 0.15),
+    color: teamColor.withOpacity(0.15),
     child: Center(child: Text(initials,
         style: GoogleFonts.orbitron(fontSize: size * 0.25, fontWeight: FontWeight.w900, color: teamColor))),
   );
@@ -702,7 +702,7 @@ class _MiniPitchPainter extends CustomPainter {
     canvas.drawRRect(RRect.fromRectAndRadius(Offset.zero & size, const Radius.circular(6)), bg);
 
     final line = Paint()
-      ..color = Colors.white.withValues(alpha: 0.5)
+      ..color = Colors.white.withOpacity(0.5)
       ..strokeWidth = 0.7
       ..style = PaintingStyle.stroke;
 
@@ -715,7 +715,7 @@ class _MiniPitchPainter extends CustomPainter {
     canvas.drawRect(Rect.fromLTWH((size.width - gw) / 2, size.height - gh, gw, gh), line);
 
     final dots = _fDots[formation] ?? _fDots['4-3-3']!;
-    final dot = Paint()..color = selected ? Colors.white : Colors.white.withValues(alpha: 0.85);
+    final dot = Paint()..color = selected ? Colors.white : Colors.white.withOpacity(0.85);
     for (final d in dots) {
       canvas.drawCircle(Offset(d[0] * size.width, d[1] * size.height), 2.2, dot);
     }
@@ -747,7 +747,7 @@ class _ModernPitchPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final p = Paint()
-      ..color = Colors.white.withValues(alpha: 0.55)
+      ..color = Colors.white.withOpacity(0.55)
       ..strokeWidth = 1.5
       ..style = PaintingStyle.stroke;
 
@@ -762,7 +762,7 @@ class _ModernPitchPainter extends CustomPainter {
 
     // Cercle central
     canvas.drawCircle(Offset(w / 2, h / 2), h * 0.1, p);
-    canvas.drawCircle(Offset(w / 2, h / 2), 2, Paint()..color = Colors.white.withValues(alpha: 0.55));
+    canvas.drawCircle(Offset(w / 2, h / 2), 2, Paint()..color = Colors.white.withOpacity(0.55));
 
     // Surface de réparation haut
     final bw = w * 0.55;

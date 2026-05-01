@@ -32,7 +32,6 @@ class _AuthScreenState extends State<AuthScreen>
   final _nomController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
-  DateTime? _birthDate;
   bool _obscurePassword = true;
 
   @override
@@ -67,37 +66,8 @@ class _AuthScreenState extends State<AuthScreen>
     _animController.reset();
     setState(() {
       _isLogin = !_isLogin;
-      _birthDate = null;
     });
     _animController.forward();
-  }
-
-  Future<void> _pickBirthDate() async {
-    final now = DateTime.now();
-    final picked = await showDatePicker(
-      context: context,
-      initialDate: _birthDate ?? DateTime(now.year - 18),
-      firstDate: DateTime(1950),
-      lastDate: DateTime(now.year - 5),
-      helpText: 'Date de naissance',
-      builder: (ctx, child) => Theme(
-        data: Theme.of(ctx).copyWith(
-          colorScheme: const ColorScheme.light(
-            primary: kGreen,
-            onPrimary: Colors.white,
-          ),
-        ),
-        child: child!,
-      ),
-    );
-    if (picked != null) setState(() => _birthDate = picked);
-  }
-
-  String get _birthDateLabel {
-    if (_birthDate == null) return 'Date de naissance';
-    return '${_birthDate!.day.toString().padLeft(2, '0')}/'
-        '${_birthDate!.month.toString().padLeft(2, '0')}/'
-        '${_birthDate!.year}';
   }
 
   void _submit() async {
@@ -125,13 +95,6 @@ class _AuthScreenState extends State<AuthScreen>
         );
       } else {
         // --- MODE INSCRIPTION ---
-        if (_birthDate == null) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Veuillez sélectionner votre date de naissance')),
-          );
-          return;
-        }
-
         await authProvider.signup(phone);
         if (!mounted) return;
 
@@ -143,7 +106,6 @@ class _AuthScreenState extends State<AuthScreen>
               firstName: _prenomController.text.trim(),
               lastName: _nomController.text.trim(),
               password: _passwordController.text.trim(),
-              birthDate: _birthDate,
               isNewUser: true,
             ),
             transitionsBuilder: (_, animation, _, child) => SlideTransition(
@@ -225,7 +187,7 @@ class _AuthScreenState extends State<AuthScreen>
                             ? 'Entre tes identifiants pour te connecter'
                             : 'Remplis les informations pour créer ton compte',
                         style: TextStyle(
-                          color: Colors.black.withValues(alpha: 0.50),
+                          color: Colors.black.withOpacity(0.50),
                           fontSize: 13,
                           height: 1.5,
                         ),
@@ -264,43 +226,6 @@ class _AuthScreenState extends State<AuthScreen>
                           }
                           return null;
                         },
-                      ),
-                      const SizedBox(height: 14),
-                      // Champ date de naissance
-                      GestureDetector(
-                        onTap: _pickBirthDate,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 16),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFF4F4F4),
-                            borderRadius: BorderRadius.circular(14),
-                            border: Border.all(
-                              color: _birthDate != null ? kGreen : Colors.transparent,
-                              width: 1.5,
-                            ),
-                          ),
-                          child: Row(
-                            children: [
-                              Icon(Icons.cake_rounded,
-                                  color: _birthDate != null ? kGreen : kGreen.withValues(alpha: 0.6),
-                                  size: 22),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Text(
-                                  _birthDateLabel,
-                                  style: TextStyle(
-                                    fontSize: 15,
-                                    color: _birthDate != null
-                                        ? Colors.black87
-                                        : Colors.black.withValues(alpha: 0.45),
-                                  ),
-                                ),
-                              ),
-                              Icon(Icons.keyboard_arrow_down_rounded,
-                                  color: kGreen.withValues(alpha: 0.7), size: 20),
-                            ],
-                          ),
-                        ),
                       ),
                       const SizedBox(height: 14),
                     ],
@@ -413,7 +338,7 @@ class _AuthScreenState extends State<AuthScreen>
                                   ? 'Pas encore de compte ? '
                                   : 'Déjà un compte ? ',
                               style: TextStyle(
-                                  color: Colors.black.withValues(alpha: 0.5)),
+                                  color: Colors.black.withOpacity(0.5)),
                             ),
                             TextSpan(
                               text: _isLogin ? 'S\'inscrire' : 'Se connecter',
@@ -469,13 +394,13 @@ class _InputField extends StatelessWidget {
       autovalidateMode: AutovalidateMode.onUserInteraction,
       decoration: InputDecoration(
         labelText: label,
-        labelStyle: TextStyle(color: Colors.black.withValues(alpha: 0.45)),
+        labelStyle: TextStyle(color: Colors.black.withOpacity(0.45)),
         prefixIcon: Icon(icon, color: kGreen),
         suffixIcon: isPassword
             ? IconButton(
                 icon: Icon(
                   obscureText ? Icons.visibility_off_rounded : Icons.visibility_rounded,
-                  color: kGreen.withValues(alpha: 0.6),
+                  color: kGreen.withOpacity(0.6),
                 ),
                 onPressed: onToggleVisibility,
               )
@@ -530,7 +455,7 @@ class _PhoneField extends StatelessWidget {
       autovalidateMode: AutovalidateMode.onUserInteraction,
       decoration: InputDecoration(
         labelText: 'Numéro de téléphone',
-        labelStyle: TextStyle(color: Colors.black.withValues(alpha: 0.45)),
+        labelStyle: TextStyle(color: Colors.black.withOpacity(0.45)),
         prefixIcon: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 12),
           child: Row(
@@ -590,7 +515,6 @@ class OtpScreen extends StatefulWidget {
   final String firstName;
   final String lastName;
   final String password;
-  final DateTime? birthDate;
   final bool isNewUser;
 
   const OtpScreen({
@@ -599,7 +523,6 @@ class OtpScreen extends StatefulWidget {
     this.firstName = '',
     this.lastName = '',
     this.password = '',
-    this.birthDate,
     this.isNewUser = false,
   });
 
@@ -642,6 +565,22 @@ class _OtpScreenState extends State<OtpScreen> {
       }
       return true;
     });
+  }
+
+  void _resend() async {
+    if (!_canResend) return;
+    try {
+      final authProvider = context.read<AuthProvider>();
+      await authProvider.resendOtp(widget.phone);
+      _startCountdown();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Un nouveau code a été envoyé')),
+        );
+      }
+    } catch (e) {
+      setState(() => _errorMessage = e.toString());
+    }
   }
 
   void _onDigit(String val, int index) {
@@ -687,7 +626,6 @@ class _OtpScreenState extends State<OtpScreen> {
             password: widget.password,
             firstName: widget.firstName,
             lastName: widget.lastName,
-            birthDate: widget.birthDate?.toIso8601String(),
           );
 
         }
@@ -762,10 +700,10 @@ class _OtpScreenState extends State<OtpScreen> {
               const SizedBox(height: 10),
 
               Text(
-                'Code envoyé au\n🇸🇳 +221 ${widget.phone}',
+                'Code envoyé au\n🇸🇳 ${widget.phone}',
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  color: Colors.black.withValues(alpha: 0.50),
+                  color: Colors.black.withOpacity(0.50),
                   fontSize: 14,
                   height: 1.6,
                 ),
@@ -793,8 +731,10 @@ class _OtpScreenState extends State<OtpScreen> {
                         fontWeight: FontWeight.w800,
                         color: kGreen,
                       ),
+                      textAlignVertical: TextAlignVertical.center,
                       decoration: InputDecoration(
                         counterText: '',
+                        contentPadding: EdgeInsets.zero,
                         filled: true,
                         fillColor: const Color(0xFFF4F4F4),
                         border: OutlineInputBorder(
@@ -862,11 +802,11 @@ class _OtpScreenState extends State<OtpScreen> {
 
               // Renvoyer
               GestureDetector(
-                onTap: _canResend ? _startCountdown : null,
+                onTap: _canResend ? _resend : null,
                 child: AnimatedDefaultTextStyle(
                   duration: const Duration(milliseconds: 300),
                   style: TextStyle(
-                    color: _canResend ? kGreen : Colors.black.withValues(alpha: 0.35),
+                    color: _canResend ? kGreen : Colors.black.withOpacity(0.35),
                     fontWeight: FontWeight.w700,
                     fontSize: 14,
                     decoration: _canResend ? TextDecoration.underline : TextDecoration.none,

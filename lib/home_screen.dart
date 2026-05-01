@@ -10,6 +10,8 @@ import 'reservations_screen.dart';
 import 'chat_screen.dart';
 import 'profile_screen.dart';
 import 'notifications_screen.dart';
+import 'providers/auth_provider.dart';
+import 'providers/notification_provider.dart';
 import 'team_screen.dart';
 import 'social_feed_screen.dart';
 import 'shop_screen.dart';
@@ -22,8 +24,8 @@ bool _isDark(BuildContext c) => Theme.of(c).brightness == Brightness.dark;
 Color _card(BuildContext c) => Theme.of(c).cardColor;
 Color _txt(BuildContext c)  => Theme.of(c).colorScheme.onSurface;
 Color _sub(BuildContext c)  => _isDark(c)
-    ? const Color(0xFFF0EBE0).withValues(alpha: 0.5)
-    : Colors.black.withValues(alpha: 0.45);
+    ? const Color(0xFFF0EBE0).withOpacity(0.5)
+    : Colors.black.withOpacity(0.45);
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -92,7 +94,7 @@ class BottomNavBar extends StatelessWidget {
                   borderRadius: BorderRadius.circular(36),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withValues(alpha: dark ? 0.4 : 0.10),
+                      color: Colors.black.withOpacity(dark ? 0.4 : 0.10),
                       blurRadius: 20,
                       offset: const Offset(0, 4),
                     ),
@@ -128,7 +130,7 @@ class BottomNavBar extends StatelessWidget {
                     ),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.12),
+                        color: Colors.black.withOpacity(0.12),
                         blurRadius: 12,
                         offset: const Offset(0, 4),
                       ),
@@ -185,8 +187,8 @@ class NavItem extends StatelessWidget {
           ),
           if (badge > 0)
             Positioned(
-              top: 4,
-              right: 4,
+              top: -2,
+              right: -2,
               child: Container(
                 width: 16,
                 height: 16,
@@ -213,11 +215,27 @@ class NavItem extends StatelessWidget {
 // PAGE ACCUEIL
 // ---------------------------------------------------------------------------
 
-class _HomePage extends StatelessWidget {
+class _HomePage extends StatefulWidget {
   const _HomePage();
 
   @override
+  State<_HomePage> createState() => _HomePageState();
+}
+
+class _HomePageState extends State<_HomePage> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final tp = context.read<TerrainProvider>();
+      tp.loadTerrains();
+      tp.updateLocation();
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final terrains = context.watch<TerrainProvider>().terrains;
     final topPadding = MediaQuery.of(context).padding.top;
     return Column(
         children: [
@@ -243,8 +261,8 @@ class _HomePage extends StatelessWidget {
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
                           colors: [
-                            kGreen.withValues(alpha: 0.92),
-                            kGreen.withValues(alpha: 0.55),
+                            kGreen.withOpacity(0.92),
+                            kGreen.withOpacity(0.55),
                             Colors.transparent,
                           ],
                           stops: const [0.0, 0.5, 0.85],
@@ -270,7 +288,7 @@ class _HomePage extends StatelessWidget {
                                 Text(
                                   'Bonjour 👋',
                                   style: TextStyle(
-                                    color: Colors.white.withValues(alpha: 0.75),
+                                    color: Colors.white.withOpacity(0.75),
                                     fontSize: 13,
                                   ),
                                 ),
@@ -292,48 +310,53 @@ class _HomePage extends StatelessWidget {
                                 final isDark = mode == ThemeMode.dark;
                                 return Row(
                                   children: [
-                                    // Icône notifications
-                                    ValueListenableBuilder<int>(
-                                      valueListenable: unreadNotifNotifier,
-                                      builder: (ctx, count, __) => GestureDetector(
-                                        onTap: () {
-                                          unreadNotifNotifier.value = 0;
-                                          Navigator.push(ctx,
-                                              MaterialPageRoute(builder: (_) => const NotificationsScreen()));
-                                        },
-                                        child: Stack(
-                                          clipBehavior: Clip.none,
-                                          children: [
-                                            Container(
-                                              width: 42, height: 42,
-                                              decoration: const BoxDecoration(
-                                                color: Colors.white,
-                                                shape: BoxShape.circle,
-                                              ),
-                                              child: const Icon(Icons.notifications_none_rounded, color: kGreen, size: 22),
-                                            ),
-                                            if (count > 0)
-                                              Positioned(
-                                                top: 4, right: 4,
-                                                child: Container(
-                                                  width: 14, height: 14,
-                                                  decoration: BoxDecoration(
-                                                    color: Colors.red,
-                                                    shape: BoxShape.circle,
-                                                    border: Border.all(color: Colors.white, width: 1.5),
-                                                  ),
-                                                  child: Center(
-                                                    child: Text(
-                                                      count > 9 ? '9+' : '$count',
-                                                      style: const TextStyle(color: Colors.white, fontSize: 7, fontWeight: FontWeight.w800),
-                                                    ),
-                                                  ),
-                                                ),
-                                              ),
-                                          ],
+                            // Icône notifications
+                            Consumer2<NotificationProvider, AuthProvider>(
+                              builder: (ctx, notifProv, authProv, __) {
+                                final count = notifProv.unreadCount;
+                                return GestureDetector(
+                                  onTap: () {
+                                    final token = authProv.token;
+                                    if (token != null) {
+                                      notifProv.markAllAsRead(token);
+                                    }
+                                    Navigator.push(ctx,
+                                        MaterialPageRoute(builder: (_) => const NotificationsScreen()));
+                                  },
+                                  child: Stack(
+                                    clipBehavior: Clip.none,
+                                    children: [
+                                      Container(
+                                        width: 42, height: 42,
+                                        decoration: const BoxDecoration(
+                                          color: Colors.white,
+                                          shape: BoxShape.circle,
                                         ),
+                                        child: const Icon(Icons.notifications_none_rounded, color: kGreen, size: 22),
                                       ),
-                                    ),
+                                      if (count > 0)
+                                        Positioned(
+                                          top: -1, right: -1,
+                                          child: Container(
+                                            width: 14, height: 14,
+                                            decoration: BoxDecoration(
+                                              color: Colors.red,
+                                              shape: BoxShape.circle,
+                                              border: Border.all(color: Colors.white, width: 1.5),
+                                            ),
+                                            child: Center(
+                                              child: Text(
+                                                count > 9 ? '9+' : '$count',
+                                                style: const TextStyle(color: Colors.white, fontSize: 7, fontWeight: FontWeight.w800),
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                    ],
+                                  ),
+                                );
+                              },
+                            ),
                                     const SizedBox(width: 8),
                                     // Toggle thème
                                     GestureDetector(
@@ -398,11 +421,10 @@ class _HomePage extends StatelessWidget {
           Expanded(
             child: CustomScrollView(
               slivers: [
-
                 // Actions rapides
                 SliverToBoxAdapter(
                   child: Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 28, 20, 10),
+                    padding: const EdgeInsets.fromLTRB(20, 24, 20, 10),
                     child: Text(
                       'Actions rapides',
                       style: GoogleFonts.orbitron(
@@ -499,14 +521,15 @@ class _HomePage extends StatelessWidget {
                         GestureDetector(
                           onTap: () => Navigator.push(context,
                               MaterialPageRoute(builder: (_) => const TerrainListScreen())),
-                          child: Text('Voir tout',
+                          child: const Text('Voir tout',
                               style: TextStyle(color: kGreen, fontSize: 12, fontWeight: FontWeight.w700)),
                         ),
                       ],
                     ),
                   ),
                 ),
-                SliverToBoxAdapter(child: _TerrainHorizontalList()),
+                const SliverToBoxAdapter(child: _TerrainHorizontalList()),
+
 
                 // Boutique foot
                 SliverToBoxAdapter(
@@ -541,6 +564,153 @@ class _HomePage extends StatelessWidget {
             ),
           ),
         ],
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// TERRAIN HORIZONTAL LIST
+// ---------------------------------------------------------------------------
+
+class _TerrainHorizontalList extends StatefulWidget {
+  const _TerrainHorizontalList();
+
+  @override
+  State<_TerrainHorizontalList> createState() => _TerrainHorizontalListState();
+}
+
+class _TerrainHorizontalListState extends State<_TerrainHorizontalList> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<TerrainProvider>().loadTerrains();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final terrainList = context.watch<TerrainProvider>().terrains;
+    final isLoading = context.watch<TerrainProvider>().isLoading;
+
+    if (isLoading && terrainList.isEmpty) {
+      return const SizedBox(
+        height: 190,
+        child: Center(child: CircularProgressIndicator()),
+      );
+    }
+    
+    if (terrainList.isEmpty) {
+      return const SizedBox(height: 190, child: Center(child: Text("Aucun terrain disponible")));
+    }
+
+    return SizedBox(
+      height: 190,
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        itemCount: terrainList.length,
+        itemBuilder: (_, i) {
+          final t = terrainList[i];
+          return GestureDetector(
+            onTap: () => Navigator.push(context,
+                MaterialPageRoute(builder: (_) => TerrainDetailScreen(terrain: t))),
+            child: Container(
+              width: 160,
+              margin: const EdgeInsets.only(right: 12),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(18),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.12),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(18),
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    Image.network(t.imageUrl, fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => Container(color: kGreen.withOpacity(0.2))),
+                    Container(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [Colors.transparent, Colors.black.withOpacity(0.75)],
+                        ),
+                      ),
+                    ),
+                    Positioned(
+                      top: 8, right: 8,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withOpacity(0.5),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.star_rounded, color: Color(0xFFFFD700), size: 11),
+                            const SizedBox(width: 3),
+                            Text('${t.rating}',
+                                style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w700)),
+                          ],
+                        ),
+                      ),
+                    ),
+                    Positioned(
+                      left: 10, right: 10, bottom: 10,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(t.name,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                  color: Colors.white, fontWeight: FontWeight.w800, fontSize: 12.5)),
+                          const SizedBox(height: 2),
+                          Text(t.address,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(color: Colors.white.withOpacity(0.7), fontSize: 10.5)),
+                          if (context.read<TerrainProvider>().userPosition != null)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 2),
+                              child: Text(
+                                '${(context.read<TerrainProvider>().distanceTo(t) / 1000).toStringAsFixed(1)} km',
+                                style: const TextStyle(
+                                  color: kGreen,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w800,
+                                ),
+                              ),
+                            ),
+                          const SizedBox(height: 6),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: kGreen,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text(t.priceLabel,
+                                style: const TextStyle(
+                                    color: Colors.white, fontSize: 10, fontWeight: FontWeight.w800)),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        },
+      ),
     );
   }
 }
@@ -592,134 +762,6 @@ class _QuickAction extends StatelessWidget {
   }
 }
 
-// ---------------------------------------------------------------------------
-// TERRAIN HORIZONTAL LIST
-// ---------------------------------------------------------------------------
-
-class _TerrainHorizontalList extends StatefulWidget {
-  @override
-  State<_TerrainHorizontalList> createState() => _TerrainHorizontalListState();
-}
-
-class _TerrainHorizontalListState extends State<_TerrainHorizontalList> {
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<TerrainProvider>().loadTerrains();
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final terrainList = context.watch<TerrainProvider>().terrains;
-    final isLoading = context.watch<TerrainProvider>().isLoading;
-
-    if (isLoading && terrainList.isEmpty) {
-      return const SizedBox(
-        height: 190,
-        child: Center(child: CircularProgressIndicator()),
-      );
-    }
-
-    return SizedBox(
-      height: 190,
-      child: ListView.builder(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        itemCount: terrainList.length,
-        itemBuilder: (_, i) {
-          final t = terrainList[i];
-          return GestureDetector(
-            onTap: () => Navigator.push(context,
-                MaterialPageRoute(builder: (_) => TerrainDetailScreen(terrain: t))),
-            child: Container(
-              width: 160,
-              margin: const EdgeInsets.only(right: 12),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(18),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.12),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(18),
-                child: Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    Image.network(t.imageUrl, fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => Container(color: kGreen.withValues(alpha: 0.2))),
-                    Container(
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
-                          colors: [Colors.transparent, Colors.black.withValues(alpha: 0.75)],
-                        ),
-                      ),
-                    ),
-                    Positioned(
-                      top: 8, right: 8,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
-                        decoration: BoxDecoration(
-                          color: Colors.black.withValues(alpha: 0.5),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(Icons.star_rounded, color: Color(0xFFFFD700), size: 11),
-                            const SizedBox(width: 3),
-                            Text('${t.rating}',
-                                style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w700)),
-                          ],
-                        ),
-                      ),
-                    ),
-                    Positioned(
-                      left: 10, right: 10, bottom: 10,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(t.name,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                  color: Colors.white, fontWeight: FontWeight.w800, fontSize: 12.5)),
-                          const SizedBox(height: 2),
-                          Text(t.address,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(color: Colors.white.withValues(alpha: 0.7), fontSize: 10.5)),
-                          const SizedBox(height: 6),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: kGreen,
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Text(t.priceLabel,
-                                style: const TextStyle(
-                                    color: Colors.white, fontSize: 10, fontWeight: FontWeight.w800)),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          );
-        },
-      ),
-    );
-  }
-}
 
 // ---------------------------------------------------------------------------
 // FEED PREVIEW (kept for reference, not used in home)
@@ -791,7 +833,7 @@ class _FeedPreviewCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(18),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: _isDark(context) ? 0.3 : 0.08),
+              color: Colors.black.withOpacity(_isDark(context) ? 0.3 : 0.08),
               blurRadius: 12,
               offset: const Offset(0, 4),
             ),
@@ -811,7 +853,7 @@ class _FeedPreviewCard extends StatelessWidget {
                     fit: BoxFit.cover,
                     errorBuilder: (_, __, ___) => Container(
                       width: 200, height: 140,
-                      color: item.color.withValues(alpha: 0.2),
+                      color: item.color.withOpacity(0.2),
                     ),
                   ),
                 ),
@@ -821,7 +863,7 @@ class _FeedPreviewCard extends StatelessWidget {
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
-                      color: Colors.black.withValues(alpha: 0.55),
+                      color: Colors.black.withOpacity(0.55),
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Row(
@@ -960,7 +1002,7 @@ class _ShopSection extends StatelessWidget {
               borderRadius: BorderRadius.circular(18),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: _isDark(context) ? 0.3 : 0.07),
+                  color: Colors.black.withOpacity(_isDark(context) ? 0.3 : 0.07),
                   blurRadius: 10, offset: const Offset(0, 3),
                 ),
               ],
@@ -977,7 +1019,7 @@ class _ShopSection extends StatelessWidget {
                         p.imageUrl, width: 148, height: 110, fit: BoxFit.cover,
                         errorBuilder: (_, __, ___) => Container(
                           width: 148, height: 110,
-                          color: p.accentColor.withValues(alpha: 0.15),
+                          color: p.accentColor.withOpacity(0.15),
                           child: Icon(p.categoryIcon, color: p.accentColor, size: 36),
                         ),
                       ),
@@ -1002,7 +1044,7 @@ class _ShopSection extends StatelessWidget {
                       child: Container(
                         width: 28, height: 28,
                         decoration: BoxDecoration(
-                          color: Colors.black.withValues(alpha: 0.45),
+                          color: Colors.black.withOpacity(0.45),
                           shape: BoxShape.circle,
                         ),
                         child: Icon(p.categoryIcon, color: Colors.white, size: 14),
@@ -1115,7 +1157,7 @@ class _FlashDealsSection extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFE65100).withValues(alpha: 0.12),
+                  color: const Color(0xFFE65100).withOpacity(0.12),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: const Text('PUB',
@@ -1156,10 +1198,10 @@ class _DealTile extends StatelessWidget {
       decoration: BoxDecoration(
         color: _card(context),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: deal.accentColor.withValues(alpha: 0.2)),
+        border: Border.all(color: deal.accentColor.withOpacity(0.2)),
         boxShadow: [
           BoxShadow(
-            color: deal.accentColor.withValues(alpha: 0.06),
+            color: deal.accentColor.withOpacity(0.06),
             blurRadius: 8, offset: const Offset(0, 2),
           ),
         ],
@@ -1170,7 +1212,7 @@ class _DealTile extends StatelessWidget {
           Container(
             width: 52, height: 52,
             decoration: BoxDecoration(
-              color: deal.accentColor.withValues(alpha: 0.12),
+              color: deal.accentColor.withOpacity(0.12),
               borderRadius: BorderRadius.circular(14),
             ),
             child: Icon(deal.icon, color: deal.accentColor, size: 26),
@@ -1337,7 +1379,7 @@ class _PromoBannerCarouselState extends State<_PromoBannerCarousel> {
             width: _current == i ? 20 : 6,
             height: 6,
             decoration: BoxDecoration(
-              color: _current == i ? kGreen : Colors.black.withValues(alpha: 0.15),
+              color: _current == i ? kGreen : Colors.black.withOpacity(0.15),
               borderRadius: BorderRadius.circular(3),
             ),
           )),
@@ -1385,7 +1427,7 @@ class _BannerCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(22),
           boxShadow: [
             BoxShadow(
-                color: data.accentColor.withValues(alpha: 0.25),
+                color: data.accentColor.withOpacity(0.25),
                 blurRadius: 18,
                 offset: const Offset(0, 6)),
           ],
@@ -1399,7 +1441,7 @@ class _BannerCard extends StatelessWidget {
                 data.imageUrl,
                 fit: BoxFit.cover,
                 errorBuilder: (_, e, s) =>
-                    Container(color: data.accentColor.withValues(alpha: 0.3)),
+                    Container(color: data.accentColor.withOpacity(0.3)),
               ),
               Container(
                 decoration: BoxDecoration(
@@ -1407,8 +1449,8 @@ class _BannerCard extends StatelessWidget {
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
                     colors: [
-                      Colors.black.withValues(alpha: 0.15),
-                      Colors.black.withValues(alpha: 0.75),
+                      Colors.black.withOpacity(0.15),
+                      Colors.black.withOpacity(0.75),
                     ],
                   ),
                 ),
@@ -1435,7 +1477,7 @@ class _BannerCard extends StatelessWidget {
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
                           decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.15),
+                            color: Colors.white.withOpacity(0.15),
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Row(
@@ -1460,7 +1502,7 @@ class _BannerCard extends StatelessWidget {
                     Text(data.subtitle,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: TextStyle(color: Colors.white.withValues(alpha: 0.75), fontSize: 11)),
+                        style: TextStyle(color: Colors.white.withOpacity(0.75), fontSize: 11)),
                     const SizedBox(height: 12),
                     Row(
                       children: [

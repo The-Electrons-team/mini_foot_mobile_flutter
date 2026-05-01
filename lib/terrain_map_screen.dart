@@ -17,25 +17,6 @@ const Color kGreen = Color(0xFF006F39);
 const Color kGreenLight = Color(0xFF00C264);
 const Color kDark = Color(0xFF1C1C1E);
 
-// ── Modèle local ─────────────────────────────────────────────────────────────
-class _Terrain {
-  final String name, address, price;
-  final double lat, lng, rating;
-  final String distance;
-  const _Terrain({
-    required this.name, required this.address, required this.price,
-    required this.lat, required this.lng,
-    this.rating = 4.5, this.distance = '2.0 km',
-  });
-}
-
-final List<_Terrain> _terrains = [
-  _Terrain(name: 'Terrain Dakar Arena',  address: 'Diamniadio, Dakar',    price: '5 000 F/h', rating: 4.8, distance: '4.0 km', lat: 14.7645, lng: -17.3660),
-  _Terrain(name: 'Stade Léopold Sédar', address: 'Plateau, Dakar',        price: '8 000 F/h', rating: 4.5, distance: '2.1 km', lat: 14.6760, lng: -17.4469),
-  _Terrain(name: 'Terrain Point E',      address: 'Point E, Dakar',        price: '6 500 F/h', rating: 4.7, distance: '1.3 km', lat: 14.6928, lng: -17.4571),
-  _Terrain(name: 'Terrain HLM',          address: 'HLM Grand Yoff, Dakar', price: '4 000 F/h', rating: 4.2, distance: '3.5 km', lat: 14.7120, lng: -17.4620),
-];
-
 // ── Écran principal ───────────────────────────────────────────────────────────
 class TerrainMapScreen extends StatefulWidget {
   const TerrainMapScreen({super.key});
@@ -48,10 +29,10 @@ class _TerrainMapScreenState extends State<TerrainMapScreen>
   final MapController _mapController = MapController();
   final TextEditingController _searchController = TextEditingController();
 
-  List<_Terrain> _filtered = List.from(_terrains);
+  List<Terrain> _filtered = [];
   LatLng? _myPosition;
   bool _locating = false;
-  _Terrain? _selectedTerrain;
+  Terrain? _selectedTerrain;
   List<LatLng> _routePoints = [];
   bool _loadingRoute = false;
   String? _routeDuration;
@@ -69,7 +50,30 @@ class _TerrainMapScreenState extends State<TerrainMapScreen>
     _pulseAnim = Tween<double>(begin: 0.5, end: 1.0).animate(
       CurvedAnimation(parent: _pulseCtrl, curve: Curves.easeInOut),
     );
+    
     _locateMe();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final provider = context.watch<TerrainProvider>();
+    // Si la liste change globalement (ex: recherche), on met à jour la carte
+    if (_filtered != provider.terrains) {
+      setState(() {
+        _filtered = provider.terrains;
+      });
+      // Si on a des résultats, on se déplace vers le premier
+      if (_filtered.isNotEmpty) {
+        final first = _filtered.first;
+        // On se déplace vers le premier résultat pour la visibilité
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          _mapController.move(LatLng(first.lat, first.lng), 14.5);
+          // On ne sélectionne plus automatiquement pour éviter d'afficher le bandeau
+          // _selectTerrain(first); 
+        });
+      }
+    }
   }
 
   @override
@@ -79,15 +83,33 @@ class _TerrainMapScreenState extends State<TerrainMapScreen>
   }
 
   void _search(String q) {
+    if (q.isEmpty) {
+      setState(() {
+        _filtered = context.read<TerrainProvider>().terrains;
+        _selectedTerrain = null;
+        _routePoints = [];
+      });
+      return;
+    }
+    final all = context.read<TerrainProvider>().terrains;
+    final results = all
+        .where((t) =>
+            t.name.toLowerCase().contains(q.toLowerCase()) ||
+            t.address.toLowerCase().contains(q.toLowerCase()))
+        .toList();
+    
     setState(() {
       _selectedTerrain = null;
       _routePoints = [];
-      _filtered = _terrains
-          .where((t) =>
-              t.name.toLowerCase().contains(q.toLowerCase()) ||
-              t.address.toLowerCase().contains(q.toLowerCase()))
-          .toList();
+      _filtered = results;
     });
+
+    if (results.isNotEmpty) {
+      final t = results.first;
+      _mapController.move(LatLng(t.lat, t.lng), 14.5);
+      // On ne sélectionne plus automatiquement
+      // _selectTerrain(t); 
+    }
   }
 
   Future<void> _locateMe() async {
@@ -100,6 +122,10 @@ class _TerrainMapScreenState extends State<TerrainMapScreen>
         locationSettings: const LocationSettings(accuracy: LocationAccuracy.high),
       );
       if (!mounted) return;
+      
+      // Update global provider
+      context.read<TerrainProvider>().updateLocation();
+      
       final latlng = LatLng(pos.latitude, pos.longitude);
       setState(() { _myPosition = latlng; _locating = false; });
       _mapController.move(latlng, 13);
@@ -109,7 +135,7 @@ class _TerrainMapScreenState extends State<TerrainMapScreen>
     }
   }
 
-  Future<void> _fetchRoute(_Terrain terrain) async {
+  Future<void> _fetchRoute(Terrain terrain) async {
     if (_myPosition == null) return;
     setState(() { _loadingRoute = true; _routePoints = []; });
     try {
@@ -155,7 +181,7 @@ class _TerrainMapScreenState extends State<TerrainMapScreen>
     }
   }
 
-  Future<void> _openNavigation(_Terrain terrain) async {
+  Future<void> _openNavigation(Terrain terrain) async {
     final uri = Uri.parse(
       'https://www.google.com/maps/dir/?api=1'
       '&destination=${terrain.lat},${terrain.lng}'
@@ -166,7 +192,7 @@ class _TerrainMapScreenState extends State<TerrainMapScreen>
     }
   }
 
-  void _selectTerrain(_Terrain t) {
+  void _selectTerrain(Terrain t) {
     setState(() { _selectedTerrain = t; _routePoints = []; _routeDuration = null; _routeDistance = null; });
     _mapController.move(LatLng(t.lat, t.lng), 14);
     _fetchRoute(t);
@@ -174,7 +200,12 @@ class _TerrainMapScreenState extends State<TerrainMapScreen>
 
   @override
   Widget build(BuildContext context) {
+    final provider = context.watch<TerrainProvider>();
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    
+    // Use filtered list if searching, otherwise use all terrains from provider
+    final displayTerrains = _searchController.text.isNotEmpty ? _filtered : provider.terrains;
+
     return Scaffold(
       body: Stack(
         children: [
@@ -209,15 +240,15 @@ class _TerrainMapScreenState extends State<TerrainMapScreen>
                       strokeWidth: 5,
                       color: kGreenLight,
                       borderStrokeWidth: 2,
-                      borderColor: kGreen.withValues(alpha: 0.6),
+                      borderColor: kGreen.withOpacity(0.6),
                     ),
                   ],
                 ),
 
               // Marqueurs terrains
               MarkerLayer(
-                markers: _filtered.map((t) {
-                  final isSelected = _selectedTerrain?.name == t.name;
+                markers: displayTerrains.map((t) {
+                  final isSelected = _selectedTerrain?.id == t.id;
                   return Marker(
                     point: LatLng(t.lat, t.lng),
                     width: isSelected ? 100 : 80,
@@ -255,7 +286,7 @@ class _TerrainMapScreenState extends State<TerrainMapScreen>
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
                   colors: [
-                    (isDark ? Colors.black : Colors.black).withValues(alpha: 0.5),
+                    (isDark ? Colors.black : Colors.black).withOpacity(0.5),
                     Colors.transparent,
                   ],
                 ),
@@ -274,12 +305,12 @@ class _TerrainMapScreenState extends State<TerrainMapScreen>
                       height: 50,
                       decoration: BoxDecoration(
                         color: isDark
-                            ? kDark.withValues(alpha: 0.92)
-                            : Colors.white.withValues(alpha: 0.95),
+                            ? kDark.withOpacity(0.92)
+                            : Colors.white.withOpacity(0.95),
                         borderRadius: BorderRadius.circular(25),
-                        border: Border.all(color: kGreen.withValues(alpha: 0.4), width: 1),
+                        border: Border.all(color: kGreen.withOpacity(0.4), width: 1),
                         boxShadow: [
-                          BoxShadow(color: Colors.black.withValues(alpha: 0.2), blurRadius: 12, offset: const Offset(0, 4)),
+                          BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 12, offset: const Offset(0, 4)),
                         ],
                       ),
                       child: TextField(
@@ -289,7 +320,7 @@ class _TerrainMapScreenState extends State<TerrainMapScreen>
                         decoration: InputDecoration(
                           hintText: 'Rechercher un terrain...',
                           hintStyle: TextStyle(
-                            color: isDark ? Colors.white.withValues(alpha: 0.4) : Colors.black.withValues(alpha: 0.35),
+                            color: isDark ? Colors.white.withOpacity(0.4) : Colors.black.withOpacity(0.35),
                             fontSize: 14,
                           ),
                           prefixIcon: Icon(Icons.search_rounded, color: kGreen, size: 22),
@@ -315,10 +346,10 @@ class _TerrainMapScreenState extends State<TerrainMapScreen>
                   decoration: BoxDecoration(
                     color: kGreen,
                     borderRadius: BorderRadius.circular(20),
-                    boxShadow: [BoxShadow(color: kGreen.withValues(alpha: 0.4), blurRadius: 8)],
+                    boxShadow: [BoxShadow(color: kGreen.withOpacity(0.4), blurRadius: 8)],
                   ),
                   child: Text(
-                    '${_filtered.length} terrain${_filtered.length > 1 ? 's' : ''}',
+                    '${displayTerrains.length} terrain${displayTerrains.length > 1 ? 's' : ''}',
                     style: GoogleFonts.orbitron(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w700),
                   ),
                 ),
@@ -358,8 +389,8 @@ class _TerrainMapScreenState extends State<TerrainMapScreen>
                   decoration: BoxDecoration(
                     color: isDark ? kDark : Colors.white,
                     borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: kGreen.withValues(alpha: 0.4)),
-                    boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.15), blurRadius: 10)],
+                    border: Border.all(color: kGreen.withOpacity(0.4)),
+                    boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.15), blurRadius: 10)],
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
@@ -405,7 +436,7 @@ class _TerrainMapScreenState extends State<TerrainMapScreen>
 
 // ── Marqueur terrain ──────────────────────────────────────────────────────────
 class _TerrainMarker extends StatelessWidget {
-  final _Terrain terrain;
+  final Terrain terrain;
   final bool isSelected;
   const _TerrainMarker({required this.terrain, required this.isSelected});
 
@@ -440,7 +471,7 @@ class _UserMarker extends StatelessWidget {
             height: 60 * pulseAnim.value,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: Colors.blue.withValues(alpha: 0.15 * (1 - pulseAnim.value + 0.5)),
+              color: Colors.blue.withOpacity(0.15 * (1 - pulseAnim.value + 0.5)),
             ),
           ),
           // Cercle pulse intermédiaire
@@ -449,7 +480,7 @@ class _UserMarker extends StatelessWidget {
             height: 36,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: Colors.blue.withValues(alpha: 0.2),
+              color: Colors.blue.withOpacity(0.2),
             ),
           ),
           // Point central
@@ -460,7 +491,7 @@ class _UserMarker extends StatelessWidget {
               color: Colors.blue,
               shape: BoxShape.circle,
               border: Border.all(color: Colors.white, width: 3),
-              boxShadow: [BoxShadow(color: Colors.blue.withValues(alpha: 0.6), blurRadius: 8, spreadRadius: 2)],
+              boxShadow: [BoxShadow(color: Colors.blue.withOpacity(0.6), blurRadius: 8, spreadRadius: 2)],
             ),
           ),
         ],
@@ -471,7 +502,7 @@ class _UserMarker extends StatelessWidget {
 
 // ── Card terrain sélectionné ──────────────────────────────────────────────────
 class _TerrainCard extends StatelessWidget {
-  final _Terrain terrain;
+  final Terrain terrain;
   final String? routeDuration;
   final String? routeDistance;
   final bool hasRoute;
@@ -493,18 +524,19 @@ class _TerrainCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final cardBg = isDark ? kDark : Colors.white;
     final textPrimary = isDark ? Colors.white : const Color(0xFF1A1A1A);
-    final textSecondary = isDark ? Colors.white.withValues(alpha: 0.5) : Colors.black.withValues(alpha: 0.45);
-    final dividerColor = isDark ? Colors.white.withValues(alpha: 0.08) : Colors.black.withValues(alpha: 0.08);
-    final chipBg = isDark ? Colors.white.withValues(alpha: 0.06) : Colors.black.withValues(alpha: 0.05);
+    final textSecondary = isDark ? Colors.white.withOpacity(0.5) : Colors.black.withOpacity(0.45);
+    final chipBg = isDark ? Colors.white.withOpacity(0.06) : Colors.black.withOpacity(0.05);
+    
+    final distance = (context.read<TerrainProvider>().distanceTo(terrain) / 1000).toStringAsFixed(1);
 
     return Container(
       decoration: BoxDecoration(
         color: cardBg,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: kGreen.withValues(alpha: 0.25), width: 1),
+        border: Border.all(color: kGreen.withOpacity(0.25), width: 1),
         boxShadow: [
-          BoxShadow(color: Colors.black.withValues(alpha: isDark ? 0.5 : 0.15), blurRadius: 20, offset: const Offset(0, 6)),
-          BoxShadow(color: kGreen.withValues(alpha: 0.08), blurRadius: 20),
+          BoxShadow(color: Colors.black.withOpacity(isDark ? 0.5 : 0.15), blurRadius: 20, offset: const Offset(0, 6)),
+          BoxShadow(color: kGreen.withOpacity(0.08), blurRadius: 20),
         ],
       ),
       child: Column(
@@ -518,9 +550,9 @@ class _TerrainCard extends StatelessWidget {
                 Container(
                   width: 46, height: 46,
                   decoration: BoxDecoration(
-                    color: kGreen.withValues(alpha: 0.12),
+                    color: kGreen.withOpacity(0.12),
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: kGreen.withValues(alpha: 0.3)),
+                    border: Border.all(color: kGreen.withOpacity(0.3)),
                   ),
                   child: Padding(
                     padding: const EdgeInsets.all(6),
@@ -557,9 +589,9 @@ class _TerrainCard extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: kGreen,
                     borderRadius: BorderRadius.circular(10),
-                    boxShadow: [BoxShadow(color: kGreen.withValues(alpha: 0.4), blurRadius: 8)],
+                    boxShadow: [BoxShadow(color: kGreen.withOpacity(0.4), blurRadius: 8)],
                   ),
-                  child: Text(terrain.price,
+                  child: Text('${terrain.pricePerHour} F/h',
                     style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 11)),
                 ),
               ],
@@ -573,7 +605,7 @@ class _TerrainCard extends StatelessWidget {
               children: [
                 _StatChip(icon: Icons.star_rounded, color: const Color(0xFFFFD700), label: terrain.rating.toStringAsFixed(1), bg: chipBg, textColor: textSecondary),
                 const SizedBox(width: 8),
-                _StatChip(icon: Icons.directions_walk_rounded, color: textSecondary, label: terrain.distance, bg: chipBg, textColor: textSecondary),
+                _StatChip(icon: Icons.directions_walk_rounded, color: textSecondary, label: '$distance km', bg: chipBg, textColor: textSecondary),
                 if (hasRoute && routeDuration != null) ...[
                   const SizedBox(width: 8),
                   _StatChip(icon: Icons.timer_outlined, color: kGreen, label: routeDuration!, bg: chipBg, textColor: textSecondary),
@@ -595,9 +627,9 @@ class _TerrainCard extends StatelessWidget {
                     child: Container(
                       height: 44,
                       decoration: BoxDecoration(
-                        color: isDark ? Colors.white.withValues(alpha: 0.07) : Colors.black.withValues(alpha: 0.04),
+                        color: isDark ? Colors.white.withOpacity(0.07) : Colors.black.withOpacity(0.04),
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: isDark ? Colors.white.withValues(alpha: 0.12) : Colors.black.withValues(alpha: 0.1)),
+                        border: Border.all(color: isDark ? Colors.white.withOpacity(0.12) : Colors.black.withOpacity(0.1)),
                       ),
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.center,
@@ -624,7 +656,7 @@ class _TerrainCard extends StatelessWidget {
                           end: Alignment.centerRight,
                         ),
                         borderRadius: BorderRadius.circular(12),
-                        boxShadow: [BoxShadow(color: kGreen.withValues(alpha: 0.45), blurRadius: 12, offset: const Offset(0, 4))],
+                        boxShadow: [BoxShadow(color: kGreen.withOpacity(0.45), blurRadius: 12, offset: const Offset(0, 4))],
                       ),
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.center,
@@ -697,10 +729,10 @@ class _FloatBtn extends StatelessWidget {
         decoration: BoxDecoration(
           color: bg,
           shape: BoxShape.circle,
-          border: Border.all(color: active ? kGreenLight : kGreen.withValues(alpha: 0.4), width: 1.5),
+          border: Border.all(color: active ? kGreenLight : kGreen.withOpacity(0.4), width: 1.5),
           boxShadow: [
-            BoxShadow(color: Colors.black.withValues(alpha: 0.2), blurRadius: 10, offset: const Offset(0, 3)),
-            if (active) BoxShadow(color: kGreen.withValues(alpha: 0.4), blurRadius: 10),
+            BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 10, offset: const Offset(0, 3)),
+            if (active) BoxShadow(color: kGreen.withOpacity(0.4), blurRadius: 10),
           ],
         ),
         child: loading

@@ -10,8 +10,8 @@ Color _bg(BuildContext c) => Theme.of(c).scaffoldBackgroundColor;
 Color _card(BuildContext c) => Theme.of(c).cardColor;
 Color _txt(BuildContext c) => Theme.of(c).colorScheme.onSurface;
 Color _sub(BuildContext c) => Theme.of(c).brightness == Brightness.dark
-    ? const Color(0xFFF0EBE0).withValues(alpha: 0.5)
-    : Colors.black.withValues(alpha: 0.45);
+    ? const Color(0xFFF0EBE0).withOpacity(0.5)
+    : Colors.black.withOpacity(0.45);
 
 // ── Modèles ───────────────────────────────────────────────────────────────────
 
@@ -107,7 +107,7 @@ class _PublicationsPageState extends State<PublicationsPage> {
     final initials = team.name.split(' ').map((w) => w[0]).take(2).join();
     return Container(
       width: size, height: size,
-      decoration: BoxDecoration(shape: BoxShape.circle, color: team.color.withValues(alpha: 0.15)),
+      decoration: BoxDecoration(shape: BoxShape.circle, color: team.color.withOpacity(0.15)),
       child: team.logoPath != null
           ? ClipOval(child: Image.file(File(team.logoPath!), fit: BoxFit.cover))
           : Center(child: Text(initials,
@@ -127,7 +127,7 @@ class _PublicationsPageState extends State<PublicationsPage> {
           padding: const EdgeInsets.fromLTRB(20, 12, 20, 28),
           child: Column(mainAxisSize: MainAxisSize.min, children: [
             Center(child: Container(width: 36, height: 4,
-                decoration: BoxDecoration(color: _sub(context).withValues(alpha: 0.3), borderRadius: BorderRadius.circular(2)))),
+                decoration: BoxDecoration(color: _sub(context).withOpacity(0.3), borderRadius: BorderRadius.circular(2)))),
             const SizedBox(height: 14),
             Row(children: [_teamLogo(), const SizedBox(width: 10),
               Text(team.name, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: _txt(context)))]),
@@ -151,7 +151,7 @@ class _PublicationsPageState extends State<PublicationsPage> {
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                 decoration: BoxDecoration(color: _bg(context), borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: _sub(context).withValues(alpha: 0.2))),
+                    border: Border.all(color: _sub(context).withOpacity(0.2))),
                 child: Row(children: [
                   Icon(Icons.image_rounded, color: pickedPath != null ? _kGreen : _sub(context), size: 18),
                   const SizedBox(width: 8),
@@ -246,7 +246,7 @@ class _PublicationsPageState extends State<PublicationsPage> {
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 gradient: LinearGradient(
-                  colors: [team.color, team.color.withValues(alpha: 0.4), const Color(0xFFE040FB)],
+                  colors: [team.color, team.color.withOpacity(0.4), const Color(0xFFE040FB)],
                   begin: Alignment.topLeft, end: Alignment.bottomRight,
                 ),
               ),
@@ -256,7 +256,7 @@ class _PublicationsPageState extends State<PublicationsPage> {
                   child: Padding(padding: const EdgeInsets.all(2),
                     child: ClipOval(child: team.logoPath != null
                         ? Image.file(File(team.logoPath!), fit: BoxFit.cover)
-                        : Container(color: team.color.withValues(alpha: 0.15),
+                        : Container(color: team.color.withOpacity(0.15),
                             child: Center(child: Text(initials,
                                 style: GoogleFonts.orbitron(fontSize: 24, fontWeight: FontWeight.w900, color: team.color))))),
                   ),
@@ -424,7 +424,7 @@ class PostCard extends StatelessWidget {
     final initials = team.name.split(' ').map((w) => w[0]).take(2).join();
     return Container(
       width: 36, height: 36,
-      decoration: BoxDecoration(shape: BoxShape.circle, color: team.color.withValues(alpha: 0.15)),
+      decoration: BoxDecoration(shape: BoxShape.circle, color: team.color.withOpacity(0.15)),
       child: team.logoPath != null
           ? ClipOval(child: Image.file(File(team.logoPath!), fit: BoxFit.cover))
           : Center(child: Text(initials,
@@ -505,7 +505,7 @@ class PostCard extends StatelessWidget {
                       style: TextStyle(fontSize: 11, color: _sub(context)))),
             ]),
           ),
-        Divider(height: 1, color: _sub(context).withValues(alpha: 0.1)),
+        Divider(height: 1, color: _sub(context).withOpacity(0.1)),
       ]),
     );
   }
@@ -562,11 +562,11 @@ class PostImage extends StatelessWidget {
     final h = height ?? 300.0;
     if (path.startsWith('http')) {
       return Image.network(path, width: double.infinity, height: h, fit: BoxFit.cover,
-          errorBuilder: (_, __, ___) => Container(height: h, color: _sub(context).withValues(alpha: 0.1),
+          errorBuilder: (_, __, ___) => Container(height: h, color: _sub(context).withOpacity(0.1),
               child: Center(child: Icon(Icons.broken_image_outlined, color: _sub(context)))));
     }
     return Image.file(File(path), width: double.infinity, height: h, fit: BoxFit.cover,
-        errorBuilder: (_, __, ___) => Container(height: h, color: _sub(context).withValues(alpha: 0.1),
+        errorBuilder: (_, __, ___) => Container(height: h, color: _sub(context).withOpacity(0.1),
             child: Center(child: Icon(Icons.broken_image_outlined, color: _sub(context)))));
   }
 }
@@ -599,7 +599,7 @@ class _PostDetailPageState extends State<PostDetailPage> {
     final initials = team.name.split(' ').map((w) => w[0]).take(2).join();
     return Container(
       width: 38, height: 38,
-      decoration: BoxDecoration(shape: BoxShape.circle, color: team.color.withValues(alpha: 0.15)),
+      decoration: BoxDecoration(shape: BoxShape.circle, color: team.color.withOpacity(0.15)),
       child: team.logoPath != null
           ? ClipOval(child: Image.file(File(team.logoPath!), fit: BoxFit.cover))
           : Center(child: Text(initials,
@@ -674,14 +674,14 @@ class _PostDetailPageState extends State<PostDetailPage> {
                   Text('${post.comments.length}', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: _txt(context))),
                 ]),
               ),
-              Divider(height: 1, color: _sub(context).withValues(alpha: 0.1)),
+              Divider(height: 1, color: _sub(context).withOpacity(0.1)),
             ])),
             const SizedBox(height: 8),
             ...post.comments.map((c) => Padding(
               padding: const EdgeInsets.fromLTRB(12, 10, 12, 0),
               child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Container(width: 34, height: 34,
-                  decoration: BoxDecoration(shape: BoxShape.circle, color: _kGreen.withValues(alpha: 0.12)),
+                  decoration: BoxDecoration(shape: BoxShape.circle, color: _kGreen.withOpacity(0.12)),
                   child: Center(child: Text(c.author[0].toUpperCase(),
                       style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w900, color: _kGreen)))),
                 const SizedBox(width: 10),
@@ -703,16 +703,16 @@ class _PostDetailPageState extends State<PostDetailPage> {
           Container(
             padding: EdgeInsets.fromLTRB(12, 10, 12, MediaQuery.of(context).padding.bottom + 10),
             decoration: BoxDecoration(color: _card(context),
-                border: Border(top: BorderSide(color: _sub(context).withValues(alpha: 0.1)))),
+                border: Border(top: BorderSide(color: _sub(context).withOpacity(0.1)))),
             child: Row(children: [
               Container(width: 34, height: 34,
-                decoration: BoxDecoration(shape: BoxShape.circle, color: _kGreen.withValues(alpha: 0.12)),
+                decoration: BoxDecoration(shape: BoxShape.circle, color: _kGreen.withOpacity(0.12)),
                 child: const Center(child: Icon(Icons.person_rounded, color: _kGreen, size: 16))),
               const SizedBox(width: 10),
               Expanded(child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                 decoration: BoxDecoration(color: _bg(context), borderRadius: BorderRadius.circular(22),
-                    border: Border.all(color: _sub(context).withValues(alpha: 0.15))),
+                    border: Border.all(color: _sub(context).withOpacity(0.15))),
                 child: TextField(
                   controller: _commentCtrl,
                   style: TextStyle(fontSize: 13, color: _txt(context)),

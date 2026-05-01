@@ -1,18 +1,45 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:provider/provider.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:intl/date_symbol_data_local.dart';
 import 'providers/auth_provider.dart';
 import 'providers/terrain_provider.dart';
+import 'providers/notification_provider.dart';
+import 'providers/team_provider.dart';
 import 'splash_screen.dart';
-
 
 // ─── Notifier global ───────────────────────────────────────────────────────
 final themeNotifier = ValueNotifier<ThemeMode>(ThemeMode.light);
-final unreadNotifNotifier = ValueNotifier<int>(3); // notifications non lues
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await dotenv.load(fileName: '.env');
+  
+  // Configuration Web lue depuis le .env
+  final firebaseOptions = FirebaseOptions(
+    apiKey: dotenv.get('FIREBASE_API_KEY'),
+    authDomain: dotenv.get('FIREBASE_AUTH_DOMAIN'),
+    projectId: dotenv.get('FIREBASE_PROJECT_ID'),
+    storageBucket: dotenv.get('FIREBASE_STORAGE_BUCKET'),
+    messagingSenderId: dotenv.get('FIREBASE_MESSAGING_SENDER_ID'),
+    appId: dotenv.get('FIREBASE_APP_ID'),
+    measurementId: dotenv.get('FIREBASE_MEASUREMENT_ID'),
+  );
+
+  try {
+    if (kIsWeb) {
+      await Firebase.initializeApp(options: firebaseOptions);
+    } else {
+      await Firebase.initializeApp();
+    }
+    debugPrint("Firebase initialisé avec succès !");
+  } catch (e) {
+    debugPrint("Erreur initialisation Firebase : $e");
+  }
+
+  await initializeDateFormatting('fr_FR', null);
   runApp(const MinifootApp());
 }
 
@@ -25,6 +52,8 @@ class MinifootApp extends StatelessWidget {
       providers: [
         ChangeNotifierProvider(create: (_) => AuthProvider()),
         ChangeNotifierProvider(create: (_) => TerrainProvider()),
+        ChangeNotifierProvider(create: (_) => NotificationProvider()),
+        ChangeNotifierProvider(create: (_) => TeamProvider()),
       ],
       child: ValueListenableBuilder<ThemeMode>(
         valueListenable: themeNotifier,

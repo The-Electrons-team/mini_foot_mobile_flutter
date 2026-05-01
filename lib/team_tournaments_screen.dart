@@ -9,8 +9,8 @@ Color _bg(BuildContext c)   => Theme.of(c).scaffoldBackgroundColor;
 Color _card(BuildContext c) => Theme.of(c).cardColor;
 Color _txt(BuildContext c)  => Theme.of(c).colorScheme.onSurface;
 Color _sub(BuildContext c)  => Theme.of(c).brightness == Brightness.dark
-    ? const Color(0xFFF0EBE0).withValues(alpha: 0.5)
-    : Colors.black.withValues(alpha: 0.45);
+    ? const Color(0xFFF0EBE0).withOpacity(0.5)
+    : Colors.black.withOpacity(0.45);
 
 // ─── Modèles ──────────────────────────────────────────────────────────────────
 enum TournamentStatus { ongoing, finished, upcoming }
@@ -129,9 +129,9 @@ class _TournamentsHeader extends StatelessWidget {
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
                     colors: [
-                      team.color.withValues(alpha: 0.75),
-                      team.color.withValues(alpha: 0.55),
-                      Colors.black.withValues(alpha: 0.65),
+                      team.color.withOpacity(0.75),
+                      team.color.withOpacity(0.55),
+                      Colors.black.withOpacity(0.65),
                     ],
                   ),
                 ),
@@ -151,9 +151,9 @@ class _TournamentsHeader extends StatelessWidget {
                           child: Container(
                             width: 38, height: 38,
                             decoration: BoxDecoration(
-                              color: Colors.black.withValues(alpha: 0.3),
+                              color: Colors.black.withOpacity(0.3),
                               shape: BoxShape.circle,
-                              border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
+                              border: Border.all(color: Colors.white.withOpacity(0.2)),
                             ),
                             child: const Icon(Icons.arrow_back_ios_new_rounded, size: 16, color: Colors.white),
                           ),
@@ -162,14 +162,14 @@ class _TournamentsHeader extends StatelessWidget {
                         Text('Tournois', style: GoogleFonts.orbitron(
                           fontSize: 22, fontWeight: FontWeight.w900,
                           color: Colors.white,
-                          shadows: [Shadow(color: Colors.black.withValues(alpha: 0.4), blurRadius: 8)])),
+                          shadows: [Shadow(color: Colors.black.withOpacity(0.4), blurRadius: 8)])),
                         const Spacer(),
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                           decoration: BoxDecoration(
-                            color: Colors.black.withValues(alpha: 0.3),
+                            color: Colors.black.withOpacity(0.3),
                             borderRadius: BorderRadius.circular(20),
-                            border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
+                            border: Border.all(color: Colors.white.withOpacity(0.2)),
                           ),
                           child: Row(children: [
                             Container(
@@ -204,7 +204,7 @@ class _TournamentsHeader extends StatelessWidget {
             borderRadius: const BorderRadius.vertical(bottom: Radius.circular(28)),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.1),
+                color: Colors.black.withOpacity(0.1),
                 blurRadius: 12,
                 offset: const Offset(0, 4),
               ),
@@ -245,15 +245,15 @@ class _StatBadge extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 14),
         decoration: BoxDecoration(
-          color: Colors.black.withValues(alpha: 0.3),
+          color: Colors.black.withOpacity(0.3),
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
+          border: Border.all(color: Colors.white.withOpacity(0.15)),
         ),
         child: Column(children: [
           Container(
             width: 36, height: 36,
             decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.15),
+              color: color.withOpacity(0.15),
               shape: BoxShape.circle,
             ),
             child: Icon(icon, color: color, size: 18),
@@ -261,10 +261,10 @@ class _StatBadge extends StatelessWidget {
           const SizedBox(height: 6),
           Text(value, style: TextStyle(
             color: color, fontSize: 20, fontWeight: FontWeight.w900,
-            shadows: [Shadow(color: Colors.black.withValues(alpha: 0.4), blurRadius: 4)],
+            shadows: [Shadow(color: Colors.black.withOpacity(0.4), blurRadius: 4)],
           )),
           Text(label, style: TextStyle(
-            color: Colors.white.withValues(alpha: 0.65),
+            color: Colors.white.withOpacity(0.65),
             fontSize: 10, fontWeight: FontWeight.w600)),
         ]),
       ),
@@ -297,7 +297,7 @@ class _TournamentList extends StatelessWidget {
   Widget build(BuildContext context) {
     if (tournaments.isEmpty) {
       return Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
-        Icon(Icons.sports_soccer_rounded, size: 48, color: _sub(context).withValues(alpha: 0.4)),
+        Icon(Icons.sports_soccer_rounded, size: 48, color: _sub(context).withOpacity(0.4)),
         const SizedBox(height: 12),
         Text('Aucun tournoi', style: TextStyle(color: _sub(context), fontSize: 14)),
       ]));
@@ -344,7 +344,7 @@ class _TournamentCard extends StatelessWidget {
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(20),
           boxShadow: [BoxShadow(
-            color: _statusColor.withValues(alpha: 0.2),
+            color: _statusColor.withOpacity(0.2),
             blurRadius: 16, offset: const Offset(0, 6),
           )],
         ),
@@ -366,8 +366,8 @@ class _TournamentCard extends StatelessWidget {
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
                     colors: [
-                      Colors.black.withValues(alpha: 0.35),
-                      Colors.black.withValues(alpha: 0.88),
+                      Colors.black.withOpacity(0.35),
+                      Colors.black.withOpacity(0.88),
                     ],
                   ),
                 ),
@@ -381,7 +381,7 @@ class _TournamentCard extends StatelessWidget {
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                     colors: [
-                      _statusColor.withValues(alpha: 0.18),
+                      _statusColor.withOpacity(0.18),
                       Colors.transparent,
                     ],
                   ),
@@ -395,7 +395,7 @@ class _TournamentCard extends StatelessWidget {
                 height: 3,
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
-                    colors: [_statusColor, _statusColor.withValues(alpha: 0.4)],
+                    colors: [_statusColor, _statusColor.withOpacity(0.4)],
                   ),
                 ),
               ),
@@ -409,9 +409,9 @@ class _TournamentCard extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                     decoration: BoxDecoration(
-                      color: _statusColor.withValues(alpha: 0.25),
+                      color: _statusColor.withOpacity(0.25),
                       borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: _statusColor.withValues(alpha: 0.6)),
+                      border: Border.all(color: _statusColor.withOpacity(0.6)),
                     ),
                     child: Text(_statusLabel, style: TextStyle(
                       fontSize: 10, fontWeight: FontWeight.w800, color: _statusColor)),
@@ -419,7 +419,7 @@ class _TournamentCard extends StatelessWidget {
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(t.phase, style: TextStyle(
-                      fontSize: 11, color: Colors.white.withValues(alpha: 0.6),
+                      fontSize: 11, color: Colors.white.withOpacity(0.6),
                       fontStyle: FontStyle.italic)),
                   ),
                 ]),
@@ -433,10 +433,10 @@ class _TournamentCard extends StatelessWidget {
                 // Lieu
                 Row(children: [
                   Icon(Icons.location_on_rounded, size: 13,
-                      color: Colors.white.withValues(alpha: 0.65)),
+                      color: Colors.white.withOpacity(0.65)),
                   const SizedBox(width: 4),
                   Expanded(child: Text(t.location, style: TextStyle(
-                    fontSize: 12, color: Colors.white.withValues(alpha: 0.65)),
+                    fontSize: 12, color: Colors.white.withOpacity(0.65)),
                     overflow: TextOverflow.ellipsis)),
                 ]),
                 const SizedBox(height: 6),
@@ -445,15 +445,15 @@ class _TournamentCard extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                     decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.1),
+                      color: Colors.white.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Row(children: [
                       Icon(Icons.groups_rounded, size: 12,
-                          color: Colors.white.withValues(alpha: 0.8)),
+                          color: Colors.white.withOpacity(0.8)),
                       const SizedBox(width: 4),
                       Text('${t.teams} équipes', style: TextStyle(
-                        fontSize: 11, color: Colors.white.withValues(alpha: 0.8),
+                        fontSize: 11, color: Colors.white.withOpacity(0.8),
                         fontWeight: FontWeight.w600)),
                     ]),
                   ),
@@ -461,9 +461,9 @@ class _TournamentCard extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                     decoration: BoxDecoration(
-                      color: _kGold.withValues(alpha: 0.15),
+                      color: _kGold.withOpacity(0.15),
                       borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: _kGold.withValues(alpha: 0.3)),
+                      border: Border.all(color: _kGold.withOpacity(0.3)),
                     ),
                     child: Row(children: [
                       const Icon(Icons.emoji_events_rounded, size: 12, color: _kGold),
@@ -479,10 +479,10 @@ class _TournamentCard extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                     decoration: BoxDecoration(
-                      color: (t.myPosition == 1 ? _kGold : _kGreen).withValues(alpha: 0.2),
+                      color: (t.myPosition == 1 ? _kGold : _kGreen).withOpacity(0.2),
                       borderRadius: BorderRadius.circular(10),
                       border: Border.all(
-                        color: (t.myPosition == 1 ? _kGold : _kGreen).withValues(alpha: 0.5)),
+                        color: (t.myPosition == 1 ? _kGold : _kGreen).withOpacity(0.5)),
                     ),
                     child: Row(mainAxisSize: MainAxisSize.min, children: [
                       Icon(t.myPosition == 1 ? Icons.emoji_events_rounded : Icons.star_rounded,
@@ -506,9 +506,9 @@ class _TournamentCard extends StatelessWidget {
                       width: double.infinity,
                       padding: const EdgeInsets.symmetric(vertical: 10),
                       decoration: BoxDecoration(
-                        color: Colors.red.withValues(alpha: 0.12),
+                        color: Colors.red.withOpacity(0.12),
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: Colors.red.withValues(alpha: 0.4)),
+                        border: Border.all(color: Colors.red.withOpacity(0.4)),
                       ),
                       child: const Row(mainAxisAlignment: MainAxisAlignment.center, children: [
                         Icon(Icons.flag_rounded, size: 14, color: Colors.red),
@@ -528,9 +528,9 @@ class _TournamentCard extends StatelessWidget {
                         child: Container(
                           padding: const EdgeInsets.symmetric(vertical: 10),
                           decoration: BoxDecoration(
-                            color: _kGold.withValues(alpha: 0.15),
+                            color: _kGold.withOpacity(0.15),
                             borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: _kGold.withValues(alpha: 0.4)),
+                            border: Border.all(color: _kGold.withOpacity(0.4)),
                           ),
                           child: const Row(mainAxisAlignment: MainAxisAlignment.center, children: [
                             Icon(Icons.hourglass_top_rounded, size: 14, color: _kGold),
@@ -547,9 +547,9 @@ class _TournamentCard extends StatelessWidget {
                           child: Container(
                             padding: const EdgeInsets.symmetric(vertical: 10),
                             decoration: BoxDecoration(
-                              color: Colors.red.withValues(alpha: 0.12),
+                              color: Colors.red.withOpacity(0.12),
                               borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: Colors.red.withValues(alpha: 0.4)),
+                              border: Border.all(color: Colors.red.withOpacity(0.4)),
                             ),
                             child: const Row(mainAxisAlignment: MainAxisAlignment.center, children: [
                               Icon(Icons.flag_rounded, size: 14, color: Colors.red),
@@ -642,9 +642,9 @@ class _TournamentCard extends StatelessWidget {
         content: Container(
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
-            color: Colors.red.withValues(alpha: 0.08),
+            color: Colors.red.withOpacity(0.08),
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.red.withValues(alpha: 0.25)),
+            border: Border.all(color: Colors.red.withOpacity(0.25)),
           ),
           child: Row(children: [
             const Icon(Icons.warning_amber_rounded, color: Colors.red, size: 22),
@@ -753,7 +753,7 @@ class _TournamentDetailPageState extends State<_TournamentDetailPage>
               color: _card(context),
               borderRadius: const BorderRadius.vertical(bottom: Radius.circular(28)),
               boxShadow: [BoxShadow(
-                color: Colors.black.withValues(alpha: 0.1),
+                color: Colors.black.withOpacity(0.1),
                 blurRadius: 12, offset: const Offset(0, 4))],
             ),
             child: ClipRRect(
@@ -858,9 +858,9 @@ class _UpcomingDetailViewState extends State<_UpcomingDetailView> {
         content: Container(
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
-            color: Colors.red.withValues(alpha: 0.08),
+            color: Colors.red.withOpacity(0.08),
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.red.withValues(alpha: 0.25)),
+            border: Border.all(color: Colors.red.withOpacity(0.25)),
           ),
           child: Row(children: [
             const Icon(Icons.warning_amber_rounded, color: Colors.red, size: 22),
@@ -923,7 +923,7 @@ class _UpcomingDetailViewState extends State<_UpcomingDetailView> {
                 decoration: BoxDecoration(
                   color: _card(context),
                   borderRadius: BorderRadius.circular(18),
-                  boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.06), blurRadius: 12, offset: const Offset(0, 4))],
+                  boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.06), blurRadius: 12, offset: const Offset(0, 4))],
                 ),
                 child: Column(children: [
                   _InfoTile(icon: Icons.location_on_rounded, label: 'Lieu', value: t.location, color: _kGreen),
@@ -954,7 +954,7 @@ class _UpcomingDetailViewState extends State<_UpcomingDetailView> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
-                    color: _kGreen.withValues(alpha: 0.12),
+                    color: _kGreen.withOpacity(0.12),
                     borderRadius: BorderRadius.circular(10)),
                   child: Text('${_registeredTeams.length}/${t.teams}',
                     style: const TextStyle(fontSize: 11, color: _kGreen, fontWeight: FontWeight.w800)),
@@ -965,7 +965,7 @@ class _UpcomingDetailViewState extends State<_UpcomingDetailView> {
                 decoration: BoxDecoration(
                   color: _card(context),
                   borderRadius: BorderRadius.circular(18),
-                  boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.06), blurRadius: 12, offset: const Offset(0, 4))],
+                  boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.06), blurRadius: 12, offset: const Offset(0, 4))],
                 ),
                 child: Column(
                   children: _registeredTeams.asMap().entries.map((e) {
@@ -977,7 +977,7 @@ class _UpcomingDetailViewState extends State<_UpcomingDetailView> {
                           Container(
                             width: 32, height: 32,
                             decoration: BoxDecoration(
-                              color: _kGreen.withValues(alpha: 0.12),
+                              color: _kGreen.withOpacity(0.12),
                               shape: BoxShape.circle),
                             child: Center(child: Text('${e.key + 1}',
                               style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: _kGreen))),
@@ -988,14 +988,14 @@ class _UpcomingDetailViewState extends State<_UpcomingDetailView> {
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                             decoration: BoxDecoration(
-                              color: _kGreen.withValues(alpha: 0.1),
+                              color: _kGreen.withOpacity(0.1),
                               borderRadius: BorderRadius.circular(8)),
                             child: const Text('Inscrit', style: TextStyle(
                               fontSize: 10, color: _kGreen, fontWeight: FontWeight.w700)),
                           ),
                         ]),
                       ),
-                      if (!isLast) Divider(height: 1, indent: 60, color: _sub(context).withValues(alpha: 0.08)),
+                      if (!isLast) Divider(height: 1, indent: 60, color: _sub(context).withOpacity(0.08)),
                     ]);
                   }).toList(),
                 ),
@@ -1012,9 +1012,9 @@ class _UpcomingDetailViewState extends State<_UpcomingDetailView> {
               Container(
                 padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
                 decoration: BoxDecoration(
-                  color: _kGold.withValues(alpha: 0.1),
+                  color: _kGold.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: _kGold.withValues(alpha: 0.3)),
+                  border: Border.all(color: _kGold.withOpacity(0.3)),
                 ),
                 child: const Row(mainAxisAlignment: MainAxisAlignment.center, children: [
                   Icon(Icons.hourglass_top_rounded, size: 16, color: _kGold),
@@ -1154,10 +1154,10 @@ class _FinishedDetailViewState extends State<_FinishedDetailView> {
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                     decoration: BoxDecoration(
-                      color: _filterTeam != null ? _kGreen.withValues(alpha: 0.15) : _card(context),
+                      color: _filterTeam != null ? _kGreen.withOpacity(0.15) : _card(context),
                       borderRadius: BorderRadius.circular(10),
                       border: Border.all(
-                        color: _filterTeam != null ? _kGreen : _sub(context).withValues(alpha: 0.2)),
+                        color: _filterTeam != null ? _kGreen : _sub(context).withOpacity(0.2)),
                     ),
                     child: Row(mainAxisSize: MainAxisSize.min, children: [
                       Icon(Icons.filter_list_rounded, size: 14,
@@ -1200,10 +1200,10 @@ class _FinishedDetailViewState extends State<_FinishedDetailView> {
                     margin: const EdgeInsets.only(bottom: 10),
                     padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                     decoration: BoxDecoration(
-                      color: isMe ? _kGreen.withValues(alpha: 0.07) : _card(context),
+                      color: isMe ? _kGreen.withOpacity(0.07) : _card(context),
                       borderRadius: BorderRadius.circular(14),
                       border: Border.all(
-                        color: isMe ? _kGreen.withValues(alpha: 0.3) : _sub(context).withValues(alpha: 0.08)),
+                        color: isMe ? _kGreen.withOpacity(0.3) : _sub(context).withOpacity(0.08)),
                     ),
                     child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                       Text(round, style: TextStyle(
@@ -1222,7 +1222,7 @@ class _FinishedDetailViewState extends State<_FinishedDetailView> {
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
                           decoration: BoxDecoration(
-                            color: isMe ? _kGreen.withValues(alpha: 0.15) : _sub(context).withValues(alpha: 0.08),
+                            color: isMe ? _kGreen.withOpacity(0.15) : _sub(context).withOpacity(0.08),
                             borderRadius: BorderRadius.circular(8)),
                           child: Text('$sh – $sa', style: TextStyle(
                             fontSize: 14, fontWeight: FontWeight.w900,
@@ -1264,7 +1264,7 @@ class _FinishedDetailViewState extends State<_FinishedDetailView> {
             Center(child: Container(
               width: 36, height: 4,
               decoration: BoxDecoration(
-                color: _sub(context).withValues(alpha: 0.3),
+                color: _sub(context).withOpacity(0.3),
                 borderRadius: BorderRadius.circular(2)),
             )),
             const SizedBox(height: 16),
@@ -1280,7 +1280,7 @@ class _FinishedDetailViewState extends State<_FinishedDetailView> {
                     leading: Container(
                       width: 32, height: 32,
                       decoration: BoxDecoration(
-                        color: _filterTeam == null ? _kGreen.withValues(alpha: 0.15) : _sub(context).withValues(alpha: 0.08),
+                        color: _filterTeam == null ? _kGreen.withOpacity(0.15) : _sub(context).withOpacity(0.08),
                         shape: BoxShape.circle),
                       child: Icon(Icons.sports_soccer_rounded, size: 16,
                         color: _filterTeam == null ? _kGreen : _sub(context))),
@@ -1290,14 +1290,14 @@ class _FinishedDetailViewState extends State<_FinishedDetailView> {
                     trailing: _filterTeam == null ? const Icon(Icons.check_rounded, color: _kGreen, size: 18) : null,
                     onTap: () { setState(() => _filterTeam = null); Navigator.pop(ctx); },
                   ),
-                  Divider(height: 1, color: _sub(context).withValues(alpha: 0.08)),
+                  Divider(height: 1, color: _sub(context).withOpacity(0.08)),
                   ...teams.expand((team) => [
                     ListTile(
                       contentPadding: EdgeInsets.zero,
                       leading: Container(
                         width: 32, height: 32,
                         decoration: BoxDecoration(
-                          color: _filterTeam == team ? _kGreen.withValues(alpha: 0.15) : _sub(context).withValues(alpha: 0.08),
+                          color: _filterTeam == team ? _kGreen.withOpacity(0.15) : _sub(context).withOpacity(0.08),
                           shape: BoxShape.circle),
                         child: Center(child: Text(team[0], style: TextStyle(
                           fontSize: 12, fontWeight: FontWeight.w800,
@@ -1308,7 +1308,7 @@ class _FinishedDetailViewState extends State<_FinishedDetailView> {
                       trailing: _filterTeam == team ? const Icon(Icons.check_rounded, color: _kGreen, size: 18) : null,
                       onTap: () { setState(() => _filterTeam = team); Navigator.pop(ctx); },
                     ),
-                    Divider(height: 1, color: _sub(context).withValues(alpha: 0.08)),
+                    Divider(height: 1, color: _sub(context).withOpacity(0.08)),
                   ]),
                   const SizedBox(height: 16),
                 ],
@@ -1337,10 +1337,10 @@ class _PodiumSlot extends StatelessWidget {
       Container(
         width: 44, height: 44,
         decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.15),
+          color: color.withOpacity(0.15),
           shape: BoxShape.circle,
           border: Border.all(color: color, width: 2),
-          boxShadow: [BoxShadow(color: color.withValues(alpha: 0.3), blurRadius: 8)],
+          boxShadow: [BoxShadow(color: color.withOpacity(0.3), blurRadius: 8)],
         ),
         child: Center(child: Text('$pos', style: TextStyle(
           fontSize: 18, fontWeight: FontWeight.w900, color: color))),
@@ -1359,12 +1359,12 @@ class _PodiumSlot extends StatelessWidget {
         decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topCenter, end: Alignment.bottomCenter,
-            colors: [color.withValues(alpha: 0.7), color.withValues(alpha: 0.3)]),
+            colors: [color.withOpacity(0.7), color.withOpacity(0.3)]),
           borderRadius: const BorderRadius.vertical(top: Radius.circular(10)),
           border: isMe ? Border.all(color: _kGreen, width: 2) : null,
         ),
         child: isMe
-            ? Center(child: Icon(Icons.star_rounded, color: Colors.white.withValues(alpha: 0.8), size: 20))
+            ? Center(child: Icon(Icons.star_rounded, color: Colors.white.withOpacity(0.8), size: 20))
             : null,
       ),
     ]);
@@ -1384,7 +1384,7 @@ class _InfoTile extends StatelessWidget {
       Container(
         width: 36, height: 36,
         decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.12),
+          color: color.withOpacity(0.12),
           borderRadius: BorderRadius.circular(10)),
         child: Icon(icon, size: 16, color: color),
       ),
@@ -1432,8 +1432,8 @@ class _DetailHeader extends StatelessWidget {
                 gradient: LinearGradient(
                   begin: Alignment.topCenter, end: Alignment.bottomCenter,
                   colors: [
-                    Colors.black.withValues(alpha: 0.3),
-                    Colors.black.withValues(alpha: 0.82),
+                    Colors.black.withOpacity(0.3),
+                    Colors.black.withOpacity(0.82),
                   ],
                 ),
               ),
@@ -1451,9 +1451,9 @@ class _DetailHeader extends StatelessWidget {
                       child: Container(
                         width: 36, height: 36,
                         decoration: BoxDecoration(
-                          color: Colors.black.withValues(alpha: 0.35),
+                          color: Colors.black.withOpacity(0.35),
                           shape: BoxShape.circle,
-                          border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
+                          border: Border.all(color: Colors.white.withOpacity(0.2)),
                         ),
                         child: const Icon(Icons.arrow_back_ios_new_rounded,
                             size: 15, color: Colors.white),
@@ -1463,9 +1463,9 @@ class _DetailHeader extends StatelessWidget {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                       decoration: BoxDecoration(
-                        color: _statusColor.withValues(alpha: 0.25),
+                        color: _statusColor.withOpacity(0.25),
                         borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: _statusColor.withValues(alpha: 0.7)),
+                        border: Border.all(color: _statusColor.withOpacity(0.7)),
                       ),
                       child: Text(_statusLabel, style: TextStyle(
                         fontSize: 11, fontWeight: FontWeight.w800, color: _statusColor)),
@@ -1479,10 +1479,10 @@ class _DetailHeader extends StatelessWidget {
                   const SizedBox(height: 6),
                   Row(children: [
                     Icon(Icons.location_on_rounded, size: 13,
-                        color: Colors.white.withValues(alpha: 0.7)),
+                        color: Colors.white.withOpacity(0.7)),
                     const SizedBox(width: 4),
                     Expanded(child: Text(t.location, style: TextStyle(
-                      fontSize: 12, color: Colors.white.withValues(alpha: 0.7)),
+                      fontSize: 12, color: Colors.white.withOpacity(0.7)),
                       overflow: TextOverflow.ellipsis)),
                   ]),
                   const SizedBox(height: 8),
@@ -1516,9 +1516,9 @@ class _MiniChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.3),
+        color: Colors.black.withOpacity(0.3),
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: color.withValues(alpha: 0.3)),
+        border: Border.all(color: color.withOpacity(0.3)),
       ),
       child: Row(mainAxisSize: MainAxisSize.min, children: [
         Icon(icon, size: 11, color: color),
@@ -1648,18 +1648,18 @@ class _GroupTableState extends State<_GroupTable> {
       decoration: BoxDecoration(
         color: _card(context),
         borderRadius: BorderRadius.circular(20),
-        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.06), blurRadius: 12, offset: const Offset(0, 4))],
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.06), blurRadius: 12, offset: const Offset(0, 4))],
       ),
       child: Column(children: [
         Container(
           padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
           decoration: BoxDecoration(
-            gradient: LinearGradient(colors: [_kGreen.withValues(alpha: 0.15), _kGreen.withValues(alpha: 0.03)]),
+            gradient: LinearGradient(colors: [_kGreen.withOpacity(0.15), _kGreen.withOpacity(0.03)]),
             borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
           ),
           child: Row(children: [
             Container(width: 28, height: 28,
-              decoration: BoxDecoration(color: _kGreen.withValues(alpha: 0.2), shape: BoxShape.circle),
+              decoration: BoxDecoration(color: _kGreen.withOpacity(0.2), shape: BoxShape.circle),
               child: const Icon(Icons.sports_soccer_rounded, size: 14, color: _kGreen)),
             const SizedBox(width: 10),
             Text(widget.group['name'] as String, style: GoogleFonts.orbitron(
@@ -1667,7 +1667,7 @@ class _GroupTableState extends State<_GroupTable> {
             const Spacer(),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-              decoration: BoxDecoration(color: _kGreen.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(8)),
+              decoration: BoxDecoration(color: _kGreen.withOpacity(0.12), borderRadius: BorderRadius.circular(8)),
               child: Text('J3/J3', style: TextStyle(fontSize: 10, color: _kGreen, fontWeight: FontWeight.w700))),
           ]),
         ),
@@ -1681,7 +1681,7 @@ class _GroupTableState extends State<_GroupTable> {
                 style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: _sub(context)))),
           ]),
         ),
-        Divider(height: 1, color: _sub(context).withValues(alpha: 0.08)),
+        Divider(height: 1, color: _sub(context).withOpacity(0.08)),
         ...teams.asMap().entries.map((e) {
           final t = e.value as Map<String, dynamic>;
           final isMe = t['name'] == myTeam;
@@ -1690,7 +1690,7 @@ class _GroupTableState extends State<_GroupTable> {
           final progress = maxPts > 0 ? pts / maxPts : 0.0;
           return Container(
             decoration: BoxDecoration(
-              color: isMe ? _kGreen.withValues(alpha: 0.06) : null,
+              color: isMe ? _kGreen.withOpacity(0.06) : null,
               border: isMe ? const Border(left: BorderSide(color: _kGreen, width: 3)) : null,
             ),
             padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
@@ -1699,8 +1699,8 @@ class _GroupTableState extends State<_GroupTable> {
                 Container(width: 22, height: 22,
                   decoration: BoxDecoration(
                     color: isQualified
-                        ? (e.key == 0 ? _kGold.withValues(alpha: 0.2) : _kGreen.withValues(alpha: 0.15))
-                        : _sub(context).withValues(alpha: 0.08),
+                        ? (e.key == 0 ? _kGold.withOpacity(0.2) : _kGreen.withOpacity(0.15))
+                        : _sub(context).withOpacity(0.08),
                     shape: BoxShape.circle),
                   child: Center(child: Text('${e.key + 1}', style: TextStyle(
                     fontSize: 10,
@@ -1717,7 +1717,7 @@ class _GroupTableState extends State<_GroupTable> {
                 SizedBox(width: 32, child: Container(
                   padding: const EdgeInsets.symmetric(vertical: 3),
                   decoration: BoxDecoration(
-                    color: isMe ? _kGreen : _sub(context).withValues(alpha: 0.1),
+                    color: isMe ? _kGreen : _sub(context).withOpacity(0.1),
                     borderRadius: BorderRadius.circular(6)),
                   child: Text('${t['pts']}', textAlign: TextAlign.center,
                     style: TextStyle(fontSize: 12, fontWeight: FontWeight.w900,
@@ -1730,11 +1730,11 @@ class _GroupTableState extends State<_GroupTable> {
                   borderRadius: BorderRadius.circular(4),
                   child: LinearProgressIndicator(
                     value: progress, minHeight: 3,
-                    backgroundColor: _sub(context).withValues(alpha: 0.1),
+                    backgroundColor: _sub(context).withOpacity(0.1),
                     valueColor: AlwaysStoppedAnimation(
                       isMe ? _kGreen : (isQualified
-                          ? _kGreen.withValues(alpha: 0.5)
-                          : _sub(context).withValues(alpha: 0.3))),
+                          ? _kGreen.withOpacity(0.5)
+                          : _sub(context).withOpacity(0.3))),
                   ))),
                 const SizedBox(width: 32 * 5),
               ]),
@@ -1752,7 +1752,7 @@ class _GroupTableState extends State<_GroupTable> {
           ]),
         ),
         if (allMatches.isNotEmpty) ...[
-          Divider(height: 1, color: _sub(context).withValues(alpha: 0.08)),
+          Divider(height: 1, color: _sub(context).withOpacity(0.08)),
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
             child: Row(children: [
@@ -1763,7 +1763,7 @@ class _GroupTableState extends State<_GroupTable> {
               if (myMatches.isNotEmpty)
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                  decoration: BoxDecoration(color: _kGreen.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8)),
+                  decoration: BoxDecoration(color: _kGreen.withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
                   child: Text('${myMatches.length} mes matchs', style: TextStyle(fontSize: 10, color: _kGreen, fontWeight: FontWeight.w700))),
             ]),
           ),
@@ -1783,9 +1783,9 @@ class _GroupTableState extends State<_GroupTable> {
                 margin: const EdgeInsets.fromLTRB(12, 4, 12, 14),
                 padding: const EdgeInsets.symmetric(vertical: 10),
                 decoration: BoxDecoration(
-                  color: _sub(context).withValues(alpha: 0.06),
+                  color: _sub(context).withOpacity(0.06),
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: _sub(context).withValues(alpha: 0.12))),
+                  border: Border.all(color: _sub(context).withOpacity(0.12))),
                 child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
                   Text(
                     _expanded ? 'Masquer les autres rencontres' : 'Voir les ${otherMatches.length} autres rencontres',
@@ -1843,21 +1843,21 @@ class _MatchRow extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
         color: isHighlighted
-            ? _kGreen.withValues(alpha: 0.06)
-            : _sub(context).withValues(alpha: 0.03),
+            ? _kGreen.withOpacity(0.06)
+            : _sub(context).withOpacity(0.03),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: isHighlighted
-              ? _kGreen.withValues(alpha: 0.25)
-              : _sub(context).withValues(alpha: 0.07)),
+              ? _kGreen.withOpacity(0.25)
+              : _sub(context).withOpacity(0.07)),
       ),
       child: Row(children: [
         Container(
           width: 26, height: 26,
           decoration: BoxDecoration(
             color: isHighlighted
-                ? _kGreen.withValues(alpha: 0.15)
-                : _sub(context).withValues(alpha: 0.08),
+                ? _kGreen.withOpacity(0.15)
+                : _sub(context).withOpacity(0.08),
             borderRadius: BorderRadius.circular(6)),
           child: Center(child: Text(date, style: TextStyle(
             fontSize: 9, fontWeight: FontWeight.w800,
@@ -1875,8 +1875,8 @@ class _MatchRow extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
           decoration: BoxDecoration(
             color: isHighlighted
-                ? _kGreen.withValues(alpha: 0.12)
-                : _sub(context).withValues(alpha: 0.07),
+                ? _kGreen.withOpacity(0.12)
+                : _sub(context).withOpacity(0.07),
             borderRadius: BorderRadius.circular(8)),
           child: played
               ? Text('$sh – $sa', style: TextStyle(
@@ -2006,9 +2006,9 @@ class _BracketView extends StatelessWidget {
                         child: Center(child: Container(
                           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                           decoration: BoxDecoration(
-                            color: _kGreen.withValues(alpha: 0.1),
+                            color: _kGreen.withOpacity(0.1),
                             borderRadius: BorderRadius.circular(10),
-                            border: Border.all(color: _kGreen.withValues(alpha: 0.2))),
+                            border: Border.all(color: _kGreen.withOpacity(0.2))),
                           child: Text(entry.key, style: GoogleFonts.orbitron(
                             fontSize: 8, fontWeight: FontWeight.w800, color: _kGreen)),
                         )),
@@ -2023,7 +2023,7 @@ class _BracketView extends StatelessWidget {
                     painter: _BracketPainter(
                       rounds: [r16, qf, sf, finale],
                       matchH: matchH, matchW: matchW, colGap: colGap,
-                      lineColor: _sub(context).withValues(alpha: 0.3),
+                      lineColor: _sub(context).withOpacity(0.3),
                       spacings: spacings,
                     ),
                   ),
@@ -2082,16 +2082,16 @@ class _BracketMatchCard extends StatelessWidget {
         color: _card(context),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: hasMe ? _kGreen.withValues(alpha: 0.6) : _sub(context).withValues(alpha: 0.12),
+          color: hasMe ? _kGreen.withOpacity(0.6) : _sub(context).withOpacity(0.12),
           width: hasMe ? 1.5 : 1),
         boxShadow: [BoxShadow(
-          color: hasMe ? _kGreen.withValues(alpha: 0.12) : Colors.black.withValues(alpha: 0.07),
+          color: hasMe ? _kGreen.withOpacity(0.12) : Colors.black.withOpacity(0.07),
           blurRadius: hasMe ? 10 : 6, offset: const Offset(0, 3))],
       ),
       child: Column(children: [
         _BTeamRow(name: match.t1, score: match.s1,
           isWinner: match.winner == match.t1, isMyTeam: match.t1 == myTeam, isTop: true),
-        Container(height: 1, color: _sub(context).withValues(alpha: 0.08)),
+        Container(height: 1, color: _sub(context).withOpacity(0.08)),
         _BTeamRow(name: match.t2, score: match.s2,
           isWinner: match.winner == match.t2, isMyTeam: match.t2 == myTeam, isTop: false),
       ]),
@@ -2111,7 +2111,7 @@ class _BTeamRow extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 8),
         decoration: BoxDecoration(
-          color: isWinner ? _kGreen.withValues(alpha: 0.1) : isMyTeam ? _kGreen.withValues(alpha: 0.04) : null,
+          color: isWinner ? _kGreen.withOpacity(0.1) : isMyTeam ? _kGreen.withOpacity(0.04) : null,
           borderRadius: BorderRadius.vertical(
             top: isTop ? const Radius.circular(12) : Radius.zero,
             bottom: !isTop ? const Radius.circular(12) : Radius.zero),
@@ -2131,8 +2131,8 @@ class _BTeamRow extends StatelessWidget {
             width: 24, height: 24,
             decoration: BoxDecoration(
               color: isWinner ? _kGreen : score == null
-                  ? _sub(context).withValues(alpha: 0.07)
-                  : _sub(context).withValues(alpha: 0.1),
+                  ? _sub(context).withOpacity(0.07)
+                  : _sub(context).withOpacity(0.1),
               borderRadius: BorderRadius.circular(7)),
             child: Center(child: Text(
               score != null ? '$score' : '–',

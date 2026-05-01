@@ -3,7 +3,9 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'terrain_data.dart';
 import 'terrain_detail_screen.dart';
+import 'package:geolocator/geolocator.dart';
 import 'providers/terrain_provider.dart';
+import 'providers/auth_provider.dart';
 
 const Color kGreen = Color(0xFF006F39);
 
@@ -12,8 +14,8 @@ Color _bg(BuildContext c)   => Theme.of(c).scaffoldBackgroundColor;
 Color _card(BuildContext c) => Theme.of(c).cardColor;
 Color _txt(BuildContext c)  => Theme.of(c).colorScheme.onSurface;
 Color _sub(BuildContext c)  => _isDark(c)
-    ? const Color(0xFFF0EBE0).withValues(alpha: 0.5)
-    : Colors.black.withValues(alpha: 0.45);
+    ? const Color(0xFFF0EBE0).withOpacity(0.5)
+    : Colors.black.withOpacity(0.45);
 
 class TerrainListScreen extends StatefulWidget {
   const TerrainListScreen({super.key});
@@ -24,26 +26,63 @@ class TerrainListScreen extends StatefulWidget {
 
 class _TerrainListScreenState extends State<TerrainListScreen> {
   String _query = '';
+  final ScrollController _scrollController = ScrollController();
 
   @override
   void initState() {
     super.initState();
+    _scrollController.addListener(_onScroll);
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<TerrainProvider>().loadTerrains();
+      final tp = context.read<TerrainProvider>();
+      tp.loadTerrains(refresh: true);
+      tp.updateLocation();
+      final auth = context.read<AuthProvider>();
+      if (auth.token != null) {
+        tp.loadFavorites(auth.token!);
+      }
     });
   }
 
-  List<Terrain> _filtered(List<Terrain> all) => all
-      .where((t) =>
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _onScroll() {
+    if (_scrollController.position.pixels >= _scrollController.position.maxScrollExtent - 200) {
+      final tp = context.read<TerrainProvider>();
+      if (!tp.isLoading && tp.hasMore) {
+        tp.loadMoreTerrains(search: _query);
+      }
+    }
+  }
+
+  List<Terrain> _getPopular(List<Terrain> all) {
+    var list = List<Terrain>.from(all);
+    list.sort((a, b) => b.rating.compareTo(a.rating));
+    return list.take(10).toList();
+  }
+
+  List<Terrain> _getNearby(List<Terrain> all, Position? pos) {
+    var list = all.where((t) =>
           t.name.toLowerCase().contains(_query.toLowerCase()) ||
           t.address.toLowerCase().contains(_query.toLowerCase()))
       .toList();
+    
+    if (pos != null) {
+      final tp = context.read<TerrainProvider>();
+      list.sort((a, b) => tp.distanceTo(a).compareTo(tp.distanceTo(b)));
+    }
+    return list;
+  }
 
   @override
   Widget build(BuildContext context) {
     final provider = context.watch<TerrainProvider>();
-    final filtered = _filtered(provider.terrains);
-    final nearby = filtered.take(2).toList();
+    final all = provider.terrains;
+    final popular = _getPopular(all);
+    final nearby = _getNearby(all, provider.userPosition);
 
     return Scaffold(
       backgroundColor: _bg(context),
@@ -51,208 +90,104 @@ class _TerrainListScreenState extends State<TerrainListScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // ── HEADER ──
+            // ── HEADER (Location + Search) ──
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Location
-                  Text('Localisation',
-                      style: TextStyle(
-                          fontSize: 11,
-                          color: _sub(context))),
+                  Text('Localisation', style: TextStyle(fontSize: 11, color: _sub(context))),
                   const SizedBox(height: 3),
                   Row(children: [
-                    const Icon(Icons.location_on_rounded,
-                        color: kGreen, size: 16),
+                    const Icon(Icons.location_on_rounded, color: kGreen, size: 16),
                     const SizedBox(width: 4),
-                    Text('Dakar, Sénégal',
-                        style: TextStyle(
-                            fontWeight: FontWeight.w700, fontSize: 14,
-                            color: _txt(context))),
-                    Icon(Icons.keyboard_arrow_down_rounded,
-                        size: 18, color: _sub(context)),
+                    Text('Dakar, Sénégal', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14, color: _txt(context))),
+                    Icon(Icons.keyboard_arrow_down_rounded, size: 18, color: _sub(context)),
                   ]),
-
                   const SizedBox(height: 16),
-
-                  // Recherche
                   Container(
                     height: 48,
-                    decoration: BoxDecoration(
-                      color: _card(context),
-                      borderRadius: BorderRadius.circular(14),
-                    ),
+                    decoration: BoxDecoration(color: _card(context), borderRadius: BorderRadius.circular(14)),
                     child: Row(
                       children: [
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 12),
-                          child: Icon(Icons.search_rounded,
-                              color: _sub(context), size: 22),
-                        ),
+                        Padding(padding: const EdgeInsets.symmetric(horizontal: 12), child: Icon(Icons.search_rounded, color: _sub(context), size: 22)),
                         Expanded(
                           child: TextField(
-                            onChanged: (v) => setState(() => _query = v),
+                            onChanged: (v) {
+                              setState(() => _query = v);
+                              provider.loadTerrains(search: v, refresh: true);
+                            },
                             style: TextStyle(color: _txt(context)),
-                            decoration: InputDecoration(
-                              hintText: 'Rechercher un terrain...',
-                              hintStyle: TextStyle(
-                                  color: _sub(context),
-                                  fontSize: 14),
-                              border: InputBorder.none,
-                              contentPadding:
-                                  const EdgeInsets.symmetric(vertical: 14),
-                            ),
+                            decoration: InputDecoration(hintText: 'Rechercher un terrain...', hintStyle: TextStyle(color: _sub(context), fontSize: 14), border: InputBorder.none),
                           ),
-                        ),
-                        Container(
-                          margin: const EdgeInsets.all(8),
-                          width: 32,
-                          height: 32,
-                          decoration: BoxDecoration(
-                            color: _bg(context),
-                            borderRadius: BorderRadius.circular(8),
-                            boxShadow: [
-                              BoxShadow(
-                                  color: Colors.black.withValues(alpha: 0.06),
-                                  blurRadius: 4)
-                            ],
-                          ),
-                          child: Icon(Icons.tune_rounded,
-                              size: 18, color: _sub(context)),
                         ),
                       ],
                     ),
                   ),
-
-                  const SizedBox(height: 18),
-
-                  // Badge Football only
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 14, vertical: 8),
-                    decoration: BoxDecoration(
-                      color: kGreen,
-                      borderRadius: BorderRadius.circular(22),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: const [
-                        Icon(Icons.sports_soccer_rounded,
-                            size: 15, color: Colors.white),
-                        SizedBox(width: 6),
-                        Text('Football',
-                            style: TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w600,
-                                color: Colors.white)),
-                      ],
-                    ),
-                  ),
-
-                  const SizedBox(height: 22),
-
-                  // Terrains à proximité
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text('Terrains à proximité',
-                          style: GoogleFonts.orbitron(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w800,
-                              color: kGreen)),
-                      Text('Voir tout',
-                          style: TextStyle(
-                              fontSize: 13,
-                              color: kGreen,
-                              fontWeight: FontWeight.w600)),
-                    ],
-                  ),
-                  const SizedBox(height: 14),
                 ],
               ),
             ),
 
-            // ── CONTENU SCROLLABLE ──
+            const SizedBox(height: 18),
+
+            // ── CONTENU PRINCIPAL ──
             Expanded(
-              child: provider.isLoading
-                  ? const Center(child: CircularProgressIndicator())
-                  : provider.error != null
-                      ? Center(
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Icon(Icons.wifi_off_rounded,
-                                  size: 48, color: Colors.black26),
-                              const SizedBox(height: 12),
-                              Text('Impossible de charger les terrains',
-                                  style: TextStyle(color: _sub(context))),
-                              const SizedBox(height: 12),
-                              TextButton(
-                                onPressed: () => context.read<TerrainProvider>().loadTerrains(),
-                                child: const Text('Réessayer'),
-                              ),
-                            ],
-                          ),
-                        )
-                      : CustomScrollView(
+              child: CustomScrollView(
+                controller: _scrollController,
                 slivers: [
-                  // Grille 2 colonnes (image arrondie + texte dessous)
-                  SliverPadding(
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
-                    sliver: SliverGrid(
-                      gridDelegate:
-                          const SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 2,
-                        crossAxisSpacing: 14,
-                        mainAxisSpacing: 6,
-                        childAspectRatio: 0.78,
-                      ),
-                      delegate: SliverChildBuilderDelegate(
-                        (_, i) => _NearbyItem(terrain: nearby[i]),
-                        childCount: nearby.length < 2 ? nearby.length : 2,
+                  // 1. TERRAINS POPULAIRES (Horizontal)
+                  if (_query.isEmpty && popular.isNotEmpty) ...[
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(20, 10, 20, 12),
+                        child: Text('Terrains populaires', style: GoogleFonts.orbitron(fontSize: 13, fontWeight: FontWeight.w800, color: kGreen)),
                       ),
                     ),
-                  ),
+                    SliverToBoxAdapter(
+                      child: SizedBox(
+                        height: 160,
+                        child: ListView.builder(
+                          scrollDirection: Axis.horizontal,
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          itemCount: popular.length,
+                          itemBuilder: (_, i) => _PopularHorizontalItem(terrain: popular[i]),
+                        ),
+                      ),
+                    ),
+                    const SliverToBoxAdapter(child: SizedBox(height: 24)),
+                  ],
 
-                  // Section Terrains Populaires
+                  // 2. TOUS LES TERRAINS / PROXIMITÉ (Vertical)
                   SliverToBoxAdapter(
                     child: Padding(
-                      padding:
-                          const EdgeInsets.fromLTRB(20, 24, 20, 14),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text('Terrains populaires',
-                              style: GoogleFonts.orbitron(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w800,
-                                  color: kGreen)),
-                          Text('Voir tout',
-                              style: TextStyle(
-                                  fontSize: 13,
-                                  color: kGreen,
-                                  fontWeight: FontWeight.w600)),
-                        ],
+                      padding: const EdgeInsets.fromLTRB(20, 0, 20, 14),
+                      child: Text(
+                        _query.isEmpty ? 'Terrains à proximité' : 'Résultats de recherche',
+                        style: GoogleFonts.orbitron(fontSize: 13, fontWeight: FontWeight.w800, color: kGreen),
                       ),
                     ),
                   ),
 
-                  // Liste populaires
                   SliverPadding(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 20),
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
                     sliver: SliverList(
                       delegate: SliverChildBuilderDelegate(
-                        (_, i) => _PopularItem(terrain: filtered[i]),
-                        childCount: filtered.length,
+                        (_, i) => _PopularItem(terrain: nearby[i]),
+                        childCount: nearby.length,
                       ),
                     ),
                   ),
 
-                  const SliverToBoxAdapter(
-                      child: SizedBox(height: 20)),
+                  // Indicateur de chargement pagination
+                  if (provider.isLoading && nearby.isNotEmpty)
+                    const SliverToBoxAdapter(
+                      child: Padding(
+                        padding: EdgeInsets.symmetric(vertical: 20),
+                        child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+                      ),
+                    ),
+
+                  const SliverToBoxAdapter(child: SizedBox(height: 80)),
                 ],
               ),
             ),
@@ -270,6 +205,10 @@ class _NearbyItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final provider = context.watch<TerrainProvider>();
+    final auth = context.watch<AuthProvider>();
+    final isFav = provider.favorites.any((t) => t.id == terrain.id);
+
     return GestureDetector(
       onTap: () => Navigator.push(
           context,
@@ -291,7 +230,7 @@ class _NearbyItem extends StatelessWidget {
                     fit: BoxFit.cover,
                     errorBuilder: (_, _, _) => Container(
                         decoration: BoxDecoration(
-                          color: kGreen.withValues(alpha: 0.10),
+                          color: kGreen.withOpacity(0.10),
                           borderRadius: BorderRadius.circular(16),
                         )),
                   ),
@@ -299,15 +238,31 @@ class _NearbyItem extends StatelessWidget {
                 Positioned(
                   top: 8,
                   right: 8,
-                  child: Container(
-                    width: 30,
-                    height: 30,
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.9),
-                      shape: BoxShape.circle,
+                  child: GestureDetector(
+                    onTap: () {
+                      if (auth.token != null) {
+                        provider.toggleFavorite(auth.token!, terrain.id);
+                      }
+                    },
+                    child: Container(
+                      width: 30,
+                      height: 30,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.9),
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.1),
+                            blurRadius: 4,
+                          )
+                        ],
+                      ),
+                      child: Icon(
+                        isFav ? Icons.favorite_rounded : Icons.favorite_border_rounded,
+                        size: 16,
+                        color: isFav ? Colors.red : Colors.black54,
+                      ),
                     ),
-                    child: const Icon(Icons.bookmark_border_rounded,
-                        size: 16, color: Colors.black54),
                   ),
                 ),
               ],
@@ -345,6 +300,16 @@ class _NearbyItem extends StatelessWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis),
             ),
+            const SizedBox(width: 4),
+            if (provider.userPosition != null)
+              Text(
+                '${(provider.distanceTo(terrain) / 1000).toStringAsFixed(1)} km',
+                style: const TextStyle(
+                  fontSize: 10,
+                  color: kGreen,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
           ]),
         ],
       ),
@@ -353,12 +318,71 @@ class _NearbyItem extends StatelessWidget {
 }
 
 // ── ITEM POPULAIRE (horizontal) ──
+class _PopularHorizontalItem extends StatelessWidget {
+  final Terrain terrain;
+  const _PopularHorizontalItem({required this.terrain});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => TerrainDetailScreen(terrain: terrain))),
+      child: Container(
+        width: 140,
+        margin: const EdgeInsets.only(right: 14),
+        decoration: BoxDecoration(
+          color: _card(context),
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 4))],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: ClipRRect(
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+                child: Image.network(
+                  terrain.imageUrl,
+                  width: double.infinity,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => Container(color: kGreen.withOpacity(0.1), child: const Icon(Icons.image, color: kGreen)),
+                ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(10),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(terrain.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12), maxLines: 1, overflow: TextOverflow.ellipsis),
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      const Icon(Icons.star_rounded, color: Colors.orange, size: 14),
+                      const SizedBox(width: 2),
+                      Text(terrain.rating.toStringAsFixed(1), style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600)),
+                      const Spacer(),
+                      Text('${terrain.pricePerHour} F', style: const TextStyle(color: kGreen, fontWeight: FontWeight.bold, fontSize: 11)),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
 class _PopularItem extends StatelessWidget {
   final Terrain terrain;
   const _PopularItem({required this.terrain});
 
   @override
   Widget build(BuildContext context) {
+    final provider = context.watch<TerrainProvider>();
+    final auth = context.watch<AuthProvider>();
+    final isFav = provider.favorites.any((t) => t.id == terrain.id);
+
     return GestureDetector(
       onTap: () => Navigator.push(
           context,
@@ -379,7 +403,7 @@ class _PopularItem extends StatelessWidget {
                 errorBuilder: (_, _, _) => Container(
                     width: 80,
                     height: 70,
-                    color: kGreen.withValues(alpha: 0.10)),
+                    color: kGreen.withOpacity(0.10)),
               ),
             ),
             const SizedBox(width: 12),
@@ -392,18 +416,30 @@ class _PopularItem extends StatelessWidget {
                           fontWeight: FontWeight.w700, fontSize: 14,
                           color: _txt(context))),
                   const SizedBox(height: 4),
-                  Row(children: [
-                    Icon(Icons.location_on_rounded,
-                        color: _sub(context), size: 13),
-                    const SizedBox(width: 2),
-                    Expanded(
-                      child: Text(terrain.address,
-                          style: TextStyle(
-                              fontSize: 12, color: _sub(context)),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis),
-                    ),
-                  ]),
+                    Row(children: [
+                      Icon(Icons.location_on_rounded,
+                          color: _sub(context), size: 13),
+                      const SizedBox(width: 2),
+                      Expanded(
+                        child: Text(terrain.address,
+                            style: TextStyle(
+                                fontSize: 12, color: _sub(context)),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis),
+                      ),
+                      if (provider.userPosition != null)
+                        Padding(
+                          padding: const EdgeInsets.only(left: 8),
+                          child: Text(
+                            '${(provider.distanceTo(terrain) / 1000).toStringAsFixed(1)} km',
+                            style: const TextStyle(
+                              fontSize: 11,
+                              color: kGreen,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                        ),
+                    ]),
                   const SizedBox(height: 6),
                   Row(
                     children: List.generate(
@@ -421,13 +457,21 @@ class _PopularItem extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 8),
-            const Icon(Icons.bookmark_border_rounded,
-                size: 20, color: Colors.black38),
+            GestureDetector(
+              onTap: () {
+                if (auth.token != null) {
+                  provider.toggleFavorite(auth.token!, terrain.id);
+                }
+              },
+              child: Icon(
+                isFav ? Icons.favorite_rounded : Icons.favorite_border_rounded,
+                size: 20,
+                color: isFav ? Colors.red : Colors.black38,
+              ),
+            ),
           ],
         ),
       ),
     );
   }
 }
-
-

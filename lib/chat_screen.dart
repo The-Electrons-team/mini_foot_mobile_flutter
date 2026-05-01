@@ -11,8 +11,8 @@ Color _bg(BuildContext c)   => Theme.of(c).scaffoldBackgroundColor;
 Color _card(BuildContext c) => Theme.of(c).cardColor;
 Color _txt(BuildContext c)  => Theme.of(c).colorScheme.onSurface;
 Color _sub(BuildContext c)  => _isDark(c)
-    ? const Color(0xFFF0EBE0).withValues(alpha: 0.5)
-    : Colors.black.withValues(alpha: 0.45);
+    ? const Color(0xFFF0EBE0).withOpacity(0.5)
+    : Colors.black.withOpacity(0.45);
 
 // ── CONTACTS FAKE DATA ──
 
@@ -320,7 +320,7 @@ class _ChatListScreenState extends State<ChatListScreen>
                     borderRadius: BorderRadius.circular(16),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.06),
+                        color: Colors.black.withOpacity(0.06),
                         blurRadius: 10,
                         offset: const Offset(0, 2),
                       ),
@@ -514,7 +514,7 @@ class _ChatTile extends StatelessWidget {
           color: hasUnread ? _card(context) : Colors.transparent,
           borderRadius: BorderRadius.circular(18),
           boxShadow: hasUnread
-              ? [BoxShadow(color: Colors.black.withValues(alpha: 0.06), blurRadius: 10, offset: const Offset(0, 2))]
+              ? [BoxShadow(color: Colors.black.withOpacity(0.06), blurRadius: 10, offset: const Offset(0, 2))]
               : null,
         ),
         child: Row(
@@ -592,7 +592,7 @@ class _ChatTile extends StatelessWidget {
                           chat.lastMessage,
                           style: TextStyle(
                             fontSize: 13,
-                            color: hasUnread ? _txt(context).withValues(alpha: 0.65) : _sub(context),
+                            color: hasUnread ? _txt(context).withOpacity(0.65) : _sub(context),
                             fontWeight: hasUnread ? FontWeight.w500 : FontWeight.w400,
                           ),
                           maxLines: 1,
@@ -791,7 +791,7 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
                 Container(
                   width: 38, height: 38,
                   decoration: BoxDecoration(
-                    color: _kGreen.withValues(alpha: 0.08),
+                    color: _kGreen.withOpacity(0.08),
                     shape: BoxShape.circle,
                   ),
                   child: const Icon(Icons.add_rounded, color: _kGreen, size: 20),
@@ -863,7 +863,7 @@ class _MessageBubble extends StatelessWidget {
             bottomRight: Radius.circular(msg.isMe ? 4 : 16),
           ),
           boxShadow: [
-            BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 6),
+            BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 6),
           ],
         ),
         child: Column(
@@ -882,12 +882,12 @@ class _MessageBubble extends StatelessWidget {
                     style: TextStyle(
                         fontSize: 10,
                         color: msg.isMe
-                            ? Colors.white.withValues(alpha: 0.5)
+                            ? Colors.white.withOpacity(0.5)
                             : _sub(context))),
                 if (msg.isMe) ...[
                   const SizedBox(width: 4),
                   Icon(Icons.done_all_rounded, size: 13,
-                      color: _kGreen.withValues(alpha: 0.8)),
+                      color: _kGreen.withOpacity(0.8)),
                 ],
               ],
             ),
@@ -918,7 +918,7 @@ class _InvitationTileState extends State<_InvitationTile> {
       decoration: BoxDecoration(
         color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(16),
-        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 8)],
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 8)],
       ),
       child: Row(
         children: [
@@ -966,7 +966,7 @@ class _InvitationTileState extends State<_InvitationTile> {
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
-                    color: _sub(context).withValues(alpha: 0.08),
+                    color: _sub(context).withOpacity(0.08),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text('Refuser',
@@ -1005,9 +1005,9 @@ class _NewChatOption extends StatelessWidget {
     child: Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.06),
+        color: color.withOpacity(0.06),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: color.withValues(alpha: 0.15)),
+        border: Border.all(color: color.withOpacity(0.15)),
       ),
       child: Row(
         children: [
@@ -1023,11 +1023,11 @@ class _NewChatOption extends StatelessWidget {
               children: [
                 Text(label, style: TextStyle(fontWeight: FontWeight.w800, fontSize: 13, color: Theme.of(context).colorScheme.onSurface)),
                 const SizedBox(height: 2),
-                Text(sub, style: TextStyle(fontSize: 11, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.45))),
+                Text(sub, style: TextStyle(fontSize: 11, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.45))),
               ],
             ),
           ),
-          Icon(Icons.arrow_forward_ios_rounded, size: 14, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3)),
+          Icon(Icons.arrow_forward_ios_rounded, size: 14, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.3)),
         ],
       ),
     ),
@@ -1090,7 +1090,7 @@ class _ContactPickerSheetState extends State<_ContactPickerSheet> {
               margin: const EdgeInsets.only(top: 10, bottom: 6),
               width: 36, height: 4,
               decoration: BoxDecoration(
-                color: _sub(context).withValues(alpha: 0.2),
+                color: _sub(context).withOpacity(0.2),
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -1101,7 +1101,7 @@ class _ContactPickerSheetState extends State<_ContactPickerSheet> {
                   Container(
                     width: 32, height: 32,
                     decoration: BoxDecoration(
-                      color: widget.color.withValues(alpha: 0.1),
+                      color: widget.color.withOpacity(0.1),
                       shape: BoxShape.circle,
                     ),
                     child: Icon(
@@ -1133,7 +1133,7 @@ class _ContactPickerSheetState extends State<_ContactPickerSheet> {
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 12),
                       child: Icon(Icons.search_rounded,
-                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4), size: 18),
+                          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.4), size: 18),
                     ),
                     Expanded(
                       child: TextField(
@@ -1143,7 +1143,7 @@ class _ContactPickerSheetState extends State<_ContactPickerSheet> {
                         decoration: InputDecoration(
                           hintText: 'Rechercher...',
                           hintStyle: TextStyle(
-                              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3), fontSize: 14),
+                              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.3), fontSize: 14),
                           border: InputBorder.none,
                         ),
                       ),
@@ -1155,7 +1155,7 @@ class _ContactPickerSheetState extends State<_ContactPickerSheet> {
             Expanded(
               child: _filtered.isEmpty
                   ? Center(child: Text('Aucun résultat',
-                      style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4))))
+                      style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.4))))
                   : ListView.builder(
                       controller: scrollCtrl,
                       itemCount: _filtered.length,
@@ -1200,9 +1200,9 @@ class _ContactPickerSheetState extends State<_ContactPickerSheet> {
                                 Container(
                                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                                   decoration: BoxDecoration(
-                                    color: widget.color.withValues(alpha: 0.1),
+                                    color: widget.color.withOpacity(0.1),
                                     borderRadius: BorderRadius.circular(8),
-                                    border: Border.all(color: widget.color.withValues(alpha: 0.25)),
+                                    border: Border.all(color: widget.color.withOpacity(0.25)),
                                   ),
                                   child: Text('Contacter',
                                       style: TextStyle(

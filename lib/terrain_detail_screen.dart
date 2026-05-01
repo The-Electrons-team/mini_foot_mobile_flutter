@@ -3,9 +3,13 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:provider/provider.dart';
 import 'terrain_data.dart';
 import 'terrain_booking_screen.dart';
 import 'terrain_map_screen.dart';
+import 'services/terrain_service.dart';
+import 'providers/auth_provider.dart';
+import 'providers/terrain_provider.dart';
 
 const Color kGreen = Color(0xFF006F39);
 const Color kDark = Color(0xFF1A1A1A);
@@ -17,8 +21,8 @@ Color _bg(BuildContext c)   => Theme.of(c).scaffoldBackgroundColor;
 Color _card(BuildContext c) => Theme.of(c).cardColor;
 Color _txt(BuildContext c)  => Theme.of(c).colorScheme.onSurface;
 Color _sub(BuildContext c)  => _isDark(c)
-    ? const Color(0xFFF0EBE0).withValues(alpha: 0.5)
-    : Colors.black.withValues(alpha: 0.45);
+    ? const Color(0xFFF0EBE0).withOpacity(0.5)
+    : Colors.black.withOpacity(0.45);
 
 class TerrainDetailScreen extends StatefulWidget {
   final Terrain terrain;
@@ -29,14 +33,28 @@ class TerrainDetailScreen extends StatefulWidget {
 }
 
 class _TerrainDetailScreenState extends State<TerrainDetailScreen> {
-  bool _isSaved = false;
+  SubTerrain? _selectedSub;
+
   int _selectedTab = 0;
   int _selectedImageIndex = 0;
+  late double _currentRating;
+
+  @override
+  void initState() {
+    super.initState();
+    _currentRating = widget.terrain.rating;
+    // Si un seul terrain, on le sélectionne par défaut
+    if (widget.terrain.subTerrains.length == 1) {
+      _selectedSub = widget.terrain.subTerrains.first;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final t = widget.terrain;
-    final currentImage = t.imageUrls[_selectedImageIndex];
+    final currentImage = t.imageUrls.isNotEmpty 
+        ? t.imageUrls[_selectedImageIndex] 
+        : t.imageUrl;
 
     return Scaffold(
       backgroundColor: _bg(context),
@@ -53,16 +71,26 @@ class _TerrainDetailScreenState extends State<TerrainDetailScreen> {
             style: GoogleFonts.orbitron(
                 fontSize: 14, fontWeight: FontWeight.w800, color: _txt(context))),
         actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 16),
-            child: GestureDetector(
-              onTap: () => setState(() => _isSaved = !_isSaved),
-              child: Icon(
-                _isSaved ? Icons.bookmark_rounded : Icons.bookmark_border_rounded,
-                color: _isSaved ? kGreen : _txt(context),
-                size: 22,
-              ),
-            ),
+          Consumer2<TerrainProvider, AuthProvider>(
+            builder: (context, terrainProv, authProv, _) {
+              final isFav = terrainProv.favorites.any((fav) => fav.id == t.id);
+              return Padding(
+                padding: const EdgeInsets.only(right: 16),
+                child: GestureDetector(
+                  onTap: () {
+                    final token = authProv.token;
+                    if (token != null) {
+                      terrainProv.toggleFavorite(token, t.id);
+                    }
+                  },
+                  child: Icon(
+                    isFav ? Icons.bookmark_rounded : Icons.bookmark_border_rounded,
+                    color: isFav ? kGreen : _txt(context),
+                    size: 22,
+                  ),
+                ),
+              );
+            },
           ),
         ],
       ),
@@ -80,7 +108,7 @@ class _TerrainDetailScreenState extends State<TerrainDetailScreen> {
                   currentImage,
                   fit: BoxFit.cover,
                   errorBuilder: (_, _, _) =>
-                      Container(color: kGreen.withValues(alpha: 0.12)),
+                      Container(color: kGreen.withOpacity(0.12)),
                 ),
                 // Dégradé bas pour les miniatures
                 Positioned.fill(
@@ -91,7 +119,7 @@ class _TerrainDetailScreenState extends State<TerrainDetailScreen> {
                         end: Alignment.bottomCenter,
                         colors: [
                           Colors.transparent,
-                          Colors.black.withValues(alpha: 0.55),
+                          Colors.black.withOpacity(0.55),
                         ],
                         stops: const [0.55, 1.0],
                       ),
@@ -163,7 +191,7 @@ class _TerrainDetailScreenState extends State<TerrainDetailScreen> {
                         const Icon(Icons.star_rounded,
                             color: Color(0xFFFFB300), size: 18),
                         const SizedBox(width: 3),
-                        Text('${t.rating}',
+                        Text(_currentRating.toStringAsFixed(1),
                             style: TextStyle(
                                 fontWeight: FontWeight.w800,
                                 fontSize: 15,
@@ -201,14 +229,22 @@ class _TerrainDetailScreenState extends State<TerrainDetailScreen> {
 
                   Container(
                     height: 1,
-                    color: Colors.black.withValues(alpha: 0.08),
+                    color: Colors.black.withOpacity(0.08),
                   ),
 
                   const SizedBox(height: 16),
 
                   // ── CONTENU ONGLET ──
-                  if (_selectedTab == 0) _AboutTab(terrain: t),
-                  if (_selectedTab == 1) _ReviewTab(terrain: t),
+                  if (_selectedTab == 0) 
+                    _AboutTab(
+                      terrain: t, 
+                      selectedSub: _selectedSub,
+                      onSelect: (s) => setState(() => _selectedSub = s),
+                    ),
+                  if (_selectedTab == 1) _ReviewTab(
+                    terrain: t, 
+                    onRatingUpdated: (newRating) => setState(() => _currentRating = newRating)
+                  ),
                   if (_selectedTab == 2) _MapTab(terrain: t),
 
                   const SizedBox(height: 24),
@@ -221,16 +257,10 @@ class _TerrainDetailScreenState extends State<TerrainDetailScreen> {
 
       // ── BOUTON RÉSERVER ──
       bottomNavigationBar: Container(
-        padding: EdgeInsets.fromLTRB(
-            20, 12, 20, MediaQuery.of(context).padding.bottom + 12),
+        padding: EdgeInsets.fromLTRB(20, 12, 20, MediaQuery.of(context).padding.bottom + 12),
         decoration: BoxDecoration(
           color: _card(context),
-          boxShadow: [
-            BoxShadow(
-                color: Colors.black.withValues(alpha: 0.06),
-                blurRadius: 12,
-                offset: const Offset(0, -3))
-          ],
+          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.06), blurRadius: 12, offset: const Offset(0, -3))],
         ),
         child: Row(
           children: [
@@ -238,34 +268,37 @@ class _TerrainDetailScreenState extends State<TerrainDetailScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text('par heure',
-                    style: TextStyle(fontSize: 11, color: _sub(context))),
+                Text('Prix par heure', style: TextStyle(fontSize: 11, color: _sub(context))),
                 const SizedBox(height: 2),
-                Text(t.priceLabel,
-                    style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w900,
-                        color: _txt(context))),
+                Text(_selectedSub != null ? '${_selectedSub!.pricePerHour ?? t.pricePerHour} F' : t.priceLabel,
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: _txt(context))),
               ],
             ),
             const Spacer(),
             GestureDetector(
-              onTap: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                      builder: (_) => TerrainBookingScreen(terrain: t))),
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 36, vertical: 14),
+              onTap: (_selectedSub != null || t.subTerrains.isEmpty) ? () {
+                Navigator.push(context, MaterialPageRoute(
+                  builder: (_) => TerrainBookingScreen(
+                    terrain: widget.terrain,
+                    initialSubTerrain: _selectedSub,
+                  ),
+                ));
+              } : null,
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 14),
                 decoration: BoxDecoration(
-                  color: kGreen,
+                  color: (_selectedSub != null || t.subTerrains.isEmpty) ? kGreen : Colors.grey[400],
                   borderRadius: BorderRadius.circular(14),
                 ),
-                child: Text('Réserver',
-                    style: GoogleFonts.orbitron(
-                        color: Colors.white,
-                        fontSize: 13,
-                        fontWeight: FontWeight.w700)),
+                child: Text(
+                  _selectedSub != null ? 'Réserver' : 'Choisir terrain',
+                  style: GoogleFonts.orbitron(
+                    color: Colors.white,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700
+                  )
+                ),
               ),
             ),
           ],
@@ -315,7 +348,13 @@ class _Tab extends StatelessWidget {
 // ── ONGLET À PROPOS ──
 class _AboutTab extends StatelessWidget {
   final Terrain terrain;
-  const _AboutTab({required this.terrain});
+  final SubTerrain? selectedSub;
+  final Function(SubTerrain) onSelect;
+  const _AboutTab({
+    required this.terrain,
+    required this.selectedSub,
+    required this.onSelect,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -333,6 +372,53 @@ class _AboutTab extends StatelessWidget {
                 color: _sub(context))),
 
         const SizedBox(height: 20),
+
+        if (terrain.subTerrains.length > 1) ...[
+          Text('Terrains disponibles',
+              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: _txt(context))),
+          const SizedBox(height: 12),
+          ...terrain.subTerrains.map((s) {
+            final isSelected = selectedSub?.id == s.id;
+            return InkWell(
+              onTap: () => onSelect(s),
+              borderRadius: BorderRadius.circular(12),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                margin: const EdgeInsets.only(bottom: 10),
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: isSelected ? kGreen.withOpacity(0.05) : _card(context),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: isSelected ? kGreen : kGreen.withOpacity(0.1)),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 40, height: 40,
+                      decoration: BoxDecoration(color: kGreen.withOpacity(0.1), borderRadius: BorderRadius.circular(10)),
+                      child: const Icon(Icons.sports_soccer_rounded, color: kGreen, size: 20),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(s.name, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: _txt(context))),
+                          const SizedBox(height: 2),
+                          Text('${s.type} • ${s.capacity} joueurs • ${s.surface ?? 'Synthétique'}', 
+                              style: TextStyle(fontSize: 11, color: _sub(context))),
+                        ],
+                      ),
+                    ),
+                    if (s.pricePerHour != null)
+                      Text('${s.pricePerHour} F', style: const TextStyle(color: kGreen, fontWeight: FontWeight.bold, fontSize: 13)),
+                  ],
+                ),
+              ),
+            );
+          }).toList(),
+          const SizedBox(height: 20),
+        ],
 
         Text('Équipements',
             style: TextStyle(
@@ -375,85 +461,190 @@ class _AboutTab extends StatelessWidget {
   }
 }
 
-// ── ONGLET AVIS ──
-class _ReviewTab extends StatelessWidget {
+// ── ONGLET AVIS DYNAMIQUE ──
+class _ReviewTab extends StatefulWidget {
   final Terrain terrain;
-  const _ReviewTab({required this.terrain});
+  final Function(double)? onRatingUpdated;
+  const _ReviewTab({required this.terrain, this.onRatingUpdated});
+
+  @override
+  State<_ReviewTab> createState() => _ReviewTabState();
+}
+
+class _ReviewTabState extends State<_ReviewTab> {
+  final TerrainService _service = TerrainService();
+  List<TerrainReview> _reviews = [];
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadReviews();
+  }
+
+  Future<void> _loadReviews() async {
+    final list = await _service.fetchReviews(widget.terrain.id);
+    if (mounted) {
+      setState(() {
+        _reviews = list;
+        _isLoading = false;
+      });
+    }
+  }
+
+  void _showAddReviewSheet() {
+    int rating = 5;
+    final commentController = TextEditingController();
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => Container(
+          padding: EdgeInsets.fromLTRB(20, 20, 20, MediaQuery.of(context).viewInsets.bottom + 30),
+          decoration: BoxDecoration(
+            color: _card(context),
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(25)),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(child: Container(width: 40, height: 4, decoration: BoxDecoration(color: _sub(context).withOpacity(0.2), borderRadius: BorderRadius.circular(2)))),
+              const SizedBox(height: 20),
+              Text('Votre avis', style: GoogleFonts.orbitron(fontSize: 18, fontWeight: FontWeight.w800, color: _txt(context))),
+              const SizedBox(height: 20),
+              // Étoiles
+              Center(
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: List.generate(5, (i) => IconButton(
+                    onPressed: () => setDialogState(() => rating = i + 1),
+                    icon: Icon(
+                      i < rating ? Icons.star_rounded : Icons.star_border_rounded,
+                      color: const Color(0xFFFFB300),
+                      size: 40,
+                    ),
+                  )),
+                ),
+              ),
+              const SizedBox(height: 20),
+              TextField(
+                controller: commentController,
+                maxLines: 3,
+                style: TextStyle(color: _txt(context), fontSize: 14),
+                autofocus: true,
+                decoration: InputDecoration(
+                  hintText: 'Partagez votre expérience sur ce terrain...',
+                  hintStyle: TextStyle(color: _sub(context)),
+                  filled: true,
+                  fillColor: _bg(context),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(15), borderSide: BorderSide.none),
+                ),
+              ),
+              const SizedBox(height: 25),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () async {
+                    final token = context.read<AuthProvider>().token;
+                    if (token == null) return;
+                    
+                    final result = await _service.addReview(token, widget.terrain.id, rating, commentController.text);
+                    if (result != null && mounted) {
+                      Navigator.pop(context);
+                      await _loadReviews();
+                      
+                      // Calculer la nouvelle moyenne locale
+                      if (_reviews.isNotEmpty) {
+                        final avg = _reviews.map((r) => r.rating).reduce((a, b) => a + b) / _reviews.length;
+                        widget.onRatingUpdated?.call(avg);
+                      }
+
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Row(
+                            children: [
+                              const Icon(Icons.check_circle_outline_rounded, color: Colors.white, size: 20),
+                              const SizedBox(width: 12),
+                              Text('Avis ajouté avec succès !', 
+                                style: GoogleFonts.orbitron(fontSize: 12, fontWeight: FontWeight.w700, color: Colors.white)),
+                            ],
+                          ),
+                          backgroundColor: kGreen,
+                          behavior: SnackBarBehavior.floating,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                          margin: const EdgeInsets.all(20),
+                          duration: const Duration(seconds: 3),
+                        )
+                      );
+                    }
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: kGreen,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                    elevation: 0,
+                  ),
+                  child: Text('Publier l\'avis', style: GoogleFonts.orbitron(color: Colors.white, fontWeight: FontWeight.w700)),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
-    final reviews = [
-      _ReviewData(
-        name: 'Moussa Diallo',
-        initials: 'MD',
-        color: kGreen,
-        rating: 5,
-        comment: 'Excellent terrain ! Gazon en très bon état et éclairage parfait pour jouer le soir. Je recommande vivement.',
-        date: 'Il y a 2 jours',
-      ),
-      _ReviewData(
-        name: 'Fatou Sall',
-        initials: 'FS',
-        color: Colors.orange,
-        rating: 4,
-        comment: 'Très bon terrain, bien entretenu. Le parking est pratique. Juste un peu cher mais ça vaut le coup.',
-        date: 'Il y a 1 semaine',
-      ),
-      _ReviewData(
-        name: 'Ibrahima Ndiaye',
-        initials: 'IN',
-        color: const Color(0xFF1565C0),
-        rating: 5,
-        comment: 'Meilleur terrain de Dakar ! Vestiaires propres, personnel accueillant. On reviendra.',
-        date: 'Il y a 2 semaines',
-      ),
-      _ReviewData(
-        name: 'Aminata Bâ',
-        initials: 'AB',
-        color: Colors.purple,
-        rating: 4,
-        comment: 'Terrain de qualité, bon accueil. La réservation en ligne est très pratique.',
-        date: 'Il y a 3 semaines',
-      ),
-    ];
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Note globale
+        // Note globale + Bouton Ajout
         Row(
           children: [
-            Text('${terrain.rating}',
-                style: TextStyle(
-                    fontSize: 48,
-                    fontWeight: FontWeight.w900,
-                    color: _txt(context))),
+            Text('${widget.terrain.rating.toStringAsFixed(1)}',
+                style: TextStyle(fontSize: 48, fontWeight: FontWeight.w900, color: _txt(context))),
             const SizedBox(width: 16),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: List.generate(
-                      5,
-                      (i) => Icon(
-                            i < terrain.rating.floor()
-                                ? Icons.star_rounded
-                                : Icons.star_border_rounded,
-                            color: const Color(0xFFFFB300),
-                            size: 20)),
-                ),
-                const SizedBox(height: 4),
-                Text('100+ avis',
-                    style: TextStyle(fontSize: 13, color: _sub(context))),
-              ],
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: List.generate(5, (i) => Icon(
+                      i < widget.terrain.rating.floor() ? Icons.star_rounded : Icons.star_border_rounded,
+                      color: const Color(0xFFFFB300),
+                      size: 20)),
+                  ),
+                  const SizedBox(height: 4),
+                  Text('${_reviews.length} avis', style: TextStyle(fontSize: 13, color: _sub(context))),
+                ],
+              ),
+            ),
+            IconButton(
+              onPressed: _showAddReviewSheet,
+              icon: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: const BoxDecoration(color: kGreen, shape: BoxShape.circle),
+                child: const Icon(Icons.add, color: Colors.white, size: 20),
+              ),
             ),
           ],
         ),
 
         const SizedBox(height: 20),
 
-        // Liste avis
-        ...reviews.map((r) => _ReviewCard(review: r)),
+        if (_isLoading)
+          const Center(child: CircularProgressIndicator(color: kGreen))
+        else if (_reviews.isEmpty)
+          Center(child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 20),
+            child: Text('Aucun avis pour le moment.', style: TextStyle(color: _sub(context))),
+          ))
+        else
+          ..._reviews.map((r) => _ReviewCard(review: r)),
       ],
     );
   }
@@ -477,11 +668,18 @@ class _ReviewData {
 }
 
 class _ReviewCard extends StatelessWidget {
-  final _ReviewData review;
+  final TerrainReview review;
   const _ReviewCard({required this.review});
 
   @override
   Widget build(BuildContext context) {
+    // Calcul de la date relative
+    final diff = DateTime.now().difference(review.createdAt);
+    String dateStr;
+    if (diff.inDays > 0) dateStr = 'Il y a ${diff.inDays}j';
+    else if (diff.inHours > 0) dateStr = 'Il y a ${diff.inHours}h';
+    else dateStr = 'À l\'instant';
+
     return Container(
       margin: const EdgeInsets.only(bottom: 14),
       padding: const EdgeInsets.all(14),
@@ -496,45 +694,36 @@ class _ReviewCard extends StatelessWidget {
             children: [
               CircleAvatar(
                 radius: 18,
-                backgroundColor: review.color,
-                child: Text(review.initials,
-                    style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold)),
+                backgroundColor: kGreen.withOpacity(0.1),
+                backgroundImage: review.userAvatar != null ? NetworkImage(review.userAvatar!) : null,
+                child: review.userAvatar == null 
+                  ? Text(review.userName.substring(0, 1).toUpperCase(),
+                    style: const TextStyle(color: kGreen, fontSize: 12, fontWeight: FontWeight.bold))
+                  : null,
               ),
               const SizedBox(width: 10),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(review.name,
-                        style: TextStyle(
-                            fontWeight: FontWeight.w700, fontSize: 13,
-                            color: _txt(context))),
-                    Text(review.date,
-                        style: TextStyle(fontSize: 11, color: _sub(context))),
+                    Text(review.userName,
+                        style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13, color: _txt(context))),
+                    Text(dateStr, style: TextStyle(fontSize: 11, color: _sub(context))),
                   ],
                 ),
               ),
               Row(
-                children: List.generate(
-                    5,
-                    (i) => Icon(
-                          i < review.rating
-                              ? Icons.star_rounded
-                              : Icons.star_border_rounded,
-                          color: const Color(0xFFFFB300),
-                          size: 14)),
+                children: List.generate(5, (i) => Icon(
+                  i < review.rating ? Icons.star_rounded : Icons.star_border_rounded,
+                  color: const Color(0xFFFFB300),
+                  size: 14)),
               ),
             ],
           ),
-          const SizedBox(height: 10),
-          Text(review.comment,
-              style: TextStyle(
-                  fontSize: 12,
-                  height: 1.5,
-                  color: _sub(context))),
+          if (review.comment != null && review.comment!.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            Text(review.comment!, style: TextStyle(fontSize: 12, height: 1.5, color: _sub(context))),
+          ],
         ],
       ),
     );
@@ -590,7 +779,7 @@ class _MapTab extends StatelessWidget {
                           border: Border.all(color: Colors.white, width: 2),
                           boxShadow: [
                             BoxShadow(
-                                color: kGreen.withValues(alpha: 0.4),
+                                color: kGreen.withOpacity(0.4),
                                 blurRadius: 10,
                                 spreadRadius: 2)
                           ],

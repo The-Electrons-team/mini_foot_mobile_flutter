@@ -1,10 +1,12 @@
-import 'dart:io';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'providers/auth_provider.dart';
+import 'providers/terrain_provider.dart';
+import 'providers/notification_provider.dart';
 
 import 'terrain_data.dart';
 import 'terrain_detail_screen.dart';
@@ -20,8 +22,8 @@ Color _bg(BuildContext c)   => Theme.of(c).scaffoldBackgroundColor;
 Color _card(BuildContext c) => Theme.of(c).cardColor;
 Color _txt(BuildContext c)  => Theme.of(c).colorScheme.onSurface;
 Color _sub(BuildContext c)  => _isDark(c)
-    ? const Color(0xFFF0EBE0).withValues(alpha: 0.5)
-    : Colors.black.withValues(alpha: 0.45);
+    ? const Color(0xFFF0EBE0).withOpacity(0.5)
+    : Colors.black.withOpacity(0.45);
 
 // ─────────────────────────────────────────────────────────────────────────────
 // PROFILE SCREEN
@@ -34,22 +36,41 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
-  File? _photo;
+  bool _isUploading = false;
 
   Future<void> _pickPhoto(ImageSource source) async {
     try {
       final picker = ImagePicker();
       final picked = await picker.pickImage(source: source, imageQuality: 85);
-      if (picked != null && mounted) setState(() => _photo = File(picked.path));
+      if (picked != null && mounted) {
+        setState(() => _isUploading = true);
+        final bytes = await picked.readAsBytes();
+        await context.read<AuthProvider>().uploadAvatar(bytes, picked.name);
+        
+        if (mounted) {
+          setState(() => _isUploading = false);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Row(
+                children: [
+                  const Icon(Icons.check_circle, color: Colors.white, size: 20),
+                  const SizedBox(width: 12),
+                  Text('Photo de profil mise à jour !', 
+                    style: GoogleFonts.orbitron(fontSize: 12, color: Colors.white)),
+                ],
+              ),
+              backgroundColor: _kGreen,
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+          );
+        }
+      }
     } catch (e) {
       if (mounted) {
+        setState(() => _isUploading = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(source == ImageSource.camera
-                ? 'Impossible d\'ouvrir la caméra'
-                : 'Impossible d\'ouvrir la galerie'),
-            backgroundColor: Colors.red.shade600,
-          ),
+          SnackBar(content: Text('Erreur: $e'), backgroundColor: Colors.red),
         );
       }
     }
@@ -91,17 +112,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     onTap: () { Navigator.pop(context); _pickPhoto(ImageSource.gallery); },
                   ),
                 ),
-                if (_photo != null) ...[
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: _PhotoOption(
-                      icon: Icons.delete_outline_rounded,
-                      label: 'Supprimer',
-                      color: Colors.red.shade600,
-                      onTap: () { Navigator.pop(context); setState(() => _photo = null); },
-                    ),
-                  ),
-                ],
               ],
             ),
           ],
@@ -147,14 +157,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             width: 88, height: 88,
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
-                              color: _kGreen.withValues(alpha: 0.15),
+                              color: _kGreen.withOpacity(0.15),
                               border: Border.all(color: _kGreen, width: 2.5),
                             ),
                             child: ClipOval(
-                              child: _photo != null
-                                  ? Image.file(_photo!, fit: BoxFit.cover)
-                                  : Icon(Icons.person_rounded,
-                                      size: 52, color: _kGreen.withValues(alpha: 0.5)),
+                              child: _isUploading
+                                  ? const Center(child: SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: _kGreen, strokeWidth: 3)))
+                                  : user?.avatarUrl != null
+                                      ? Image.network(
+                                          user!.avatarUrl!, 
+                                          fit: BoxFit.cover,
+                                          key: ValueKey(user.avatarUrl),
+                                          errorBuilder: (context, error, stackTrace) => 
+                                            Icon(Icons.person_rounded, size: 52, color: _kGreen.withOpacity(0.5)))
+                                      : Icon(Icons.person_rounded,
+                                          size: 52, color: _kGreen.withOpacity(0.5)),
                             ),
                           ),
                           Positioned(
@@ -189,8 +206,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           Wrap(
                             spacing: 6, runSpacing: 6,
                             children: [
-                              _PosBadge(label: 'Attaquant', color: _kGreen),
-                              _PosBadge(label: 'Les Lions FC', color: const Color(0xFF1565C0)),
+                              if (user?.position != null)
+                                _PosBadge(label: user!.position!, color: _kGreen),
+                              if (user != null && user.teamName != null)
+                                _PosBadge(label: user.teamName!, color: const Color(0xFF1565C0)),
                               if (user?.birthDate != null)
                                 Builder(
                                   builder: (context) {
@@ -203,7 +222,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                     );
                                   },
                                 ),
-
                             ],
                           ),
                         ],
@@ -220,38 +238,46 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 decoration: BoxDecoration(
                   color: _card(context),
                   borderRadius: BorderRadius.circular(20),
-                  boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.06), blurRadius: 12, offset: const Offset(0, 4))],
+                  boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.06), blurRadius: 12, offset: const Offset(0, 4))],
                 ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceAround,
                   children: [
-                    const _StatItem(value: '47', label: 'Matchs'),
-                    Container(width: 1, height: 32, color: Colors.black.withValues(alpha: 0.08)),
-                    const _StatItem(value: '12', label: 'Buts'),
-                    Container(width: 1, height: 32, color: Colors.black.withValues(alpha: 0.08)),
-                    const _StatItem(value: '8',  label: 'Passes'),
+                    _StatItem(value: '${user?.matchesCount ?? 0}', label: 'Matchs'),
+                    Container(width: 1, height: 32, color: Colors.black.withOpacity(0.08)),
+                    _StatItem(value: '${user?.goalsCount ?? 0}', label: 'Buts'),
+                    Container(width: 1, height: 32, color: Colors.black.withOpacity(0.08)),
+                    _StatItem(value: '${user?.assistsCount ?? 0}',  label: 'Passes'),
                   ],
                 ),
               ),
 
               // ── PROCHAINS MATCHS ──
-              Padding(
-                padding: const EdgeInsets.fromLTRB(24, 22, 24, 10),
-                child: Text('Prochains matchs',
-                    style: GoogleFonts.orbitron(fontSize: 13, fontWeight: FontWeight.w800, color: _txt(context))),
-              ),
-              SizedBox(
-                height: 110,
-                child: ListView(
-                  scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  children: const [
-                    _MatchCard(day: 'Sam 22 Mars', time: '16:00', home: 'Les Lions FC', away: 'Tigres FC',      terrain: 'Dakar Arena'),
-                    _MatchCard(day: 'Dim 23 Mars', time: '10:00', home: 'Les Lions FC', away: 'Plateau Stars',  terrain: 'Stade Léopold'),
-                    _MatchCard(day: 'Mer 26 Mars', time: '19:00', home: 'Les Lions FC', away: 'Warriors HLM',   terrain: 'Terrain Point E'),
-                  ],
+              if (user != null && user.upcomingMatches.isNotEmpty) ...[
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(24, 22, 24, 10),
+                  child: Text('Prochains matchs',
+                      style: GoogleFonts.orbitron(fontSize: 13, fontWeight: FontWeight.w800, color: _txt(context))),
                 ),
-              ),
+                SizedBox(
+                  height: 110,
+                  child: ListView.builder(
+                    scrollDirection: Axis.horizontal,
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    itemCount: user.upcomingMatches.length,
+                    itemBuilder: (context, index) {
+                      final m = user.upcomingMatches[index];
+                      return _MatchCard(
+                        day: m['day'] ?? '',
+                        time: m['time'] ?? '',
+                        home: m['home'] ?? '',
+                        away: m['away'] ?? '',
+                        terrain: m['terrain'] ?? '',
+                      );
+                    },
+                  ),
+                ),
+              ],
 
               const SizedBox(height: 20),
 
@@ -363,9 +389,9 @@ class _PhotoOption extends StatelessWidget {
     child: Container(
       padding: const EdgeInsets.symmetric(vertical: 16),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.07),
+        color: color.withOpacity(0.07),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: color.withValues(alpha: 0.18)),
+        border: Border.all(color: color.withOpacity(0.18)),
       ),
       child: Column(
         children: [
@@ -388,9 +414,9 @@ class _PosBadge extends StatelessWidget {
   Widget build(BuildContext context) => Container(
     padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
     decoration: BoxDecoration(
-      color: color.withValues(alpha: 0.1),
+      color: color.withOpacity(0.1),
       borderRadius: BorderRadius.circular(20),
-      border: Border.all(color: color.withValues(alpha: 0.25)),
+      border: Border.all(color: color.withOpacity(0.25)),
     ),
     child: Text(label,
         style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: color)),
@@ -430,7 +456,7 @@ class _MatchCard extends StatelessWidget {
     margin: const EdgeInsets.only(right: 12),
     decoration: BoxDecoration(
       borderRadius: BorderRadius.circular(20),
-      boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.2), blurRadius: 12, offset: const Offset(0, 5))],
+      boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 12, offset: const Offset(0, 5))],
     ),
     child: ClipRRect(
       borderRadius: BorderRadius.circular(20),
@@ -468,7 +494,7 @@ class _MatchCard extends StatelessWidget {
                           style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w800)),
                     ),
                     const Spacer(),
-                    Text(day, style: TextStyle(color: Colors.white.withValues(alpha: 0.4), fontSize: 8)),
+                    Text(day, style: TextStyle(color: Colors.white.withOpacity(0.4), fontSize: 8)),
                   ],
                 ),
                 const SizedBox(height: 6),
@@ -482,7 +508,7 @@ class _MatchCard extends StatelessWidget {
                     const SizedBox(width: 6),
                     Expanded(
                       child: Text(away,
-                          style: TextStyle(color: Colors.white.withValues(alpha: 0.6), fontWeight: FontWeight.w600, fontSize: 11),
+                          style: TextStyle(color: Colors.white.withOpacity(0.6), fontWeight: FontWeight.w600, fontSize: 11),
                           maxLines: 1, overflow: TextOverflow.ellipsis),
                     ),
                   ],
@@ -491,11 +517,11 @@ class _MatchCard extends StatelessWidget {
                 // Terrain
                 Row(
                   children: [
-                    Icon(Icons.location_on_rounded, size: 9, color: _kGreen.withValues(alpha: 0.8)),
+                    Icon(Icons.location_on_rounded, size: 9, color: _kGreen.withOpacity(0.8)),
                     const SizedBox(width: 2),
                     Expanded(
                       child: Text(terrain,
-                          style: TextStyle(color: Colors.white.withValues(alpha: 0.38), fontSize: 8),
+                          style: TextStyle(color: Colors.white.withOpacity(0.38), fontSize: 8),
                           overflow: TextOverflow.ellipsis),
                     ),
                   ],
@@ -520,7 +546,7 @@ class _MenuCard extends StatelessWidget {
     decoration: BoxDecoration(
       color: _card(context),
       borderRadius: BorderRadius.circular(20),
-      boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10, offset: const Offset(0, 2))],
+      boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 2))],
     ),
     child: Column(
       children: List.generate(items.length, (i) {
@@ -539,8 +565,8 @@ class _MenuCard extends StatelessWidget {
                       width: 34, height: 34,
                       decoration: BoxDecoration(
                         color: item.isDestructive
-                            ? Colors.red.withValues(alpha: 0.08)
-                            : _kGreen.withValues(alpha: 0.08),
+                            ? Colors.red.withOpacity(0.08)
+                            : _kGreen.withOpacity(0.08),
                         borderRadius: BorderRadius.circular(10),
                       ),
                       child: Icon(item.icon, size: 18,
@@ -554,13 +580,13 @@ class _MenuCard extends StatelessWidget {
                               color: item.isDestructive ? Colors.red.shade600 : _txt(context))),
                     ),
                     Icon(Icons.arrow_forward_ios_rounded, size: 13,
-                        color: _sub(context).withValues(alpha: 0.5)),
+                        color: _sub(context).withOpacity(0.5)),
                   ],
                 ),
               ),
             ),
             if (!isLast)
-              Divider(height: 1, indent: 66, endIndent: 18, color: Colors.black.withValues(alpha: 0.06)),
+              Divider(height: 1, indent: 66, endIndent: 18, color: Colors.black.withOpacity(0.06)),
           ],
         );
       }),
@@ -588,17 +614,41 @@ class _AccountSettingsScreen extends StatefulWidget {
 }
 
 class _AccountSettingsScreenState extends State<_AccountSettingsScreen> {
-  final _prenomCtrl = TextEditingController(text: 'Mamadou');
-  final _nomCtrl    = TextEditingController(text: 'Diallo');
-  final _phoneCtrl  = TextEditingController(text: '77 123 45 67');
-  String _poste         = 'Attaquant';
+  final _prenomCtrl = TextEditingController();
+  final _nomCtrl    = TextEditingController();
+  final _phoneCtrl  = TextEditingController();
+  String? _poste;
   bool   _phoneModified = false;
   DateTime? _birthDate;
 
+  static const _posteLabels = {
+    'ATTAQUANT': 'Attaquant',
+    'MILIEU': 'Milieu',
+    'DEFENSEUR': 'Défenseur',
+    'GARDIEN': 'Gardien de but',
+  };
+
   static const _postes = [
-    'Attaquant', 'Milieu offensif', 'Milieu défensif',
-    'Défenseur central', 'Latéral', 'Gardien de but',
+    'ATTAQUANT',
+    'MILIEU',
+    'DEFENSEUR',
+    'GARDIEN',
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    final user = context.read<AuthProvider>().user;
+    if (user != null) {
+      _prenomCtrl.text = user.firstName ?? '';
+      _nomCtrl.text = user.lastName ?? '';
+      _phoneCtrl.text = user.phone.replaceAll('+221', '').trim();
+      _poste = user.position;
+      if (user.birthDate != null) {
+        _birthDate = DateTime.tryParse(user.birthDate!);
+      }
+    }
+  }
 
   @override
   void dispose() {
@@ -614,7 +664,7 @@ class _AccountSettingsScreenState extends State<_AccountSettingsScreen> {
       context: context,
       initialDate: _birthDate ?? DateTime(now.year - 20),
       firstDate: DateTime(1950),
-      lastDate: DateTime(now.year - 5),
+      lastDate: DateTime(now.year - 10),
       helpText: 'Date de naissance',
       builder: (ctx, child) => Theme(
         data: Theme.of(ctx).copyWith(
@@ -685,7 +735,7 @@ class _AccountSettingsScreenState extends State<_AccountSettingsScreen> {
                     Container(
                       width: 36, height: 36,
                       decoration: BoxDecoration(
-                        color: _poste == p ? _kGreen.withValues(alpha: 0.1) : _sub(context).withValues(alpha: 0.08),
+                        color: _poste == p ? _kGreen.withOpacity(0.1) : _sub(context).withOpacity(0.08),
                         borderRadius: BorderRadius.circular(10),
                       ),
                       child: Icon(Icons.sports_soccer_rounded, size: 18,
@@ -693,7 +743,7 @@ class _AccountSettingsScreenState extends State<_AccountSettingsScreen> {
                     ),
                     const SizedBox(width: 14),
                     Expanded(
-                      child: Text(p,
+                      child: Text(_posteLabels[p] ?? p,
                           style: TextStyle(
                               fontSize: 14,
                               fontWeight: _poste == p ? FontWeight.w700 : FontWeight.w500,
@@ -724,7 +774,7 @@ class _AccountSettingsScreenState extends State<_AccountSettingsScreen> {
     return null;
   }
 
-  void _onSave() {
+  void _onSave() async {
     final error = _validate();
     if (error != null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -735,7 +785,22 @@ class _AccountSettingsScreenState extends State<_AccountSettingsScreen> {
     if (_phoneModified) {
       _showOtpSheet(_phoneCtrl.text.trim());
     } else {
-      _saveSuccess();
+      try {
+        final auth = context.read<AuthProvider>();
+        await auth.updateProfile({
+          'firstName': _prenomCtrl.text.trim(),
+          'lastName': _nomCtrl.text.trim(),
+          if (_poste != null) 'position': _poste,
+          if (_birthDate != null) 'birthDate': _birthDate!.toIso8601String(),
+        });
+        if (mounted) _saveSuccess();
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Erreur: $e'), backgroundColor: Colors.red.shade600),
+          );
+        }
+      }
     }
   }
 
@@ -770,7 +835,7 @@ class _AccountSettingsScreenState extends State<_AccountSettingsScreen> {
                   // Icône
                   Container(
                     width: 56, height: 56,
-                    decoration: BoxDecoration(color: _kGreen.withValues(alpha: 0.1), shape: BoxShape.circle),
+                    decoration: BoxDecoration(color: _kGreen.withOpacity(0.1), shape: BoxShape.circle),
                     child: const Icon(Icons.sms_rounded, color: _kGreen, size: 28),
                   ),
                   const SizedBox(height: 14),
@@ -792,7 +857,7 @@ class _AccountSettingsScreenState extends State<_AccountSettingsScreen> {
                         border: Border.all(
                           color: controllers[i].text.isNotEmpty
                               ? _kGreen
-                              : Colors.black.withValues(alpha: 0.12),
+                              : Colors.black.withOpacity(0.12),
                           width: controllers[i].text.isNotEmpty ? 2 : 1,
                         ),
                       ),
@@ -835,7 +900,7 @@ class _AccountSettingsScreenState extends State<_AccountSettingsScreen> {
                           child: Container(
                             padding: const EdgeInsets.symmetric(vertical: 14),
                             decoration: BoxDecoration(
-                              color: _sub(context).withValues(alpha: 0.08),
+                              color: _sub(context).withOpacity(0.08),
                               borderRadius: BorderRadius.circular(14),
                             ),
                             child: Text('Annuler', textAlign: TextAlign.center,
@@ -855,7 +920,7 @@ class _AccountSettingsScreenState extends State<_AccountSettingsScreen> {
                           child: Container(
                             padding: const EdgeInsets.symmetric(vertical: 14),
                             decoration: BoxDecoration(
-                              color: getCode().length == 6 ? _kGreen : _sub(context).withValues(alpha: 0.15),
+                              color: getCode().length == 6 ? _kGreen : _sub(context).withOpacity(0.15),
                               borderRadius: BorderRadius.circular(14),
                             ),
                             child: Text('Valider', textAlign: TextAlign.center,
@@ -919,7 +984,7 @@ class _AccountSettingsScreenState extends State<_AccountSettingsScreen> {
                     decoration: BoxDecoration(
                       color: _card(context),
                       borderRadius: BorderRadius.circular(14),
-                      boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 8)],
+                      boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 8)],
                     ),
                     child: Row(
                       children: [
@@ -928,7 +993,7 @@ class _AccountSettingsScreenState extends State<_AccountSettingsScreen> {
                           margin: const EdgeInsets.only(left: 12),
                           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
                           decoration: BoxDecoration(
-                            color: _kGreen.withValues(alpha: 0.08),
+                            color: _kGreen.withOpacity(0.08),
                             borderRadius: BorderRadius.circular(10),
                           ),
                           child: Row(
@@ -980,15 +1045,19 @@ class _AccountSettingsScreenState extends State<_AccountSettingsScreen> {
                       decoration: BoxDecoration(
                         color: _card(context),
                         borderRadius: BorderRadius.circular(14),
-                        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 8)],
+                        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 8)],
                       ),
                       child: Row(
                         children: [
                           const Icon(Icons.sports_soccer_rounded, size: 18, color: _kGreen),
                           const SizedBox(width: 12),
                           Expanded(
-                            child: Text(_poste,
-                                style: TextStyle(fontSize: 14, color: _txt(context), fontWeight: FontWeight.w500)),
+                            child: Text(_posteLabels[_poste] ?? 'Sélectionner',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: _poste == null ? _sub(context) : _txt(context),
+                                  fontWeight: FontWeight.w500,
+                                )),
                           ),
                           const Icon(Icons.keyboard_arrow_down_rounded, color: _kGreen, size: 20),
                         ],
@@ -1013,7 +1082,7 @@ class _AccountSettingsScreenState extends State<_AccountSettingsScreen> {
                       decoration: BoxDecoration(
                         color: _card(context),
                         borderRadius: BorderRadius.circular(14),
-                        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 8)],
+                        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 8)],
                       ),
                       child: Row(
                         children: [
@@ -1047,6 +1116,38 @@ class _AccountSettingsScreenState extends State<_AccountSettingsScreen> {
                       style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 15)),
                 ),
               ),
+              const SizedBox(height: 14),
+              GestureDetector(
+                onTap: () async {
+                  final auth = context.read<AuthProvider>();
+                  final notif = context.read<NotificationProvider>();
+                  if (auth.token != null) {
+                    await notif.sendTestNotification(auth.token!);
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Notification de test envoyée ! 🚀')),
+                      );
+                    }
+                  }
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  decoration: BoxDecoration(
+                    color: _kGreen.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: _kGreen.withOpacity(0.3)),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: const [
+                      Icon(Icons.notifications_active_outlined, color: _kGreen, size: 20),
+                      SizedBox(width: 10),
+                      Text('Tester les notifications',
+                          style: TextStyle(color: _kGreen, fontWeight: FontWeight.w700, fontSize: 14)),
+                    ],
+                  ),
+                ),
+              ),
             ],
           ),
         ),
@@ -1078,7 +1179,7 @@ class _SettingsField extends StatelessWidget {
         decoration: BoxDecoration(
           color: _card(context),
           borderRadius: BorderRadius.circular(14),
-          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 8)],
+          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 8)],
         ),
         child: Row(
           children: [
@@ -1114,16 +1215,30 @@ class _FavoriteTerrainsScreen extends StatefulWidget {
 }
 
 class _FavoriteTerrainsScreenState extends State<_FavoriteTerrainsScreen> {
-  final List<Terrain> favs = const [
-    Terrain(id: '1', name: 'Terrain Dakar Arena', address: 'Diamniadio, Dakar', zone: 'DAKAR', pricePerHour: 5000, rating: 4.8, lat: 14.7645, lng: -17.3660, imageUrl: 'https://images.pexels.com/photos/12486370/pexels-photo-12486370.jpeg?auto=compress&cs=tinysrgb&w=800'),
-    Terrain(id: '2', name: 'Stade Léopold Sédar', address: 'Plateau, Dakar', zone: 'DAKAR', pricePerHour: 8000, rating: 4.5, lat: 14.6760, lng: -17.4469, imageUrl: 'https://images.pexels.com/photos/13783930/pexels-photo-13783930.jpeg?auto=compress&cs=tinysrgb&w=800'),
-    Terrain(id: '3', name: 'Terrain Point E', address: 'Point E, Dakar', zone: 'DAKAR', pricePerHour: 6500, rating: 4.3, lat: 14.6928, lng: -17.4571, imageUrl: 'https://images.pexels.com/photos/7160121/pexels-photo-7160121.jpeg?auto=compress&cs=tinysrgb&w=800'),
-  ];
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final token = context.read<AuthProvider>().token;
+      debugPrint('FavoriteTerrainsScreen initState: token=${token != null ? "Present" : "Missing"}');
+      if (token != null) {
+        context.read<TerrainProvider>().loadFavorites(token);
+      }
+    });
+  }
 
-  void _remove(int i) => setState(() => favs.removeAt(i));
+  void _remove(String terrainId) {
+    final token = context.read<AuthProvider>().token;
+    if (token != null) {
+      context.read<TerrainProvider>().toggleFavorite(token, terrainId);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    final favorites = context.watch<TerrainProvider>().favorites;
+    final isLoading = context.watch<TerrainProvider>().isFavLoading;
+
     return Scaffold(
       backgroundColor: _bg(context),
       appBar: AppBar(
@@ -1137,28 +1252,30 @@ class _FavoriteTerrainsScreenState extends State<_FavoriteTerrainsScreen> {
         title: Text('Terrains favoris',
             style: GoogleFonts.orbitron(fontSize: 14, fontWeight: FontWeight.w800, color: _txt(context))),
       ),
-      body: favs.isEmpty
-          ? Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.favorite_border_rounded, size: 48, color: _kGreen.withValues(alpha: 0.3)),
-                  const SizedBox(height: 12),
-                  Text('Aucun favori',
-                      style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700,
-                          color: _sub(context))),
-                ],
-              ),
-            )
-          : ListView.builder(
-              padding: const EdgeInsets.all(20),
-              itemCount: favs.length,
-              itemBuilder: (_, i) {
-                final t = favs[i];
-                return Dismissible(
-                  key: Key(t.name),
-                  direction: DismissDirection.endToStart,
-                  onDismissed: (_) => _remove(i),
+      body: isLoading && favorites.isEmpty
+          ? const Center(child: CircularProgressIndicator(color: _kGreen))
+          : favorites.isEmpty
+              ? Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.favorite_border_rounded, size: 48, color: _kGreen.withOpacity(0.3)),
+                      const SizedBox(height: 12),
+                      Text('Aucun favori',
+                          style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700,
+                              color: _sub(context))),
+                    ],
+                  ),
+                )
+              : ListView.builder(
+                  padding: const EdgeInsets.all(20),
+                  itemCount: favorites.length,
+                  itemBuilder: (_, i) {
+                    final t = favorites[i];
+                    return Dismissible(
+                      key: Key(t.id),
+                      direction: DismissDirection.endToStart,
+                      onDismissed: (_) => _remove(t.id),
                   background: Container(
                     margin: const EdgeInsets.only(bottom: 14),
                     decoration: BoxDecoration(
@@ -1176,14 +1293,14 @@ class _FavoriteTerrainsScreenState extends State<_FavoriteTerrainsScreen> {
                       decoration: BoxDecoration(
                         color: _card(context),
                         borderRadius: BorderRadius.circular(18),
-                        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.06), blurRadius: 10, offset: const Offset(0, 3))],
+                        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.06), blurRadius: 10, offset: const Offset(0, 3))],
                       ),
                       child: Row(
                         children: [
                           ClipRRect(
                             borderRadius: const BorderRadius.horizontal(left: Radius.circular(18)),
                             child: Image.network(t.imageUrl, width: 90, height: 80, fit: BoxFit.cover,
-                                errorBuilder: (_, e, s) => Container(width: 90, height: 80, color: _kGreen.withValues(alpha: 0.2))),
+                                errorBuilder: (_, e, s) => Container(width: 90, height: 80, color: _kGreen.withOpacity(0.2))),
                           ),
                           Expanded(
                             child: Padding(
@@ -1202,7 +1319,7 @@ class _FavoriteTerrainsScreenState extends State<_FavoriteTerrainsScreen> {
                             ),
                           ),
                           GestureDetector(
-                            onTap: () => _remove(i),
+                            onTap: () => _remove(t.id),
                             child: Padding(
                               padding: const EdgeInsets.only(right: 14),
                               child: Icon(Icons.favorite_rounded, color: Colors.red.shade400, size: 20),
@@ -1290,9 +1407,9 @@ class _PaymentsScreenState extends State<_PaymentsScreen> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                   decoration: BoxDecoration(
-                    color: statusColor.withValues(alpha: 0.1),
+                    color: statusColor.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: statusColor.withValues(alpha: 0.3)),
+                    border: Border.all(color: statusColor.withOpacity(0.3)),
                   ),
                   child: Text(statusLabel,
                       style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: statusColor)),
@@ -1310,7 +1427,7 @@ class _PaymentsScreenState extends State<_PaymentsScreen> {
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: statusColor.withValues(alpha: 0.07),
+                  color: statusColor.withOpacity(0.07),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Row(
@@ -1336,7 +1453,7 @@ class _PaymentsScreenState extends State<_PaymentsScreen> {
                 width: double.infinity,
                 padding: const EdgeInsets.symmetric(vertical: 14),
                 decoration: BoxDecoration(
-                  color: _kGreen.withValues(alpha: 0.08),
+                  color: _kGreen.withOpacity(0.08),
                   borderRadius: BorderRadius.circular(14),
                 ),
                 child: const Text('Fermer', textAlign: TextAlign.center,
@@ -1386,13 +1503,13 @@ class _PaymentsScreenState extends State<_PaymentsScreen> {
                     color: _card(context),
                     borderRadius: BorderRadius.circular(16),
                     border: isDefault ? Border.all(color: _kGreen, width: 1.5) : Border.all(color: Colors.transparent),
-                    boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 8)],
+                    boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 8)],
                   ),
                   child: Row(
                     children: [
                       Container(
                         width: 44, height: 44,
-                        decoration: BoxDecoration(shape: BoxShape.circle, color: _kGreen.withValues(alpha: 0.08)),
+                        decoration: BoxDecoration(shape: BoxShape.circle, color: _kGreen.withOpacity(0.08)),
                         child: ClipOval(child: Image.asset(m.$1, fit: BoxFit.cover,
                             errorBuilder: (_, e, s) => const Icon(Icons.account_balance_wallet_rounded, color: _kGreen))),
                       ),
@@ -1407,11 +1524,11 @@ class _PaymentsScreenState extends State<_PaymentsScreen> {
                       if (isDefault)
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                          decoration: BoxDecoration(color: _kGreen.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8)),
+                          decoration: BoxDecoration(color: _kGreen.withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
                           child: const Text('Défaut', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: _kGreen)),
                         )
                       else
-                        Icon(Icons.radio_button_unchecked_rounded, color: _sub(context).withValues(alpha: 0.4), size: 20),
+                        Icon(Icons.radio_button_unchecked_rounded, color: _sub(context).withOpacity(0.4), size: 20),
                     ],
                   ),
                 ),
@@ -1436,7 +1553,7 @@ class _PaymentsScreenState extends State<_PaymentsScreen> {
                   decoration: BoxDecoration(
                     color: _card(context),
                     borderRadius: BorderRadius.circular(14),
-                    boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 6)],
+                    boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 6)],
                   ),
                   child: Row(
                     children: [
@@ -1481,7 +1598,7 @@ class _DetailRow extends StatelessWidget {
       children: [
         Container(
           width: 34, height: 34,
-          decoration: BoxDecoration(color: _kGreen.withValues(alpha: 0.08), borderRadius: BorderRadius.circular(10)),
+          decoration: BoxDecoration(color: _kGreen.withOpacity(0.08), borderRadius: BorderRadius.circular(10)),
           child: Icon(icon, size: 16, color: _kGreen),
         ),
         const SizedBox(width: 12),
@@ -1625,7 +1742,7 @@ class _HelpScreen extends StatelessWidget {
                             style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 15)),
                         const SizedBox(height: 3),
                         Text('Disponible 7j/7 · 8h–22h',
-                            style: TextStyle(color: Colors.white.withValues(alpha: 0.7), fontSize: 12)),
+                            style: TextStyle(color: Colors.white.withOpacity(0.7), fontSize: 12)),
                       ],
                     ),
                   ),
@@ -1679,7 +1796,7 @@ class _FaqTileState extends State<_FaqTile> {
       decoration: BoxDecoration(
         color: _card(context),
         borderRadius: BorderRadius.circular(16),
-        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 8)],
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 8)],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

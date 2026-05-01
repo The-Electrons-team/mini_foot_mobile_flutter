@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 
 class TerrainFeature {
@@ -17,6 +18,35 @@ class TerrainSlot {
       );
 }
 
+class SubTerrain {
+  final String id;
+  final String name;
+  final int capacity;
+  final String type;
+  final String? surface;
+  final int? pricePerHour;
+
+  SubTerrain({
+    required this.id,
+    required this.name,
+    required this.capacity,
+    required this.type,
+    this.surface,
+    this.pricePerHour,
+  });
+
+  factory SubTerrain.fromJson(Map<String, dynamic> json) {
+    return SubTerrain(
+      id: json['id']?.toString() ?? '',
+      name: json['name']?.toString() ?? '',
+      capacity: (json['capacity'] ?? 10).toInt(),
+      type: json['type']?.toString() ?? '5v5',
+      surface: json['surface']?.toString(),
+      pricePerHour: (json['pricePerHour'] ?? json['price_per_hour'])?.toInt(),
+    );
+  }
+}
+
 class Terrain {
   final String id;
   final String name;
@@ -31,6 +61,7 @@ class Terrain {
   final List<String> features;
   final String description;
   final bool isActive;
+  final List<SubTerrain> subTerrains;
 
   const Terrain({
     required this.id,
@@ -46,6 +77,7 @@ class Terrain {
     this.features = const [],
     this.description = '',
     this.isActive = true,
+    this.subTerrains = const [],
   });
 
   String get priceLabel => '$pricePerHour F/h';
@@ -54,20 +86,33 @@ class Terrain {
       features.map((f) => TerrainFeature(_iconFor(f), f)).toList();
 
   factory Terrain.fromJson(Map<String, dynamic> json) {
+    List<String> parseList(dynamic val) {
+      if (val is List) return val.map((e) => e.toString()).toList();
+      if (val is String && val.startsWith('[')) {
+        try {
+          return (jsonDecode(val) as List).map((e) => e.toString()).toList();
+        } catch (_) {}
+      }
+      return [];
+    }
+
     return Terrain(
-      id: json['id'] ?? '',
-      name: json['name'] ?? '',
-      address: json['address'] ?? '',
-      zone: json['zone'] ?? '',
-      pricePerHour: (json['pricePerHour'] ?? 0) as int,
+      id: json['id']?.toString() ?? '',
+      name: json['name']?.toString() ?? '',
+      address: json['address']?.toString() ?? '',
+      zone: json['zone']?.toString() ?? '',
+      pricePerHour: (json['pricePerHour'] ?? json['price_per_hour'] ?? 0).toInt(),
       rating: (json['rating'] ?? 0).toDouble(),
       lat: (json['lat'] ?? 0).toDouble(),
       lng: (json['lng'] ?? 0).toDouble(),
-      imageUrl: json['imageUrl'] ?? '',
-      imageUrls: (json['imageUrls'] as List<dynamic>?)?.cast<String>() ?? [],
-      features: (json['features'] as List<dynamic>?)?.cast<String>() ?? [],
-      description: json['description'] ?? '',
-      isActive: json['isActive'] ?? true,
+      imageUrl: json['imageUrl']?.toString() ?? json['image_url']?.toString() ?? '',
+      imageUrls: parseList(json['imageUrls'] ?? json['image_urls']),
+      features: parseList(json['features']),
+      description: json['description']?.toString() ?? '',
+      isActive: json['isActive'] ?? json['is_active'] ?? true,
+      subTerrains: (json['subTerrains'] as List? ?? [])
+          .map((s) => SubTerrain.fromJson(s))
+          .toList(),
     );
   }
 
@@ -83,5 +128,41 @@ class Terrain {
     if (f.contains('maillot')) return Icons.checkroom_rounded;
     if (RegExp(r'\d+ x \d+').hasMatch(f)) return Icons.straighten_rounded;
     return Icons.check_circle_outline_rounded;
+  }
+}
+
+class TerrainReview {
+  final String id;
+  final String terrainId;
+  final String userId;
+  final double rating;
+  final String? comment;
+  final String userName;
+  final String? userAvatar;
+  final DateTime createdAt;
+
+  TerrainReview({
+    required this.id,
+    required this.terrainId,
+    required this.userId,
+    required this.rating,
+    this.comment,
+    required this.userName,
+    this.userAvatar,
+    required this.createdAt,
+  });
+
+  factory TerrainReview.fromJson(Map<String, dynamic> json) {
+    final user = json['user'] as Map<String, dynamic>?;
+    return TerrainReview(
+      id: json['id']?.toString() ?? '',
+      terrainId: json['terrainId']?.toString() ?? '',
+      userId: json['userId']?.toString() ?? '',
+      rating: (json['rating'] ?? 0).toDouble(),
+      comment: json['comment'],
+      userName: user != null ? '${user['first_name']} ${user['last_name']}' : 'Anonyme',
+      userAvatar: user?['avatar_url'],
+      createdAt: DateTime.parse(json['createdAt'] ?? DateTime.now().toIso8601String()),
+    );
   }
 }

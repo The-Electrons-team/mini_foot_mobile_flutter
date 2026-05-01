@@ -9,8 +9,8 @@ Color _bg(BuildContext c)   => Theme.of(c).scaffoldBackgroundColor;
 Color _card(BuildContext c) => Theme.of(c).cardColor;
 Color _txt(BuildContext c)  => Theme.of(c).colorScheme.onSurface;
 Color _sub(BuildContext c)  => _isDark(c)
-    ? const Color(0xFFF0EBE0).withValues(alpha: 0.5)
-    : Colors.black.withValues(alpha: 0.45);
+    ? const Color(0xFFF0EBE0).withOpacity(0.5)
+    : Colors.black.withOpacity(0.45);
 
 // ── MODÈLES ──
 
@@ -310,7 +310,7 @@ class _PostCardState extends State<_PostCard> {
             child: Text(p.time, style: TextStyle(fontSize: 10, color: _sub(context))),
           ),
 
-          Divider(height: 1, color: _sub(context).withValues(alpha: 0.12)),
+          Divider(height: 1, color: _sub(context).withOpacity(0.12)),
         ],
       ),
     );
@@ -345,7 +345,7 @@ class _ImageCarouselState extends State<_ImageCarousel> {
             itemBuilder: (_, i) => Image.network(
               widget.imageUrls[i],
               fit: BoxFit.cover,
-              errorBuilder: (_, __, ___) => Container(color: _kGreen.withValues(alpha: 0.1)),
+              errorBuilder: (_, __, ___) => Container(color: _kGreen.withOpacity(0.1)),
             ),
           ),
         ),
@@ -362,7 +362,7 @@ class _ImageCarouselState extends State<_ImageCarousel> {
                 width: _current == i ? 18 : 6,
                 height: 6,
                 decoration: BoxDecoration(
-                  color: _current == i ? Colors.white : Colors.white.withValues(alpha: 0.5),
+                  color: _current == i ? Colors.white : Colors.white.withOpacity(0.5),
                   borderRadius: BorderRadius.circular(3),
                 ),
               )),
@@ -431,7 +431,7 @@ class _CommentsSheetState extends State<_CommentsSheet> {
               margin: const EdgeInsets.only(top: 10, bottom: 4),
               width: 36, height: 4,
               decoration: BoxDecoration(
-                color: _sub(context).withValues(alpha: 0.3),
+                color: _sub(context).withOpacity(0.3),
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -440,7 +440,7 @@ class _CommentsSheetState extends State<_CommentsSheet> {
               child: Text('Commentaires',
                   style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15, color: _txt(context))),
             ),
-            Divider(height: 1, color: _sub(context).withValues(alpha: 0.15)),
+            Divider(height: 1, color: _sub(context).withOpacity(0.15)),
             // Liste commentaires
             Expanded(
               child: _comments.isEmpty
@@ -460,7 +460,7 @@ class _CommentsSheetState extends State<_CommentsSheet> {
               padding: EdgeInsets.fromLTRB(12, 10, 12, MediaQuery.of(context).viewInsets.bottom + 12),
               decoration: BoxDecoration(
                 color: _card(context),
-                border: Border(top: BorderSide(color: _sub(context).withValues(alpha: 0.12))),
+                border: Border(top: BorderSide(color: _sub(context).withOpacity(0.12))),
               ),
               child: Row(
                 children: [
@@ -479,7 +479,7 @@ class _CommentsSheetState extends State<_CommentsSheet> {
                       decoration: BoxDecoration(
                         color: _bg(context),
                         borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: _sub(context).withValues(alpha: 0.2)),
+                        border: Border.all(color: _sub(context).withOpacity(0.2)),
                       ),
                       child: TextField(
                         controller: _ctrl,
@@ -651,7 +651,7 @@ class _NewPostSheetState extends State<_NewPostSheet> {
               child: Container(
                 width: 36, height: 4,
                 decoration: BoxDecoration(
-                  color: _sub(context).withValues(alpha: 0.3),
+                  color: _sub(context).withOpacity(0.3),
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
@@ -666,7 +666,7 @@ class _NewPostSheetState extends State<_NewPostSheet> {
               decoration: BoxDecoration(
                 color: _bg(context),
                 borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: _sub(context).withValues(alpha: 0.2)),
+                border: Border.all(color: _sub(context).withOpacity(0.2)),
               ),
               child: TextField(
                 controller: _captionCtrl,
@@ -723,9 +723,9 @@ class _NewPostSheetState extends State<_NewPostSheet> {
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                     decoration: BoxDecoration(
-                      color: _kGreen.withValues(alpha: 0.1),
+                      color: _kGreen.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: _kGreen.withValues(alpha: 0.25)),
+                      border: Border.all(color: _kGreen.withOpacity(0.25)),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,

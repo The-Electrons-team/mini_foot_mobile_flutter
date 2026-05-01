@@ -8,8 +8,8 @@ Color _bg(BuildContext c) => Theme.of(c).scaffoldBackgroundColor;
 Color _card(BuildContext c) => Theme.of(c).cardColor;
 Color _txt(BuildContext c) => Theme.of(c).colorScheme.onSurface;
 Color _sub(BuildContext c) => Theme.of(c).brightness == Brightness.dark
-    ? const Color(0xFFF0EBE0).withValues(alpha: 0.5)
-    : Colors.black.withValues(alpha: 0.45);
+    ? const Color(0xFFF0EBE0).withOpacity(0.5)
+    : Colors.black.withOpacity(0.45);
 
 // ── PAGE : EFFECTIF ───────────────────────────────────────────────────────────
 
@@ -74,7 +74,7 @@ class _RosterPageState extends State<RosterPage>
                 child: Container(
                   width: 40, height: 40,
                   decoration: BoxDecoration(color: _card(context), shape: BoxShape.circle,
-                      boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.07), blurRadius: 8)]),
+                      boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.07), blurRadius: 8)]),
                   child: Icon(Icons.arrow_back_ios_new_rounded, size: 16, color: _txt(context)),
                 ),
               ),
@@ -139,7 +139,7 @@ class _RosterPageState extends State<RosterPage>
                 _pending.isEmpty
                     ? Center(
                         child: Column(mainAxisSize: MainAxisSize.min, children: [
-                          Icon(Icons.inbox_rounded, size: 48, color: _sub(context).withValues(alpha: 0.4)),
+                          Icon(Icons.inbox_rounded, size: 48, color: _sub(context).withOpacity(0.4)),
                           const SizedBox(height: 12),
                           Text('Aucune demande en attente',
                               style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: _sub(context))),
@@ -171,12 +171,12 @@ class _RosterPageState extends State<RosterPage>
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
         color: _card(context), borderRadius: BorderRadius.circular(14),
-        border: m.isCaptain ? Border.all(color: _kGreen.withValues(alpha: 0.35)) : null,
+        border: m.isCaptain ? Border.all(color: _kGreen.withOpacity(0.35)) : null,
       ),
       child: Row(children: [
         Container(
           width: 40, height: 40,
-          decoration: BoxDecoration(shape: BoxShape.circle, color: team.color.withValues(alpha: 0.15)),
+          decoration: BoxDecoration(shape: BoxShape.circle, color: team.color.withOpacity(0.15)),
           child: Center(child: Text(m.name.split(' ').map((w) => w[0]).take(2).join(),
               style: TextStyle(fontSize: 13, fontWeight: FontWeight.w900, color: team.color))),
         ),
@@ -188,7 +188,7 @@ class _RosterPageState extends State<RosterPage>
               const SizedBox(width: 6),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                decoration: BoxDecoration(color: _kGreen.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(6)),
+                decoration: BoxDecoration(color: _kGreen.withOpacity(0.12), borderRadius: BorderRadius.circular(6)),
                 child: const Text('Capitaine', style: TextStyle(fontSize: 9, fontWeight: FontWeight.w800, color: _kGreen)),
               ),
             ],
@@ -198,7 +198,7 @@ class _RosterPageState extends State<RosterPage>
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
               decoration: BoxDecoration(
-                color: m.position.color.withValues(alpha: 0.12),
+                color: m.position.color.withOpacity(0.12),
                 borderRadius: BorderRadius.circular(5),
               ),
               child: Text(m.position.short,
@@ -239,12 +239,12 @@ class _RosterPageState extends State<RosterPage>
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
           color: _card(context), borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: _kGreen.withValues(alpha: 0.2), width: 1.5),
+          border: Border.all(color: _kGreen.withOpacity(0.2), width: 1.5),
         ),
         child: Row(children: [
           Container(
             width: 44, height: 44,
-            decoration: BoxDecoration(shape: BoxShape.circle, color: _sub(context).withValues(alpha: 0.1)),
+            decoration: BoxDecoration(shape: BoxShape.circle, color: _sub(context).withOpacity(0.1)),
             child: Center(child: Text(m.name.split(' ').map((w) => w[0]).take(2).join(),
                 style: TextStyle(fontSize: 14, fontWeight: FontWeight.w900, color: _sub(context)))),
           ),
@@ -256,7 +256,7 @@ class _RosterPageState extends State<RosterPage>
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                 decoration: BoxDecoration(
-                  color: m.position.color.withValues(alpha: 0.1),
+                  color: m.position.color.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(5),
                 ),
                 child: Text(m.position.short,
@@ -272,8 +272,8 @@ class _RosterPageState extends State<RosterPage>
             onTap: () => _refuse(m),
             child: Container(
               width: 36, height: 36,
-              decoration: BoxDecoration(color: Colors.red.withValues(alpha: 0.08), shape: BoxShape.circle,
-                  border: Border.all(color: Colors.red.withValues(alpha: 0.25))),
+              decoration: BoxDecoration(color: Colors.red.withOpacity(0.08), shape: BoxShape.circle,
+                  border: Border.all(color: Colors.red.withOpacity(0.25))),
               child: const Icon(Icons.close_rounded, color: Colors.red, size: 18),
             ),
           ),
@@ -347,9 +347,9 @@ class _PlayerDetailPage extends StatelessWidget {
                         begin: Alignment.topCenter,
                         end: Alignment.bottomCenter,
                         colors: [
-                          Colors.black.withValues(alpha: 0.35),
+                          Colors.black.withOpacity(0.35),
                           Colors.transparent,
-                          Colors.black.withValues(alpha: 0.85),
+                          Colors.black.withOpacity(0.85),
                         ],
                         stops: const [0.0, 0.45, 1.0],
                       ),
@@ -364,9 +364,9 @@ class _PlayerDetailPage extends StatelessWidget {
                     child: Container(
                       width: 38, height: 38,
                       decoration: BoxDecoration(
-                        color: Colors.black.withValues(alpha: 0.4),
+                        color: Colors.black.withOpacity(0.4),
                         shape: BoxShape.circle,
-                        border: Border.all(color: Colors.white.withValues(alpha: 0.25)),
+                        border: Border.all(color: Colors.white.withOpacity(0.25)),
                       ),
                       child: const Icon(Icons.arrow_back_ios_new_rounded,
                           size: 15, color: Colors.white),
@@ -397,9 +397,9 @@ class _PlayerDetailPage extends StatelessWidget {
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                             decoration: BoxDecoration(
-                              color: Colors.white.withValues(alpha: 0.15),
+                              color: Colors.white.withOpacity(0.15),
                               borderRadius: BorderRadius.circular(20),
-                              border: Border.all(color: Colors.amber.withValues(alpha: 0.7)),
+                              border: Border.all(color: Colors.amber.withOpacity(0.7)),
                             ),
                             child: const Row(mainAxisSize: MainAxisSize.min, children: [
                               Icon(Icons.star_rounded, color: Colors.amber, size: 12),
@@ -414,7 +414,7 @@ class _PlayerDetailPage extends StatelessWidget {
                       // Prénom
                       Text(firstName,
                           style: TextStyle(
-                              color: Colors.white.withValues(alpha: 0.65),
+                              color: Colors.white.withOpacity(0.65),
                               fontSize: 14, fontWeight: FontWeight.w400)),
                       // Nom
                       Text(lastName.isNotEmpty ? lastName : firstName,
@@ -423,7 +423,7 @@ class _PlayerDetailPage extends StatelessWidget {
                       const SizedBox(height: 4),
                       Text('${member.age} ans',
                           style: TextStyle(
-                              color: Colors.white.withValues(alpha: 0.55), fontSize: 12)),
+                              color: Colors.white.withOpacity(0.55), fontSize: 12)),
                     ],
                   ),
                 ),
@@ -441,7 +441,7 @@ class _PlayerDetailPage extends StatelessWidget {
               color: _card(context),
               borderRadius: BorderRadius.circular(20),
               boxShadow: [BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.05), blurRadius: 12)],
+                  color: Colors.black.withOpacity(0.05), blurRadius: 12)],
             ),
             child: Row(children: [
               _HStatCol(label: 'Buts', value: '${member.goals}'),
@@ -465,7 +465,7 @@ class _PlayerDetailPage extends StatelessWidget {
               color: _card(context),
               borderRadius: BorderRadius.circular(20),
               boxShadow: [BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.05), blurRadius: 12)],
+                  color: Colors.black.withOpacity(0.05), blurRadius: 12)],
             ),
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Text('PERFORMANCES',
@@ -493,7 +493,7 @@ class _PlayerDetailPage extends StatelessWidget {
 
   Widget _vLine(BuildContext context) => Container(
     width: 1, height: 36,
-    color: _sub(context).withValues(alpha: 0.15),
+    color: _sub(context).withOpacity(0.15),
   );
 
   Widget _perfBar(BuildContext context, {
@@ -512,7 +512,7 @@ class _PlayerDetailPage extends StatelessWidget {
           child: Stack(children: [
             Container(
               height: 10,
-              color: _sub(context).withValues(alpha: 0.1),
+              color: _sub(context).withOpacity(0.1),
             ),
             FractionallySizedBox(
               widthFactor: value.clamp(0.0, 1.0),

@@ -143,7 +143,7 @@ class _SplashScreenState extends State<SplashScreen>
                 child: Text(
                   'Deviens le roi du terrain.',
                   style: TextStyle(
-                    color: kGreen.withValues(alpha: 0.65),
+                    color: kGreen.withOpacity(0.65),
                     fontSize: 15,
                     fontWeight: FontWeight.w400,
                     letterSpacing: 1.4,
@@ -231,7 +231,7 @@ class _BouncingDotsState extends State<_BouncingDots>
               decoration: BoxDecoration(
                 color: isActive
                     ? kGreen
-                    : kGreen.withValues(alpha: 0.35),
+                    : kGreen.withOpacity(0.35),
                 shape: BoxShape.circle,
               ),
             ),
