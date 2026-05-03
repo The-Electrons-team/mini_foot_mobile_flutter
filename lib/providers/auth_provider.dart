@@ -10,12 +10,14 @@ class User {
   final String? lastName;
   final String? birthDate;
   final String? position;
+  final String? teamId; // Ajout de teamId
   final String? teamName;
   final int matchesCount;
   final int goalsCount;
   final int assistsCount;
   final List<dynamic> upcomingMatches;
   final String? avatarUrl;
+  final bool isCaptain; // Ajout de isCaptain
 
   User({
     required this.id,
@@ -24,14 +26,15 @@ class User {
     this.lastName,
     this.birthDate,
     this.position,
+    this.teamId,
     this.teamName,
     this.matchesCount = 0,
     this.goalsCount = 0,
     this.assistsCount = 0,
     this.upcomingMatches = const [],
     this.avatarUrl,
+    this.isCaptain = false,
   });
-
 
   factory User.fromJson(Map<String, dynamic> json) {
     return User(
@@ -41,12 +44,14 @@ class User {
       lastName: json['lastName'],
       birthDate: json['birthDate'],
       position: json['position'],
+      teamId: json['team']?['id'], // Récupération de l'ID de l'équipe
       teamName: json['team']?['name'],
       matchesCount: json['stats']?['matches'] ?? 0,
       goalsCount: json['stats']?['goals'] ?? 0,
       assistsCount: json['stats']?['assists'] ?? 0,
       upcomingMatches: json['upcomingMatches'] ?? [],
       avatarUrl: json['avatarUrl'],
+      isCaptain: json['isCaptain'] ?? false,
     );
   }
 }
@@ -63,26 +68,18 @@ class AuthProvider with ChangeNotifier {
   bool get isAuthenticated => _token != null;
 
   Future<bool> tryAutoLogin() async {
-    debugPrint('Checking auto login...');
     final prefs = await SharedPreferences.getInstance();
-    if (!prefs.containsKey('token')) {
-      debugPrint('No token found in storage.');
-      return false;
-    }
+    if (!prefs.containsKey('token')) return false;
 
     final token = prefs.getString('token')!;
-    final tokenPreview = token.length > 10 ? '${token.substring(0, 10)}...' : token;
-    debugPrint('Token found: $tokenPreview');
     try {
       final userData = await _authService.getProfile(token);
       _token = token;
       _user = User.fromJson(userData);
       NotificationService().init(token);
       notifyListeners();
-      debugPrint('Auto login successful for user: ${_user?.firstName}');
       return true;
     } catch (e) {
-      debugPrint('Auto login failed: $e');
       prefs.remove('token');
       return false;
     }
@@ -92,30 +89,15 @@ class AuthProvider with ChangeNotifier {
     _isLoading = true;
     notifyListeners();
     try {
-      debugPrint('Tentative de connexion pour $phone...');
       final result = await _authService.login(phone, password);
-      debugPrint('Réponse login reçue: ${result.keys}');
-      
       _token = result['token'];
-      if (result['user'] == null) {
-        debugPrint('Erreur: L\'objet user est manquant dans la réponse');
-        throw Exception('Données utilisateur manquantes');
-      }
+      if (result['user'] == null) throw Exception('Données utilisateur manquantes');
       
-      try {
-        _user = User.fromJson(result['user']);
-        debugPrint('Utilisateur parsé avec succès: ${_user?.firstName}');
-      } catch (e) {
-        debugPrint('Erreur lors du parsing de l\'utilisateur: $e');
-        rethrow;
-      }
-
+      _user = User.fromJson(result['user']);
       NotificationService().init(_token);
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString('token', _token!);
-      debugPrint('Connexion finalisée et token enregistré.');
     } catch (e) {
-      debugPrint('Échec de la connexion dans AuthProvider: $e');
       rethrow;
     } finally {
       _isLoading = false;

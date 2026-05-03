@@ -15,6 +15,7 @@ import 'providers/notification_provider.dart';
 import 'team_screen.dart';
 import 'social_feed_screen.dart';
 import 'shop_screen.dart';
+import 'ranking_screen.dart';
 import 'main.dart';
 
 const Color kGreen = Color(0xFF006F39);
@@ -842,7 +843,6 @@ class _FeedPreviewCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Image pleine largeur avec overlay avatar
             Stack(
               children: [
                 ClipRRect(

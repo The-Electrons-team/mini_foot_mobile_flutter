@@ -1,5 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:provider/provider.dart';
+import 'providers/auth_provider.dart';
 
 const Color _kGreen  = Color(0xFF006F39);
 const Color _kGold   = Color(0xFFFFD700);
@@ -17,57 +22,36 @@ Color _sub(BuildContext c)   => _isDark(c)
 // ── MODÈLE ───────────────────────────────────────────────────────────────────
 
 class _Team {
-  final String name, dept, logoUrl;
+  final String name, zone, logoUrl;
   final Color  color;
-  final int pts, j, g, n, p, bp, bc;
+  final int pts, j, g, n, p, rank;
   const _Team({
-    required this.name, required this.dept,
+    required this.name, required this.zone,
     required this.logoUrl, required this.color,
     required this.pts, required this.j,
     required this.g, required this.n,
-    required this.p, required this.bp, required this.bc,
+    required this.p, required this.rank,
   });
-  int get diff => bp - bc;
 }
 
 const _cdn = 'https://cdn.jsdelivr.net/npm/club-icons@1.0.0/icons';
 
-const _allTeams = <_Team>[
-  _Team(name:'Les Lions FC',      dept:'Dakar',      logoUrl:'$_cdn/barcelona.png',        color:Color(0xFF006F39), pts:34,j:14,g:11,n:1,p:2,bp:38,bc:14),
-  _Team(name:'Plateau Stars',     dept:'Dakar',      logoUrl:'$_cdn/real-madrid.png',       color:Color(0xFF1565C0), pts:28,j:14,g:8, n:4,p:2,bp:30,bc:16),
-  _Team(name:'Almadies FC',       dept:'Dakar',      logoUrl:'$_cdn/ac-milan.png',          color:Color(0xFFB71C1C), pts:24,j:14,g:7, n:3,p:4,bp:26,bc:20),
-  _Team(name:'Médina United',     dept:'Dakar',      logoUrl:'$_cdn/liverpool.png',         color:Color(0xFFB71C1C), pts:20,j:14,g:6, n:2,p:6,bp:22,bc:24),
-  _Team(name:'Yoff Ballers',      dept:'Dakar',      logoUrl:'$_cdn/borussia-dortmund.png', color:Color(0xFFF9A825), pts:16,j:14,g:4, n:4,p:6,bp:18,bc:26),
-  _Team(name:'Ouakam City',       dept:'Dakar',      logoUrl:'$_cdn/atletico-madrid.png',   color:Color(0xFFB71C1C), pts:13,j:14,g:3, n:4,p:7,bp:15,bc:29),
-  _Team(name:'Fann FC',           dept:'Dakar',      logoUrl:'$_cdn/chelsea.png',           color:Color(0xFF0D47A1), pts:10,j:14,g:2, n:4,p:8,bp:12,bc:32),
-  _Team(name:'Gueule Tapée SC',   dept:'Dakar',      logoUrl:'$_cdn/arsenal.png',           color:Color(0xFFAD1457), pts: 7,j:14,g:1, n:4,p:9,bp: 9,bc:36),
-  _Team(name:'Guédiawaye FC',     dept:'Guédiawaye', logoUrl:'$_cdn/manchester-city.png',   color:Color(0xFF1565C0), pts:32,j:14,g:10,n:2,p:2,bp:35,bc:15),
-  _Team(name:'Sam Notaire Elite', dept:'Guédiawaye', logoUrl:'$_cdn/psg.png',               color:Color(0xFF1A237E), pts:27,j:14,g:8, n:3,p:3,bp:29,bc:18),
-  _Team(name:'Golf Sud Stars',    dept:'Guédiawaye', logoUrl:'$_cdn/juventus.png',          color:Color(0xFF212121), pts:22,j:14,g:6, n:4,p:4,bp:24,bc:21),
-  _Team(name:'Wakhinane FC',      dept:'Guédiawaye', logoUrl:'$_cdn/inter-milan.png',       color:Color(0xFF1A237E), pts:18,j:14,g:5, n:3,p:6,bp:20,bc:24),
-  _Team(name:'Ndiarème United',   dept:'Guédiawaye', logoUrl:'$_cdn/manchester-united.png', color:Color(0xFFB71C1C), pts:14,j:14,g:3, n:5,p:6,bp:16,bc:27),
-  _Team(name:'Médina Gounass SC', dept:'Guédiawaye', logoUrl:'$_cdn/tottenham.png',         color:Color(0xFF37474F), pts:11,j:14,g:2, n:5,p:7,bp:13,bc:30),
-  _Team(name:'Daroukhane FC',     dept:'Guédiawaye', logoUrl:'$_cdn/ajax.png',              color:Color(0xFFB71C1C), pts: 8,j:14,g:1, n:5,p:8,bp:10,bc:34),
-  _Team(name:'Nimzatt Ballers',   dept:'Guédiawaye', logoUrl:'$_cdn/porto.png',             color:Color(0xFF1565C0), pts: 5,j:14,g:0, n:5,p:9,bp: 7,bc:40),
-  _Team(name:'Aigles de Pikine',  dept:'Pikine',     logoUrl:'$_cdn/napoli.png',            color:Color(0xFF1A237E), pts:31,j:14,g:10,n:1,p:3,bp:33,bc:16),
-  _Team(name:'Thiaroye FC',       dept:'Pikine',     logoUrl:'$_cdn/sevilla.png',           color:Color(0xFFB71C1C), pts:26,j:14,g:8, n:2,p:4,bp:28,bc:19),
-  _Team(name:'Yeumbeul Stars',    dept:'Pikine',     logoUrl:'$_cdn/valencia.png',          color:Color(0xFFE65100), pts:22,j:14,g:6, n:4,p:4,bp:25,bc:22),
-  _Team(name:'Keur Massar Elite', dept:'Pikine',     logoUrl:'$_cdn/benfica.png',           color:Color(0xFFB71C1C), pts:19,j:14,g:5, n:4,p:5,bp:21,bc:23),
-  _Team(name:'Dalifort FC',       dept:'Pikine',     logoUrl:'$_cdn/sporting-cp.png',       color:Color(0xFF006F39), pts:15,j:14,g:4, n:3,p:7,bp:17,bc:27),
-  _Team(name:'Mbao United',       dept:'Pikine',     logoUrl:'$_cdn/celtic.png',            color:Color(0xFF006F39), pts:12,j:14,g:3, n:3,p:8,bp:14,bc:30),
-  _Team(name:'Tivaouane Peul SC', dept:'Pikine',     logoUrl:'$_cdn/rangers.png',           color:Color(0xFF1565C0), pts: 9,j:14,g:2, n:3,p:9,bp:11,bc:33),
-  _Team(name:'Pikine Nord FC',    dept:'Pikine',     logoUrl:'$_cdn/feyenoord.png',         color:Color(0xFFB71C1C), pts: 6,j:14,g:1, n:3,p:10,bp:8,bc:38),
-  _Team(name:'Rufisque City',     dept:'Rufisque',   logoUrl:'$_cdn/psv.png',               color:Color(0xFF006F39), pts:30,j:14,g:9, n:3,p:2,bp:32,bc:17),
-  _Team(name:'Bargny FC',         dept:'Rufisque',   logoUrl:'$_cdn/lyon.png',              color:Color(0xFF1565C0), pts:25,j:14,g:7, n:4,p:3,bp:27,bc:20),
-  _Team(name:'Sangalkam Elite',   dept:'Rufisque',   logoUrl:'$_cdn/marseille.png',         color:Color(0xFF1565C0), pts:21,j:14,g:6, n:3,p:5,bp:23,bc:22),
-  _Team(name:'Diamniadio FC',     dept:'Rufisque',   logoUrl:'$_cdn/monaco.png',            color:Color(0xFFB71C1C), pts:17,j:14,g:5, n:2,p:7,bp:19,bc:25),
-  _Team(name:'Sébikotane SC',     dept:'Rufisque',   logoUrl:'$_cdn/lille.png',             color:Color(0xFFB71C1C), pts:14,j:14,g:4, n:2,p:8,bp:16,bc:28),
-  _Team(name:'Bambilor United',   dept:'Rufisque',   logoUrl:'$_cdn/rennes.png',            color:Color(0xFFB71C1C), pts:10,j:14,g:2, n:4,p:8,bp:13,bc:31),
-  _Team(name:'Jaxaay FC',         dept:'Rufisque',   logoUrl:'$_cdn/nantes.png',            color:Color(0xFFF9A825), pts: 7,j:14,g:1, n:4,p:9,bp:10,bc:35),
-  _Team(name:'Tivaouane FC',      dept:'Rufisque',   logoUrl:'$_cdn/strasbourg.png',        color:Color(0xFF1565C0), pts: 4,j:14,g:0, n:4,p:10,bp:7,bc:42),
-];
+String _formatZone(String zone) {
+  if (zone == 'Toutes') return zone;
+  return zone.replaceAll('_', '-').split(' ').map((word) {
+    if (word.isEmpty) return word;
+    return word[0].toUpperCase() + word.substring(1).toLowerCase();
+  }).join(' ');
+}
 
-const _depts = ['Toutes', 'Dakar', 'Guédiawaye', 'Pikine', 'Rufisque'];
+Color _parseColor(String? hex) {
+  if (hex == null || hex.isEmpty) return _kGreen;
+  try {
+    hex = hex.replaceAll('#', '');
+    if (hex.length == 6) hex = 'FF$hex';
+    return Color(int.parse(hex, radix: 16));
+  } catch (_) { return _kGreen; }
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // RANKING SCREEN
@@ -81,42 +65,88 @@ class RankingScreen extends StatefulWidget {
 
 class _RankingScreenState extends State<RankingScreen>
     with SingleTickerProviderStateMixin {
-  late final TabController _tabCtrl;
+  TabController? _tabCtrl;
+  List<String> _zones = ['Toutes'];
+  bool _isLoadingZones = true;
 
   @override
   void initState() {
     super.initState();
-    _tabCtrl = TabController(length: _depts.length, vsync: this);
+    _loadZones();
+  }
+
+  Future<void> _loadZones() async {
+    try {
+      final baseUrl = dotenv.get('API_URL');
+      final response = await http.get(Uri.parse('$baseUrl/teams/zones'));
+      if (response.statusCode == 200) {
+        final List<dynamic> data = jsonDecode(response.body);
+        if (mounted) {
+          setState(() {
+            _zones = ['Toutes', ...data.map((e) => e.toString())];
+            _tabCtrl = TabController(length: _zones.length, vsync: this);
+            _tabCtrl!.addListener(() => setState(() {}));
+            _isLoadingZones = false;
+          });
+        }
+      }
+    } catch (e) {
+      debugPrint('Erreur chargement zones: $e');
+      if (mounted) setState(() => _isLoadingZones = false);
+    }
   }
 
   @override
-  void dispose() { _tabCtrl.dispose(); super.dispose(); }
+  void dispose() { _tabCtrl?.dispose(); super.dispose(); }
 
-  List<_Team> _teamsFor(String dept) {
-    final list = dept == 'Toutes'
-        ? List<_Team>.from(_allTeams)
-        : _allTeams.where((t) => t.dept == dept).toList();
-    list.sort((a, b) {
-      final pts = b.pts.compareTo(a.pts);
-      if (pts != 0) return pts;
-      final diff = b.diff.compareTo(a.diff);
-      if (diff != 0) return diff;
-      return b.bp.compareTo(a.bp);
-    });
-    return list;
+  Future<List<_Team>> _fetchRankings(String zone) async {
+    final baseUrl = dotenv.get('API_URL');
+    
+    var url = '$baseUrl/teams/ranking';
+    if (zone != 'Toutes') url += '?zone=$zone';
+
+    final response = await http.get(Uri.parse(url));
+    if (response.statusCode == 200) {
+      final List<dynamic> data = jsonDecode(response.body);
+      return data.map((t) => _Team(
+        name: t['teamName'] ?? 'Équipe',
+        zone: zone == 'Toutes' ? (t['zone'] ?? '') : zone,
+        logoUrl: t['logoUrl'] ?? '',
+        color: _parseColor(t['color']),
+        pts: t['pts'] ?? 0,
+        j: t['j'] ?? 0,
+        g: t['g'] ?? 0,
+        n: t['n'] ?? 0,
+        p: t['p'] ?? 0,
+        rank: t['rank'] ?? 0,
+      )).toList();
+    } else {
+      throw Exception('Erreur serveur (${response.statusCode})');
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final dark = _isDark(context);
+    
+    if (_isLoadingZones || _tabCtrl == null) {
+      return Scaffold(
+        backgroundColor: _bg(context),
+        body: const Center(child: CircularProgressIndicator(color: _kGreen)),
+      );
+    }
+
     return Scaffold(
       backgroundColor: _bg(context),
       body: Column(
         children: [
           _HeroHeader(onBack: () => Navigator.pop(context), dark: dark),
-          // ── ONGLETS ──
+
+          const SizedBox(height: 12),
+
+          // ── ONGLETS RÉGION ──
           Container(
-            margin: const EdgeInsets.fromLTRB(20, 16, 20, 12),
+            margin: const EdgeInsets.fromLTRB(20, 12, 20, 12),
             height: 42,
             decoration: BoxDecoration(
               color: _card(context),
@@ -135,14 +165,47 @@ class _RankingScreenState extends State<RankingScreen>
               labelStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
               unselectedLabelStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
               padding: const EdgeInsets.all(4),
-              tabs: _depts.map((d) => Tab(text: d)).toList(),
+              tabs: _zones.map((z) => Tab(text: _formatZone(z))).toList(),
             ),
           ),
           Expanded(
             child: TabBarView(
               controller: _tabCtrl,
-              children: _depts.map((dept) =>
-                  _DeptRanking(teams: _teamsFor(dept), dept: dept)).toList(),
+              children: _zones.map((zone) => FutureBuilder<List<_Team>>(
+      future: _fetchRankings(zone),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator(color: _kGreen));
+        }
+        if (snapshot.hasError) {
+          return Center(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Text('Erreur: ${snapshot.error}', 
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: Colors.red.shade400, fontSize: 12)),
+            ),
+          );
+        }
+        final teams = snapshot.data ?? [];
+                  if (teams.isEmpty) {
+                    return Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.leaderboard_outlined, size: 48, color: _sub(context).withOpacity(0.3)),
+                          const SizedBox(height: 12),
+                          Text('Aucun classement disponible', style: TextStyle(color: _sub(context))),
+                        ],
+                      ),
+                    );
+                  }
+                  return _ZoneRanking(
+                    teams: teams,
+                    zone: zone,
+                  );
+                },
+              )).toList(),
             ),
           ),
         ],
@@ -218,7 +281,7 @@ class _HeroHeader extends StatelessWidget {
                     ]),
                   ),
                   const SizedBox(height: 2),
-                  Text('Région de Dakar · Saison 2026',
+                  Text('Région du Sénégal · Saison 2026',
                       style: TextStyle(fontSize: 11, color: Colors.white.withOpacity(0.6))),
                 ]),
               ),
@@ -235,15 +298,6 @@ class _HeroHeader extends StatelessWidget {
                   const Text('2026', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: _kGold)),
                 ]),
               ),
-            ]),
-            const SizedBox(height: 22),
-            // Stats row
-            Row(children: [
-              _StatPill(icon: Icons.shield_rounded,      label: 'Équipes', value: '${_allTeams.length}'),
-              const SizedBox(width: 10),
-              _StatPill(icon: Icons.location_on_rounded, label: 'Zones',   value: '4'),
-              const SizedBox(width: 10),
-              _StatPill(icon: Icons.sports_rounded,      label: 'Matchs',  value: '${_allTeams.fold(0, (s, t) => s + t.j) ~/ 2}'),
             ]),
           ]),
         ),
@@ -285,12 +339,12 @@ class _StatPill extends StatelessWidget {
   );
 }
 
-// ── VUE DÉPARTEMENT ──────────────────────────────────────────────────────────
+// ── VUE RÉGION ──────────────────────────────────────────────────────────────
 
-class _DeptRanking extends StatelessWidget {
+class _ZoneRanking extends StatelessWidget {
   final List<_Team> teams;
-  final String dept;
-  const _DeptRanking({required this.teams, required this.dept});
+  final String zone;
+  const _ZoneRanking({required this.teams, required this.zone});
 
   @override
   Widget build(BuildContext context) {
@@ -303,6 +357,12 @@ class _DeptRanking extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.only(bottom: 40),
       children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 8, 20, 4),
+          child: Row(children: [
+            Text('${teams.length} équipes au total', style: TextStyle(fontSize: 11, color: _sub(context), fontWeight: FontWeight.w700)),
+          ]),
+        ),
         // ── PODIUM ──
         _Podium(teams: top3),
         const SizedBox(height: 20),
@@ -322,7 +382,6 @@ class _DeptRanking extends StatelessWidget {
               _ColHeader('G'),
               _ColHeader('N'),
               _ColHeader('P'),
-              _ColHeader('Diff'),
               _ColHeaderPts('Pts'),
             ]),
           ),
@@ -518,11 +577,7 @@ class _PodiumItem extends StatelessWidget {
             end: Alignment.bottomCenter,
           ),
           borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
-          border: Border(
-            top:   BorderSide(color: medalColor.withOpacity(0.6), width: 2),
-            left:  BorderSide(color: medalColor.withOpacity(0.3), width: 1),
-            right: BorderSide(color: medalColor.withOpacity(0.3), width: 1),
-          ),
+          border: Border.all(color: medalColor.withOpacity(0.4), width: 1.5),
         ),
         child: Center(child: Text(
           rank == 1 ? '🥇' : rank == 2 ? '🥈' : '🥉',
@@ -540,8 +595,6 @@ class _TeamRow extends StatelessWidget {
   final _Team team;
   const _TeamRow({required this.rank, required this.team});
 
-  static const _myTeam = 'Les Lions FC';
-
   Color _rankColor(int r) {
     if (r <= 3) return _kGold;
     if (r <= 6) return _kGreen;
@@ -550,8 +603,10 @@ class _TeamRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final dark  = _isDark(context);
-    final isMe  = team.name == _myTeam;
+    final dark = _isDark(context);
+    final auth = context.watch<AuthProvider>();
+    final myTeamName = auth.user?.teamName ?? '';
+    final isMe  = team.name == myTeamName;
     final rColor = _rankColor(rank);
 
     return Container(
@@ -563,7 +618,10 @@ class _TeamRow extends StatelessWidget {
                 ? _card(context).withOpacity(0.6)
                 : Colors.transparent,
         borderRadius: BorderRadius.circular(14),
-        border: isMe ? Border.all(color: _kGreen.withOpacity(0.35), width: 1.5) : null,
+        border: Border.all(
+          color: isMe ? _kGreen.withOpacity(0.35) : Colors.transparent,
+          width: isMe ? 1.5 : 0,
+        ),
       ),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
@@ -605,8 +663,8 @@ class _TeamRow extends StatelessWidget {
                   fontWeight: isMe ? FontWeight.w800 : FontWeight.w600,
                   color: isMe ? _kGreen : _txt(context),
                 )),
-            if (team.dept.isNotEmpty)
-              Text(team.dept,
+            if (team.zone.isNotEmpty)
+              Text(_formatZone(team.zone),
                   style: TextStyle(fontSize: 9, color: _sub(context), fontWeight: FontWeight.w500)),
           ])),
           // ── Stats ──
@@ -614,22 +672,6 @@ class _TeamRow extends StatelessWidget {
           _Cell('${team.g}'),
           _Cell('${team.n}'),
           _Cell('${team.p}'),
-          // Diff coloré
-          SizedBox(
-            width: 34,
-            child: Text(
-              team.diff >= 0 ? '+${team.diff}' : '${team.diff}',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 11, fontWeight: FontWeight.w700,
-                color: team.diff > 0
-                    ? _kGreen
-                    : team.diff < 0
-                        ? Colors.red.shade400
-                        : _sub(context),
-              ),
-            ),
-          ),
           // ── Pts badge ──
           Container(
             width: 34,

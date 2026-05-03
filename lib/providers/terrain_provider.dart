@@ -132,4 +132,20 @@ class TerrainProvider with ChangeNotifier {
       notifyListeners();
     }
   }
+
+  Future<List<Terrain>> loadAvailableTerrains(String date, String startTime, int durationMin) async {
+    _isLoading = true;
+    _error = null;
+    notifyListeners();
+    try {
+      final available = await _service.fetchAvailableTerrains(date, startTime, durationMin);
+      return available;
+    } catch (e) {
+      _error = e.toString();
+      return [];
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
 }

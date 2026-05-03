@@ -1,7 +1,10 @@
 import 'dart:io' show File;
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
 import 'team_screen.dart' show TeamData, TeamMember, MemberStatus, PlayerPositionLabel, mockPlayers;
+import 'providers/auth_provider.dart';
+import 'services/team_service.dart';
 
 const Color _kGreen = Color(0xFF006F39);
 bool _isDark(BuildContext c) => Theme.of(c).brightness == Brightness.dark;
@@ -22,42 +25,40 @@ class CompositionPage extends StatefulWidget {
 }
 
 class _CompositionPageState extends State<CompositionPage> {
-  static const _formations = [
-    '4-3-3', '4-4-2', '4-2-3-1', '3-5-2', '5-3-2',
-    '4-1-4-1', '3-4-3', '5-4-1', '4-3-2-1', '4-5-1',
-    '3-6-1', '4-4-1-1', '3-3-3-1',
-  ];
-  String _formation = '4-3-3';
+  // Formations disponibles par nombre total de joueurs (GK inclus)
+  static const _formationsByCount = <int, List<String>>{
+    5:  ['2-2', '1-2-1', '3-1', '1-3', '2-1-1'],
+    7:  ['2-3-1', '3-2-1', '2-2-2', '3-3', '1-2-3'],
+    9:  ['3-3-2', '4-3-1', '3-4-1', '3-2-3', '2-4-2'],
+    11: ['4-3-3', '4-4-2', '4-2-3-1', '3-5-2', '5-3-2', '4-1-4-1', '3-4-3'],
+  };
+
+  int _playerCount = 5; // Format minifoot par défaut
+  String _formation = '2-2';
   List<int?> _lineup = [];
   int? _selectedSlot;
-  late List<TeamMember> _cachedPlayers; // liste fixe calculée une fois
+  late List<TeamMember> _cachedPlayers;
+
+  List<String> get _currentFormations => _formationsByCount[_playerCount] ?? ['2-2'];
 
   TeamData get team => widget.team;
   List<TeamMember> get _allPlayers => _cachedPlayers;
 
   void _buildPlayerList() {
     final active = team.members.where((m) => m.status == MemberStatus.active).toList();
-    if (active.isNotEmpty) {
-      _cachedPlayers = active.asMap().entries.map((e) {
-        final m = e.value;
-        final mockIdx = e.key % mockPlayers.length;
-        return TeamMember(
-          id: m.id, name: m.name, isCaptain: m.isCaptain,
-          age: m.age, goals: m.goals, assists: m.assists,
-          matchesPlayed: m.matchesPlayed, position: m.position,
-          status: m.status,
-          avatarUrl: m.avatarUrl.isNotEmpty ? m.avatarUrl : mockPlayers[mockIdx].avatarUrl,
-        );
-      }).toList();
-    } else {
-      // Pas de membres → afficher les mocks directement
-      _cachedPlayers = List.from(mockPlayers);
-    }
+    // On affiche uniquement les vrais joueurs. Pas de mocks.
+    _cachedPlayers = active.map((m) => TeamMember(
+      id: m.id, name: m.name, isCaptain: m.isCaptain,
+      age: m.age, goals: m.goals, assists: m.assists,
+      matchesPlayed: m.matchesPlayed, position: m.position,
+      status: m.status,
+      avatarUrl: m.avatarUrl,
+    )).toList();
   }
 
   int get _slotCount {
-    final parts = _formation.split('-').map(int.parse).toList();
-    return 1 + parts.fold(0, (a, b) => a + b);
+    // _playerCount inclut le GK, les parts sont les lignes sans GK
+    return _playerCount;
   }
 
   List<int> get _benchIndices {
@@ -68,11 +69,115 @@ class _CompositionPageState extends State<CompositionPage> {
         .toList();
   }
 
+  String _teamId = '';
+  bool _isSaving = false;
+  bool _isDirty  = false; // a-t-on des modifications non sauvegardées ?
+
   @override
   void initState() {
     super.initState();
     _buildPlayerList();
     _initLineup();
+    // Charger la composition persistée
+    WidgetsBinding.instance.addPostFrameCallback((_) => _loadComposition());
+  }
+
+  Future<void> _loadComposition() async {
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+    final token = auth.token;
+    if (token == null || team.inviteCode.isEmpty) return;
+
+    // Récupérer l'id de l'équipe depuis le team provider ou les membres
+    // On utilise une recherche via le service
+    try {
+      final service = TeamService();
+      // Chercher l'équipe par inviteCode pour obtenir l'id
+      final teams = await service.getMyTeams(token);
+      final found = teams.firstWhere(
+        (t) => (t['inviteCode'] ?? t['invite_code']) == team.inviteCode,
+        orElse: () => null,
+      );
+      if (found == null) return;
+      _teamId = found['id'] ?? '';
+      if (_teamId.isEmpty) return;
+
+      final comp = await service.getComposition(token, _teamId);
+      final formation = comp['formation'] as String? ?? '2-2';
+      final rawLineup = (comp['lineup'] as List?) ?? [];
+      // Restaurer le nombre de joueurs depuis le slot spécial -1
+      final metaEntry = rawLineup.where((e) => (e['slot'] as num?)?.toInt() == -1).firstOrNull;
+      final savedCount = (metaEntry?['playerCount'] as num?)?.toInt() ?? (comp['playerCount'] as num?)?.toInt() ?? 5;
+      final validCount = [5, 6, 7, 8, 9, 10, 11].contains(savedCount) ? savedCount : 5;
+      final slotsOnly = rawLineup.where((e) => (e['slot'] as num?)?.toInt() != -1).toList();
+
+      // Reconstruire le lineup
+      setState(() {
+        _playerCount = validCount;
+        _formation = (_formationsByCount[validCount]!.contains(formation)) ? formation : _formationsByCount[validCount]!.first;
+        final count = _playerCount;
+        _lineup = List.generate(count, (_) => null);
+        for (final entry in slotsOnly) {
+          final slot = (entry['slot'] as num?)?.toInt();
+          final memberId = entry['memberId'] as String?;
+          if (slot == null || slot >= count) continue;
+          if (memberId == null) {
+            _lineup[slot] = null;
+          } else {
+            final idx = _cachedPlayers.indexWhere((p) => p.id == memberId);
+            _lineup[slot] = idx >= 0 ? idx : null;
+          }
+        }
+      });
+    } catch (e) {
+      debugPrint('Erreur chargement composition: $e');
+    }
+  }
+
+  Future<void> _saveComposition() async {
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+    final token = auth.token;
+    if (token == null || _teamId.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Impossible de sauvegarder — connectez-vous'), backgroundColor: Colors.red),
+      );
+      return;
+    }
+    setState(() => _isSaving = true);
+    try {
+      final service = TeamService();
+      final lineupData = List.generate(_lineup.length, (slot) {
+        final playerIdx = _lineup[slot];
+        return {
+          'slot': slot,
+          'memberId': playerIdx != null ? _cachedPlayers[playerIdx].id : null,
+        };
+      });
+      // Inclure playerCount dans la formation pour restauration
+      final formationWithCount = _formation; // on passe playerCount en meta
+      await service.saveComposition(token, _teamId, formationWithCount, [
+        ...lineupData,
+        // slot spécial -1 pour stocker le playerCount
+        {'slot': -1, 'memberId': null, 'playerCount': _playerCount},
+      ]);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('✅ Composition sauvegardée !'),
+            backgroundColor: _kGreen,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erreur: $e'), backgroundColor: Colors.red),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
+    }
   }
 
   void _initLineup() {
@@ -81,10 +186,21 @@ class _CompositionPageState extends State<CompositionPage> {
     _lineup = List.generate(count, (i) => i < players.length ? i : null);
   }
 
+  void _changePlayerCount(int count) {
+    setState(() {
+      _playerCount = count;
+      _formation = _formationsByCount[count]!.first;
+      _selectedSlot = null;
+      _isDirty = true;
+      _initLineup();
+    });
+  }
+
   void _changeFormation(String f) {
     setState(() {
       _formation = f;
       _selectedSlot = null;
+      _isDirty = true;
       _initLineup();
     });
   }
@@ -92,10 +208,12 @@ class _CompositionPageState extends State<CompositionPage> {
   List<Offset> _getPositions() {
     final parts = _formation.split('-').map(int.parse).toList();
     final positions = <Offset>[const Offset(0.5, 0.90)]; // GB
-    final yLines = [0.73, 0.54, 0.34, 0.14];
+    // Distribute lines evenly between y=0.72 and y=0.14
+    final lineCount = parts.length;
+    final step = lineCount > 1 ? 0.58 / (lineCount - 1) : 0.0;
     for (int li = 0; li < parts.length; li++) {
       final count = parts[li];
-      final y = yLines[li < yLines.length ? li : yLines.length - 1];
+      final y = 0.72 - li * (lineCount > 1 ? step : 0.29);
       for (int pi = 0; pi < count; pi++) {
         positions.add(Offset((pi + 1) / (count + 1), y));
       }
@@ -142,6 +260,7 @@ class _CompositionPageState extends State<CompositionPage> {
             if (existingSlot != -1) _lineup[existingSlot] = _lineup[slotIdx];
             _lineup[slotIdx] = newIdx;
             _selectedSlot = null;
+            _isDirty = true;
           });
           Navigator.pop(context);
         },
@@ -149,55 +268,141 @@ class _CompositionPageState extends State<CompositionPage> {
     ).whenComplete(() => setState(() => _selectedSlot = null));
   }
 
+  /// Popup de confirmation quand on quitte avec des modifs non sauvegardées
+  Future<bool> _onWillPop() async {
+    if (!_isDirty) return true;
+    final result = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: _card(context),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(children: [
+          const Icon(Icons.edit_note_rounded, color: _kGreen, size: 22),
+          const SizedBox(width: 8),
+          Text('Modifications non sauvegardées',
+              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: _txt(context))),
+        ]),
+        content: Text('Voulez-vous sauvegarder la composition avant de quitter ?',
+            style: TextStyle(fontSize: 13, color: _sub(context))),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, 'discard'),
+            child: Text('Ignorer', style: TextStyle(color: _sub(context))),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, 'save'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: _kGreen, foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            child: const Text('Sauvegarder', style: TextStyle(fontWeight: FontWeight.w800)),
+          ),
+        ],
+      ),
+    );
+    if (result == 'save') {
+      await _saveComposition();
+      return true;
+    }
+    return result == 'discard';
+  }
+
   @override
   Widget build(BuildContext context) {
     final topPad = MediaQuery.of(context).padding.top;
     final positions = _getPositions();
 
-    return Scaffold(
-      backgroundColor: _bg(context),
-      body: Column(children: [
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) async {
+        if (didPop) return;
+        final canLeave = await _onWillPop();
+        if (canLeave && context.mounted) Navigator.of(context).pop();
+      },
+      child: Scaffold(
+        backgroundColor: _bg(context),
+        body: Column(children: [
 
-        // ── Header ──
-        Container(
-          padding: EdgeInsets.fromLTRB(16, topPad + 14, 16, 14),
-          decoration: BoxDecoration(
-            color: _bg(context),
-            boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 8, offset: const Offset(0, 2))],
-          ),
-          child: Row(children: [
-            GestureDetector(
-              onTap: () => Navigator.pop(context),
-              child: Container(
-                width: 38, height: 38,
-                decoration: BoxDecoration(
-                  color: _card(context), shape: BoxShape.circle,
-                  boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.07), blurRadius: 8)],
-                ),
-                child: Icon(Icons.arrow_back_ios_new_rounded, size: 15, color: _txt(context)),
-              ),
+          // ── Header ──
+          Container(
+            padding: EdgeInsets.fromLTRB(16, topPad + 10, 16, 10),
+            decoration: BoxDecoration(
+              color: _bg(context),
+              boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 8, offset: const Offset(0, 2))],
             ),
-            const Spacer(),
-            Text('Composition',
-                style: GoogleFonts.orbitron(fontSize: 17, fontWeight: FontWeight.w900, color: _txt(context))),
-            const Spacer(),
-            // Dropdown formation compact
-            GestureDetector(
-              onTap: () => _showFormationPicker(context),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-                decoration: BoxDecoration(
-                  color: _kGreen,
-                  borderRadius: BorderRadius.circular(20),
-                  boxShadow: [BoxShadow(color: _kGreen.withOpacity(0.35), blurRadius: 8)],
+            child: Column(children: [
+              // Ligne 1 : Retour + titre + indicateur dirty + formation
+              Row(children: [
+                GestureDetector(
+                  onTap: () async {
+                    final canLeave = await _onWillPop();
+                    if (canLeave && context.mounted) Navigator.of(context).pop();
+                  },
+                  child: Container(
+                    width: 38, height: 38,
+                    decoration: BoxDecoration(
+                      color: _card(context), shape: BoxShape.circle,
+                      boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.07), blurRadius: 8)],
+                    ),
+                    child: Icon(Icons.arrow_back_ios_new_rounded, size: 15, color: _txt(context)),
+                  ),
                 ),
-                child: Row(mainAxisSize: MainAxisSize.min, children: [
-                  Text(_formation,
-                      style: GoogleFonts.orbitron(
-                          fontSize: 12, fontWeight: FontWeight.w900, color: Colors.white)),
-                  const SizedBox(width: 4),
-                  const Icon(Icons.keyboard_arrow_down_rounded, color: Colors.white, size: 16),
+                const Spacer(),
+                Column(crossAxisAlignment: CrossAxisAlignment.center, mainAxisSize: MainAxisSize.min, children: [
+                  Text('Composition',
+                      style: GoogleFonts.orbitron(fontSize: 16, fontWeight: FontWeight.w900, color: _txt(context))),
+                  if (_isDirty)
+                    Text('Modifications non sauvegardées',
+                        style: TextStyle(fontSize: 9, color: Colors.orange.shade600, fontWeight: FontWeight.w700)),
                 ]),
+                const Spacer(),
+                // Formation picker
+                GestureDetector(
+                  onTap: () => _showFormationPicker(context),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: _kGreen,
+                      borderRadius: BorderRadius.circular(18),
+                      boxShadow: [BoxShadow(color: _kGreen.withOpacity(0.35), blurRadius: 8)],
+                    ),
+                    child: Row(mainAxisSize: MainAxisSize.min, children: [
+                      Text(_formation, style: GoogleFonts.orbitron(fontSize: 11, fontWeight: FontWeight.w900, color: Colors.white)),
+                      const SizedBox(width: 3),
+                      const Icon(Icons.keyboard_arrow_down_rounded, color: Colors.white, size: 14),
+                    ]),
+                  ),
+                ),
+              ]),
+            const SizedBox(height: 10),
+            // Ligne 2 : Sélecteur format (nb joueurs)
+            SizedBox(
+              height: 32,
+              child: ListView(
+                scrollDirection: Axis.horizontal,
+                children: [5, 7, 9, 11].map((n) {
+                  final selected = n == _playerCount;
+                  return GestureDetector(
+                    onTap: () => _changePlayerCount(n),
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 150),
+                      margin: const EdgeInsets.only(right: 8),
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
+                      decoration: BoxDecoration(
+                        color: selected ? _kGreen : _card(context),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: selected ? _kGreen : _sub(context).withOpacity(0.2)),
+                        boxShadow: selected ? [BoxShadow(color: _kGreen.withOpacity(0.3), blurRadius: 6)] : null,
+                      ),
+                      child: Text('${n}v${n}',
+                          style: GoogleFonts.orbitron(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w800,
+                            color: selected ? Colors.white : _sub(context),
+                          )),
+                    ),
+                  );
+                }).toList(),
               ),
             ),
           ]),
@@ -314,7 +519,8 @@ class _CompositionPageState extends State<CompositionPage> {
           ]),
         ),
       ]),
-    );
+      ), // Scaffold
+    ); // PopScope
   }
 
   void _showFormationPicker(BuildContext context) {
@@ -335,9 +541,12 @@ class _CompositionPageState extends State<CompositionPage> {
           const SizedBox(height: 16),
           Text('Choisir une formation',
               style: GoogleFonts.orbitron(fontSize: 14, fontWeight: FontWeight.w900, color: _txt(context))),
+          const SizedBox(height: 4),
+          Text('Format $_playerCount×$_playerCount • ${_currentFormations.length} formations disponibles',
+              style: TextStyle(fontSize: 11, color: _sub(context))),
           const SizedBox(height: 16),
           SizedBox(
-            height: 320,
+            height: 260,
             child: GridView.builder(
               gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                 crossAxisCount: 3,
@@ -345,9 +554,9 @@ class _CompositionPageState extends State<CompositionPage> {
                 mainAxisSpacing: 10,
                 childAspectRatio: 0.75,
               ),
-              itemCount: _formations.length,
+              itemCount: _currentFormations.length,
               itemBuilder: (_, i) {
-                final f = _formations[i];
+                final f = _currentFormations[i];
                 final sel = f == _formation;
                 return GestureDetector(
                   onTap: () { _changeFormation(f); Navigator.pop(context); },
@@ -363,7 +572,6 @@ class _CompositionPageState extends State<CompositionPage> {
                       boxShadow: sel ? [BoxShadow(color: _kGreen.withOpacity(0.3), blurRadius: 10)] : null,
                     ),
                     child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-                      // Mini terrain
                       SizedBox(
                         width: 52, height: 68,
                         child: CustomPaint(painter: _MiniPitchPainter(formation: f, selected: sel)),
@@ -403,40 +611,65 @@ class _PlayerToken extends StatelessWidget {
     return SizedBox(
       width: 64,
       child: Column(mainAxisSize: MainAxisSize.min, children: [
-        AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          width: isSelected ? 54 : 48,
-          height: isSelected ? 54 : 48,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: Colors.white,
-            border: Border.all(
-              color: isSelected ? const Color(0xFFFFD700) : posColor,
-              width: isSelected ? 3.5 : 2.5,
-            ),
-            boxShadow: [
-              if (isSelected)
-                BoxShadow(
-                  color: const Color(0xFFFFD700).withOpacity(0.7),
-                  blurRadius: 18,
-                  spreadRadius: 2,
+        Stack(
+          clipBehavior: Clip.none,
+          alignment: Alignment.center,
+          children: [
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              width: isSelected ? 54 : 48,
+              height: isSelected ? 54 : 48,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.white,
+                border: Border.all(
+                  color: isSelected ? const Color(0xFFFFD700) : posColor,
+                  width: isSelected ? 3.5 : 2.5,
                 ),
-              BoxShadow(
-                color: Colors.black.withOpacity(0.4),
-                blurRadius: 8,
-                offset: const Offset(0, 3),
+                boxShadow: [
+                  if (isSelected)
+                    BoxShadow(
+                      color: const Color(0xFFFFD700).withOpacity(0.7),
+                      blurRadius: 18,
+                      spreadRadius: 2,
+                    ),
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.4),
+                    blurRadius: 8,
+                    offset: const Offset(0, 3),
+                  ),
+                ],
               ),
-            ],
-          ),
-          child: ClipOval(
-            child: member?.avatarUrl.isNotEmpty == true
-                ? Image.network(
-                    member!.avatarUrl,
-                    fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => _initialsWidget(initials, posColor),
-                  )
-                : _initialsWidget(initials, posColor),
-          ),
+              child: ClipOval(
+                child: member?.avatarUrl.isNotEmpty == true
+                    ? Image.network(
+                        member!.avatarUrl,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => _initialsWidget(initials, posColor),
+                      )
+                    : _initialsWidget(initials, posColor),
+              ),
+            ),
+            // 👑 Badge Capitaine
+            if (member != null && member!.isCaptain)
+              Positioned(
+                top: -10,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFFD700),
+                    borderRadius: BorderRadius.circular(8),
+                    boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.35), blurRadius: 4)],
+                  ),
+                  child: const Text('C', style: TextStyle(
+                    fontSize: 8,
+                    fontWeight: FontWeight.w900,
+                    color: Colors.black,
+                    letterSpacing: 0.5,
+                  )),
+                ),
+              ),
+          ],
         ),
         const SizedBox(height: 5),
         // Nom + badge position

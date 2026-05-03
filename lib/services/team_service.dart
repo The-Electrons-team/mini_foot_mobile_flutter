@@ -78,4 +78,50 @@ class TeamService {
       throw Exception('Erreur lors de la tentative de rejoindre: ${response.body}');
     }
   }
+
+  Future<Map<String, dynamic>> getComposition(String token, String teamId) async {
+    final response = await http.get(
+      Uri.parse('$_baseUrl/teams/$teamId/composition'),
+      headers: {'Authorization': 'Bearer $token'},
+    );
+    if (response.statusCode == 200) return jsonDecode(response.body);
+    throw Exception('Erreur chargement composition: ${response.body}');
+  }
+
+  Future<Map<String, dynamic>> saveComposition(
+    String token,
+    String teamId,
+    String formation,
+    List<Map<String, dynamic>> lineup,
+  ) async {
+    final response = await http.put(
+      Uri.parse('$_baseUrl/teams/$teamId/composition'),
+      headers: {
+        'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+      },
+      body: jsonEncode({'formation': formation, 'lineup': lineup}),
+    );
+    if (response.statusCode == 200 || response.statusCode == 201) return jsonDecode(response.body);
+    throw Exception('Erreur sauvegarde composition: ${response.body}');
+  }
+
+  Future<List<dynamic>> searchTeams({String? zone, String? query, String? excludeId}) async {
+    var url = '$_baseUrl/teams/search';
+    List<String> params = [];
+    if (zone != null && zone != 'Toutes') params.add('zone=$zone');
+    if (query != null && query.isNotEmpty) params.add('query=$query');
+    if (excludeId != null) params.add('excludeId=$excludeId');
+    if (params.isNotEmpty) url += '?' + params.join('&');
+
+    final response = await http.get(Uri.parse(url));
+    if (response.statusCode == 200) return jsonDecode(response.body);
+    throw Exception('Erreur recherche équipes: ${response.body}');
+  }
+
+  Future<List<dynamic>> getZones() async {
+    final response = await http.get(Uri.parse('$_baseUrl/teams/zones'));
+    if (response.statusCode == 200) return jsonDecode(response.body);
+    return ['DAKAR', 'GUEDIAWAYE', 'PIKINE', 'RUFISQUE']; // Fallback
+  }
 }

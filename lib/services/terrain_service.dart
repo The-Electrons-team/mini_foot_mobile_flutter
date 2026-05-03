@@ -104,4 +104,20 @@ class TerrainService {
     }
     return null;
   }
+
+  Future<List<Terrain>> fetchAvailableTerrains(String date, String startTime, int durationMin) async {
+    final uri = Uri.parse('$_base/terrains/available').replace(
+      queryParameters: {
+        'date': date,
+        'startTime': startTime,
+        'durationMin': durationMin.toString(),
+      },
+    );
+    final response = await http.get(uri);
+    if (response.statusCode == 200) {
+      final list = jsonDecode(response.body) as List<dynamic>;
+      return list.map((j) => Terrain.fromJson(j as Map<String, dynamic>)).toList();
+    }
+    throw Exception('Erreur chargement terrains disponibles');
+  }
 }

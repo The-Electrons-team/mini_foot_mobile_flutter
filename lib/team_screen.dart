@@ -12,7 +12,7 @@ import 'package:share_plus/share_plus.dart';
 import 'package:provider/provider.dart';
 
 import 'team_composition_screen.dart';
-import 'match_screen.dart';
+import 'matches_screen.dart';
 import 'ranking_screen.dart';
 import 'team_publications_screen.dart';
 import 'team_tournaments_screen.dart';
@@ -110,31 +110,51 @@ final mockPlayers = [
 ];
 
 //  ENTRY POINT 
-class TeamScreen extends StatelessWidget {
+class TeamScreen extends StatefulWidget {
   const TeamScreen({super.key});
+
+  @override
+  State<TeamScreen> createState() => _TeamScreenState();
+}
+
+class _TeamScreenState extends State<TeamScreen> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final authProv = Provider.of<AuthProvider>(context, listen: false);
+      final teamProv = Provider.of<TeamProvider>(context, listen: false);
+      
+      if (authProv.token != null) {
+        teamProv.loadMyTeams(authProv.token!);
+      }
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
-    final authProv = Provider.of<AuthProvider>(context, listen: false);
     final teamProv = Provider.of<TeamProvider>(context);
 
-    // Charger les équipes si vide au premier build
-    if (teamProv.myTeams.isEmpty && !teamProv.isLoading) {
-      Future.microtask(() => teamProv.loadMyTeams(authProv.token!));
+    if (teamProv.isLoading && !teamProv.hasLoaded) {
+      return const _NoTeamPage(isLoading: true);
     }
 
-    if (teamProv.isLoading) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    Widget content;
+    if (teamProv.myTeams.isEmpty) {
+      content = const _NoTeamPage();
+    } else {
+      content = _MyTeamPage(team: teamProv.myTeams.first);
     }
 
-    return teamProv.myTeams.isEmpty 
-        ? const _NoTeamPage() 
-        : _MyTeamPage(team: teamProv.myTeams.first);
+    return content;
   }
 }
 
 //  PAGE : PAS D EQUIPE 
 class _NoTeamPage extends StatelessWidget {
-  const _NoTeamPage();
+  final bool isLoading;
+  const _NoTeamPage({this.isLoading = false});
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -155,33 +175,37 @@ class _NoTeamPage extends StatelessWidget {
           ]),
         ),
         const Spacer(),
-        Container(width: 110, height: 110,
-          decoration: BoxDecoration(color: _kGreen.withOpacity(0.08), shape: BoxShape.circle),
-          child: Icon(Icons.shield_outlined, size: 52, color: _kGreen.withOpacity(0.5))),
-        const SizedBox(height: 24),
-        Text("Tu n'as pas encore d'equipe",
-            style: GoogleFonts.orbitron(fontSize: 16, fontWeight: FontWeight.w800, color: _txt(context))),
-        const SizedBox(height: 10),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 40),
-          child: Text('Cree ton equipe, invite tes joueurs via un lien et commence a defier les autres equipes.',
-              textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 13, color: _sub(context), height: 1.5)),
-        ),
-        const SizedBox(height: 36),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 32),
-          child: GestureDetector(
-            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CreateTeamScreen())),
-            child: Container(width: double.infinity, padding: const EdgeInsets.symmetric(vertical: 15),
-              decoration: BoxDecoration(color: _kGreen, borderRadius: BorderRadius.circular(16)),
-              child: const Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                Icon(Icons.add_rounded, color: Colors.white, size: 20),
-                SizedBox(width: 8),
-                Text('Creer mon equipe', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 15)),
-              ])),
+        if (isLoading)
+          const CircularProgressIndicator(color: _kGreen)
+        else ...[
+          Container(width: 110, height: 110,
+            decoration: BoxDecoration(color: _kGreen.withOpacity(0.08), shape: BoxShape.circle),
+            child: Icon(Icons.shield_outlined, size: 52, color: _kGreen.withOpacity(0.5))),
+          const SizedBox(height: 24),
+          Text("Tu n'as pas encore d'equipe",
+              style: GoogleFonts.orbitron(fontSize: 16, fontWeight: FontWeight.w800, color: _txt(context))),
+          const SizedBox(height: 10),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 40),
+            child: Text('Cree ton equipe, invite tes joueurs via un lien et commence a defier les autres equipes.',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 13, color: _sub(context), height: 1.5)),
           ),
-        ),
+          const SizedBox(height: 36),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 32),
+            child: GestureDetector(
+              onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CreateTeamScreen())),
+              child: Container(width: double.infinity, padding: const EdgeInsets.symmetric(vertical: 15),
+                decoration: BoxDecoration(color: _kGreen, borderRadius: BorderRadius.circular(16)),
+                child: const Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                  Icon(Icons.add_rounded, color: Colors.white, size: 20),
+                  SizedBox(width: 8),
+                  Text('Creer mon equipe', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 15)),
+                ])),
+            ),
+          ),
+        ],
         const Spacer(),
       ])),
     );
@@ -220,6 +244,16 @@ Color _colorFromHex(String hex) {
   return Color(int.parse(hex, radix: 16));
 }
 
+PlayerPosition _mapPosition(String? pos) {
+  if (pos == null) return PlayerPosition.milieu;
+  switch (pos.toUpperCase()) {
+    case 'GARDIEN':   return PlayerPosition.gardien;
+    case 'DEFENSEUR': return PlayerPosition.defenseur;
+    case 'ATTAQUANT': return PlayerPosition.attaquant;
+    default:          return PlayerPosition.milieu;
+  }
+}
+
 class _MyTeamPage extends StatefulWidget {
   final Map<String, dynamic> team;
   const _MyTeamPage({required this.team});
@@ -232,22 +266,57 @@ class _MyTeamPageState extends State<_MyTeamPage> {
   List<dynamic> get _members => team['members'] ?? [];
   List<dynamic> get _active => _members.where((m) => m['status'] == 'ACTIVE').toList();
 
+  TeamData _toTeamData() {
+    final members = (_members as List).map((m) {
+      final user = m['user'] ?? m;
+      return TeamMember(
+        id: m['id'] ?? '',
+        name: '${user['firstName'] ?? ''} ${user['lastName'] ?? ''}'.trim().isNotEmpty
+            ? '${user['firstName'] ?? ''} ${user['lastName'] ?? ''}'.trim()
+            : user['phone'] ?? 'Joueur',
+        isCaptain: m['isCaptain'] == true,
+        status: m['status'] == 'ACTIVE' ? MemberStatus.active : MemberStatus.pending,
+        avatarUrl: user['avatarUrl'] ?? '',
+        goals: m['goals'] ?? 0,
+        assists: m['assists'] ?? 0,
+        matchesPlayed: m['matchesPlayed'] ?? 0,
+        position: _mapPosition(m['position'] ?? user['position']),
+      );
+    }).toList();
+
+    return TeamData(
+      name: team['name'] ?? '',
+      zone: team['zone'] ?? 'DAKAR',
+      address: team['address'] ?? '',
+      color: _colorFromHex(team['color'] ?? '#006F39'),
+      logoPath: team['logoUrl'],
+      inviteCode: team['inviteCode'] ?? '',
+      members: members,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: _bg(context),
-      body: CustomScrollView(slivers: [
-        SliverToBoxAdapter(child: _buildHeader(context)),
-        SliverToBoxAdapter(child: _buildGrid(context)),
-        const SizedBox(height: 24),
-        SliverToBoxAdapter(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: InviteCard(inviteCode: team['inviteCode'] ?? '---'),
-          ),
+      body: RefreshIndicator(
+        onRefresh: () => Provider.of<TeamProvider>(context, listen: false).loadMyTeams(
+          Provider.of<AuthProvider>(context, listen: false).token!
         ),
-        const SliverToBoxAdapter(child: SizedBox(height: 40)),
-      ]),
+        color: _kGreen,
+        child: CustomScrollView(slivers: [
+          SliverToBoxAdapter(child: _buildHeader(context)),
+          SliverToBoxAdapter(child: _buildGrid(context)),
+          const SliverToBoxAdapter(child: SizedBox(height: 24)),
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: InviteCard(inviteCode: team['inviteCode'] ?? '---'),
+            ),
+          ),
+          const SliverToBoxAdapter(child: SizedBox(height: 40)),
+        ]),
+      ),
     );
   }
 
@@ -315,18 +384,18 @@ class _MyTeamPageState extends State<_MyTeamPage> {
                   border: Border.all(color: Colors.white.withOpacity(0.1))),
               child: Row(children: [
                 Expanded(flex: 2, child: Column(children: [
-                  Text('#--', style: GoogleFonts.orbitron(color: const Color(0xFFFFD700), fontSize: 28, fontWeight: FontWeight.w900)),
-                  Text('-- pts', style: TextStyle(color: const Color(0xFFFFD700).withOpacity(0.85), fontSize: 11, fontWeight: FontWeight.w700)),
-                  Text('Rang', style: TextStyle(color: Colors.white.withOpacity(0.55), fontSize: 9, fontWeight: FontWeight.w600)),
+                  Text('#${team['globalRank'] ?? '-'}', style: GoogleFonts.orbitron(color: const Color(0xFFFFD700), fontSize: 26, fontWeight: FontWeight.w900)),
+                  Text('${team['pts'] ?? 0} pts', style: TextStyle(color: const Color(0xFFFFD700).withOpacity(0.85), fontSize: 11, fontWeight: FontWeight.w700)),
+                  Text('Rang National', style: TextStyle(color: Colors.white.withOpacity(0.55), fontSize: 9, fontWeight: FontWeight.w600)),
                 ])),
                 _StatDivider(),
                 Expanded(child: _StatPill('Joueurs', '${_active.length}')),
                 _StatDivider(),
-                Expanded(child: _StatPill('Matchs', '0')),
+                Expanded(child: _StatPill('Matchs', '${team['j'] ?? 0}')),
                 _StatDivider(),
-                Expanded(child: _StatPill('Victoires', '0')),
+                Expanded(child: _StatPill('Victoires', '${team['g'] ?? 0}')),
                 _StatDivider(),
-                Expanded(child: _StatPill('Defaites', '0')),
+                Expanded(child: _StatPill('Défaites', '${team['p'] ?? 0}')),
               ])),
           ])),
       ]),
@@ -336,25 +405,26 @@ class _MyTeamPageState extends State<_MyTeamPage> {
   Widget _buildGrid(BuildContext context) {
     final dark = _isDark(context);
     final pending = _members.where((m) => m['status'] == 'PENDING').length;
+    final teamData = _toTeamData();
     final items = [
       _GridItem(icon: Icons.grid_view_rounded, label: 'Compositions',
         color: const Color(0xFF6A1B9A), bgColor: dark ? const Color(0xFF1E1228) : const Color(0xFFF3E5F5),
-        onTap: () {}), // TODO: CompositionPage(team: team) needs refactor
+        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => CompositionPage(team: teamData)))),
       _GridItem(icon: Icons.people_rounded, label: 'Effectif', badge: pending,
         color: const Color(0xFF2E7D32), bgColor: dark ? const Color(0xFF0D1F0D) : const Color(0xFFE8F5E9),
-        onTap: () {}), // TODO: RosterPage(team: team) needs refactor
+        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => RosterPage(team: teamData)))),
       _GridItem(icon: Icons.workspace_premium_rounded, label: 'Classement',
         color: const Color(0xFFE6A800), bgColor: dark ? const Color(0xFF1F1A00) : const Color(0xFFFFF8E1),
         onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => RankingScreen()))),
       _GridItem(icon: Icons.sports_rounded, label: 'Matchs',
         color: const Color(0xFFF57F17), bgColor: dark ? const Color(0xFF2A2310) : const Color(0xFFFFF8E1),
-        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => MatchScreen()))),
+        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const MatchesScreen()))),
       _GridItem(icon: Icons.photo_library_rounded, label: 'Publications',
         color: const Color(0xFF1565C0), bgColor: dark ? const Color(0xFF071428) : const Color(0xFFE3F2FD),
-        onTap: () {}), // TODO: PublicationsPage(team: team) needs refactor
+        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => PublicationsPage(team: teamData)))),
       _GridItem(icon: Icons.emoji_events_rounded, label: 'Tournois',
         color: const Color(0xFFAD1457), bgColor: dark ? const Color(0xFF1F0A14) : const Color(0xFFFCE4EC),
-        onTap: () {}), // TODO: TournamentsPage(team: team) needs refactor
+        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => TournamentsPage(team: teamData)))),
     ];
     return Padding(padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
       child: GridView.count(crossAxisCount: 4, shrinkWrap: true, physics: const NeverScrollableScrollPhysics(),

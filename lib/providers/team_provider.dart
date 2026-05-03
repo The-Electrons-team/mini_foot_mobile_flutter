@@ -5,9 +5,11 @@ class TeamProvider with ChangeNotifier {
   final TeamService _service = TeamService();
   List<dynamic> _myTeams = [];
   bool _isLoading = false;
+  bool _hasLoaded = false;
 
   List<dynamic> get myTeams => _myTeams;
   bool get isLoading => _isLoading;
+  bool get hasLoaded => _hasLoaded;
 
   Future<void> loadMyTeams(String token) async {
     _isLoading = true;
@@ -18,6 +20,7 @@ class TeamProvider with ChangeNotifier {
       debugPrint('Error loading teams: $e');
     } finally {
       _isLoading = false;
+      _hasLoaded = true;
       notifyListeners();
     }
   }
