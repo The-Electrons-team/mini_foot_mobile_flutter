@@ -35,9 +35,9 @@ class MatchService {
     throw Exception('Erreur chargement matchs équipe: ${response.body}');
   }
 
-  Future<List<dynamic>> getPendingChallenges(String token) async {
+  Future<List<dynamic>> getPendingChallenges(String token, String teamId) async {
     final response = await http.get(
-      Uri.parse('$_baseUrl/matches/challenges/pending'),
+      Uri.parse('$_baseUrl/matches/challenges/pending/$teamId'),
       headers: {'Authorization': 'Bearer $token'},
     );
     if (response.statusCode == 200) return jsonDecode(response.body);

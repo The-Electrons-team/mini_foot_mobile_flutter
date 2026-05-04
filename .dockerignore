@@ -1,0 +1,12 @@
+.dart_tool
+.flutter-plugins
+.flutter-plugins-dependencies
+.metadata
+.packages
+build
+ios/Flutter/Flutter.podspec
+node_modules
+.git
+.gitignore
+*.md
+Dockerfile

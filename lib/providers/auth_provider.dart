@@ -17,7 +17,6 @@ class User {
   final int assistsCount;
   final List<dynamic> upcomingMatches;
   final String? avatarUrl;
-  final bool isCaptain; // Ajout de isCaptain
 
   User({
     required this.id,
@@ -33,7 +32,6 @@ class User {
     this.assistsCount = 0,
     this.upcomingMatches = const [],
     this.avatarUrl,
-    this.isCaptain = false,
   });
 
   factory User.fromJson(Map<String, dynamic> json) {
@@ -51,7 +49,6 @@ class User {
       assistsCount: json['stats']?['assists'] ?? 0,
       upcomingMatches: json['upcomingMatches'] ?? [],
       avatarUrl: json['avatarUrl'],
-      isCaptain: json['isCaptain'] ?? false,
     );
   }
 }

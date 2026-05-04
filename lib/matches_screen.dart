@@ -228,12 +228,7 @@ class _MatchesScreenState extends State<MatchesScreen> {
   }
 
   Widget _buildTabs(BuildContext context) {
-    final auth = Provider.of<AuthProvider>(context, listen: false);
-    final tabs = ['Mes Matchs', 'Organiser'];
-    if (auth.user?.isCaptain == true) {
-      tabs.add('Demandes');
-    }
-    
+    final tabs = ['Mes Matchs', 'Organiser', 'Demandes'];
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
       padding: const EdgeInsets.all(4),
@@ -460,7 +455,7 @@ class _MatchesScreenState extends State<MatchesScreen> {
       return const Center(child: Text('Vous devez avoir une équipe pour voir les demandes.'));
     }
     return FutureBuilder<List<dynamic>>(
-      future: _matchService.getPendingChallenges(auth.token!),
+      future: _matchService.getPendingChallenges(auth.token!, auth.user!.teamId!),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator(color: _kGreen));
         final challenges = snapshot.data ?? [];
@@ -476,87 +471,31 @@ class _MatchesScreenState extends State<MatchesScreen> {
 
   Widget _buildChallengeCard(dynamic challenge, AuthProvider auth) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: _card(context),
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 20,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(color: _card(context), borderRadius: BorderRadius.circular(20)),
       child: Column(
         children: [
           Row(
             children: [
-              _LogoCircle(url: challenge['fromTeam']['logoUrl'] ?? '', size: 50, color: _kGreen),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      challenge['fromTeam']['name'],
-                      style: TextStyle(fontWeight: FontWeight.w900, fontSize: 16, color: _txt(context)),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      'Format: ${challenge['format']} · ${challenge['zone'] ?? 'Dakar'}',
-                      style: TextStyle(color: _sub(context), fontSize: 12, fontWeight: FontWeight.w500),
-                    ),
-                  ],
-                ),
-              ),
+              _LogoCircle(url: challenge['fromTeam']['logoUrl'] ?? '', size: 40, color: _kGreen),
+              const SizedBox(width: 12),
+              Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text(challenge['fromTeam']['name'], style: TextStyle(fontWeight: FontWeight.w800, fontSize: 14, color: _txt(context))),
+                Text('Défie votre équipe · ${challenge['format']}', style: TextStyle(color: _sub(context), fontSize: 11)),
+              ])),
             ],
           ),
-          const SizedBox(height: 20),
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: _bg(context).withOpacity(0.5),
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Row(
-              children: [
-                Icon(Icons.calendar_today_rounded, size: 16, color: _kGreen),
-                const SizedBox(width: 8),
-                Text(
-                  _formatMatchDate(challenge['date']),
-                  style: TextStyle(fontWeight: FontWeight.w800, fontSize: 13, color: _txt(context)),
-                ),
-                const SizedBox(width: 12),
-                Icon(Icons.access_time_rounded, size: 16, color: _kGreen),
-                const SizedBox(width: 6),
-                Text(
-                  challenge['time'] ?? '16:00',
-                  style: TextStyle(fontWeight: FontWeight.w800, fontSize: 13, color: _txt(context)),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 16),
           Row(
             children: [
-              Expanded(
-                child: _buildActionButton(
-                  'Refuser',
-                  Colors.redAccent,
-                  () => _respondChallenge(challenge['id'], auth, false),
-                  isOutline: true,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: _buildActionButton(
-                  'Accepter',
-                  _kGreen,
-                  () => _respondChallenge(challenge['id'], auth, true),
-                ),
-              ),
+              Icon(Icons.calendar_today, size: 14, color: _sub(context)),
+              const SizedBox(width: 6),
+              Text(_formatMatchDate(challenge['date']), style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12, color: _txt(context))),
+              const Spacer(),
+              _buildActionButton('Refuser', Colors.red, () => _respondChallenge(challenge['id'], auth, false)),
+              const SizedBox(width: 8),
+              _buildActionButton('Accepter', _kGreen, () => _respondChallenge(challenge['id'], auth, true)),
             ],
           ),
         ],
@@ -564,32 +503,13 @@ class _MatchesScreenState extends State<MatchesScreen> {
     );
   }
 
-  Widget _buildActionButton(String label, Color color, VoidCallback onTap, {bool isOutline = false}) {
+  Widget _buildActionButton(String label, Color color, VoidCallback onTap) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        height: 44,
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: isOutline ? Colors.transparent : color,
-          borderRadius: BorderRadius.circular(14),
-          border: isOutline ? Border.all(color: color.withOpacity(0.3), width: 2) : null,
-          boxShadow: isOutline ? null : [
-            BoxShadow(
-              color: color.withOpacity(0.2),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            color: isOutline ? color : Colors.white,
-            fontWeight: FontWeight.w900,
-            fontSize: 14,
-          ),
-        ),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(10)),
+        child: Text(label, style: TextStyle(color: color, fontWeight: FontWeight.w800, fontSize: 12)),
       ),
     );
   }
@@ -805,19 +725,18 @@ class _TeamRow extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 8),
-            if (Provider.of<AuthProvider>(context, listen: false).user?.isCaptain == true)
-              GestureDetector(
-                onTap: onChallenge,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                  decoration: BoxDecoration(
-                    color: _kGreen,
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: const Text('Défier',
-                      style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w800)),
+            GestureDetector(
+              onTap: onChallenge,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                decoration: BoxDecoration(
+                  color: _kGreen,
+                  borderRadius: BorderRadius.circular(10),
                 ),
+                child: const Text('Défier',
+                    style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w800)),
               ),
+            ),
           ],
         ),
       ),
