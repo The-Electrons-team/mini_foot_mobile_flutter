@@ -10,10 +10,10 @@ const Color _kGreen = Color(0xFF006F39);
 
 // ─── Helpers thème ──────────────────────────────────────────────────────────
 bool _isDark(BuildContext c) => Theme.of(c).brightness == Brightness.dark;
-Color _bg(BuildContext c)   => Theme.of(c).scaffoldBackgroundColor;
+Color _bg(BuildContext c) => Theme.of(c).scaffoldBackgroundColor;
 Color _card(BuildContext c) => Theme.of(c).cardColor;
-Color _txt(BuildContext c)  => Theme.of(c).colorScheme.onSurface;
-Color _sub(BuildContext c)  => _isDark(c)
+Color _txt(BuildContext c) => Theme.of(c).colorScheme.onSurface;
+Color _sub(BuildContext c) => _isDark(c)
     ? const Color(0xFFF0EBE0).withOpacity(0.5)
     : Colors.black.withOpacity(0.45);
 
@@ -28,7 +28,6 @@ class NotificationsScreen extends StatefulWidget {
 }
 
 class _NotificationsScreenState extends State<NotificationsScreen> {
-
   @override
   void initState() {
     super.initState();
@@ -40,19 +39,36 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     });
   }
 
-  void _markAllRead() {
+  Future<void> _markAllRead() async {
     final auth = context.read<AuthProvider>();
     if (auth.token != null) {
-      context.read<NotificationProvider>().markAllAsRead(auth.token!);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('Toutes les notifications ont été lues'),
-          backgroundColor: _kGreen,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          duration: const Duration(seconds: 2),
-        ),
-      );
+      try {
+        await context.read<NotificationProvider>().markAllAsRead(auth.token!);
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('Toutes les notifications ont été lues'),
+            backgroundColor: _kGreen,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      } catch (_) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('Impossible de tout marquer comme lu'),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+        );
+      }
     }
   }
 
@@ -63,9 +79,10 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     final items = notifProv.notifications;
     final unreadCount = notifProv.unreadCount;
     final isLoading = notifProv.isLoading;
+    final isMarkingAllRead = notifProv.isMarkingAllRead;
 
     final unread = items.where((n) => !n.read).toList();
-    final read   = items.where((n) =>  n.read).toList();
+    final read = items.where((n) => n.read).toList();
 
     return Scaffold(
       backgroundColor: _bg(context),
@@ -73,7 +90,6 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-
             // ── HEADER ──
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
@@ -83,24 +99,38 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('Notifications',
-                            style: GoogleFonts.orbitron(
-                                fontSize: 20, fontWeight: FontWeight.w900,
-                                color: _txt(context))),
+                        Text(
+                          'Notifications',
+                          style: GoogleFonts.orbitron(
+                            fontSize: 20,
+                            fontWeight: FontWeight.w900,
+                            color: _txt(context),
+                          ),
+                        ),
                         if (unreadCount > 0)
                           Padding(
                             padding: const EdgeInsets.only(top: 3),
-                            child: Text('$unreadCount non lue${unreadCount > 1 ? "s" : ""}',
-                                style: TextStyle(fontSize: 12, color: _sub(context))),
+                            child: Text(
+                              '$unreadCount non lue${unreadCount > 1 ? "s" : ""}',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: _sub(context),
+                              ),
+                            ),
                           ),
                       ],
                     ),
                   ),
                   GestureDetector(
-                    onTap: unreadCount > 0 ? _markAllRead : null,
+                    onTap: unreadCount > 0 && !isMarkingAllRead
+                        ? _markAllRead
+                        : null,
                     child: AnimatedContainer(
                       duration: const Duration(milliseconds: 200),
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 7,
+                      ),
                       decoration: BoxDecoration(
                         color: unreadCount > 0
                             ? _kGreen.withOpacity(0.1)
@@ -112,23 +142,42 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                               : Colors.transparent,
                         ),
                       ),
-                      child: Text('Tout lire',
-                          style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w700,
-                              color: unreadCount > 0 ? _kGreen : _sub(context))),
+                      child: isMarkingAllRead
+                          ? const SizedBox(
+                              width: 14,
+                              height: 14,
+                              child: CircularProgressIndicator(
+                                color: _kGreen,
+                                strokeWidth: 2,
+                              ),
+                            )
+                          : Text(
+                              'Tout lire',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                                color: unreadCount > 0
+                                    ? _kGreen
+                                    : _sub(context),
+                              ),
+                            ),
                     ),
                   ),
                   const SizedBox(width: 8),
                   GestureDetector(
                     onTap: () => Navigator.pop(context),
                     child: Container(
-                      width: 36, height: 36,
+                      width: 36,
+                      height: 36,
                       decoration: BoxDecoration(
                         color: _sub(context).withOpacity(0.1),
                         shape: BoxShape.circle,
                       ),
-                      child: Icon(Icons.close_rounded, size: 18, color: _sub(context)),
+                      child: Icon(
+                        Icons.close_rounded,
+                        size: 18,
+                        color: _sub(context),
+                      ),
                     ),
                   ),
                 ],
@@ -140,28 +189,36 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
             // ── LISTE ──
             Expanded(
               child: isLoading && items.isEmpty
-                  ? const Center(child: CircularProgressIndicator(color: _kGreen))
+                  ? const Center(
+                      child: CircularProgressIndicator(color: _kGreen),
+                    )
                   : items.isEmpty
-                      ? _EmptyState()
-                      : ListView(
-                          padding: const EdgeInsets.only(bottom: 24),
-                          children: [
-                            if (unread.isNotEmpty) ...[
-                              const _SectionLabel(label: 'Nouvelles'),
-                              ...unread.map((n) => _NotifTile(
-                                    notif: n,
-                                    onTap: () => _openNotification(n, authProv, notifProv),
-                                  )),
-                            ],
-                            if (read.isNotEmpty) ...[
-                              const _SectionLabel(label: 'Précédentes'),
-                              ...read.map((n) => _NotifTile(
-                                    notif: n,
-                                    onTap: () => _openNotification(n, authProv, notifProv),
-                                  )),
-                            ],
-                          ],
-                        ),
+                  ? _EmptyState()
+                  : ListView(
+                      padding: const EdgeInsets.only(bottom: 24),
+                      children: [
+                        if (unread.isNotEmpty) ...[
+                          const _SectionLabel(label: 'Nouvelles'),
+                          ...unread.map(
+                            (n) => _NotifTile(
+                              notif: n,
+                              onTap: () =>
+                                  _openNotification(n, authProv, notifProv),
+                            ),
+                          ),
+                        ],
+                        if (read.isNotEmpty) ...[
+                          const _SectionLabel(label: 'Précédentes'),
+                          ...read.map(
+                            (n) => _NotifTile(
+                              notif: n,
+                              onTap: () =>
+                                  _openNotification(n, authProv, notifProv),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
             ),
           ],
         ),
@@ -178,12 +235,14 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       notifProv.markAsRead(authProv.token!, notification.id);
     }
 
-    final isChallenge = notification.type == NotifType.CHALLENGE_RECEIVED ||
+    final isChallenge =
+        notification.type == NotifType.CHALLENGE_RECEIVED ||
         notification.type == NotifType.CHALLENGE_RESPONSE;
     final targetScreen = notification.data?['screen']?.toString();
 
     if (isChallenge || targetScreen == 'matches') {
-      final tabIndex = int.tryParse(notification.data?['tabIndex']?.toString() ?? '') ?? 2;
+      final tabIndex =
+          int.tryParse(notification.data?['tabIndex']?.toString() ?? '') ?? 2;
       Navigator.push(
         context,
         MaterialPageRoute(builder: (_) => MatchesScreen(initialTab: tabIndex)),
@@ -199,9 +258,15 @@ class _SectionLabel extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Padding(
     padding: const EdgeInsets.fromLTRB(20, 4, 20, 6),
-    child: Text(label,
-        style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700,
-            color: _sub(context), letterSpacing: 0.5)),
+    child: Text(
+      label,
+      style: TextStyle(
+        fontSize: 11,
+        fontWeight: FontWeight.w700,
+        color: _sub(context),
+        letterSpacing: 0.5,
+      ),
+    ),
   );
 }
 
@@ -281,21 +346,30 @@ class _NotifTile extends StatelessWidget {
           borderRadius: BorderRadius.circular(18),
           boxShadow: muted
               ? null
-              : [BoxShadow(color: Colors.black.withOpacity(0.06), blurRadius: 10, offset: const Offset(0, 3))],
-          border: muted
-              ? null
-              : Border.all(color: _color.withOpacity(0.12)),
+              : [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.06),
+                    blurRadius: 10,
+                    offset: const Offset(0, 3),
+                  ),
+                ],
+          border: muted ? null : Border.all(color: _color.withOpacity(0.12)),
         ),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Container(
-              width: 42, height: 42,
+              width: 42,
+              height: 42,
               decoration: BoxDecoration(
                 color: _color.withOpacity(muted ? 0.07 : 0.12),
                 borderRadius: BorderRadius.circular(13),
               ),
-              child: Icon(_icon, color: _color.withOpacity(muted ? 0.5 : 1.0), size: 20),
+              child: Icon(
+                _icon,
+                color: _color.withOpacity(muted ? 0.5 : 1.0),
+                size: 20,
+              ),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -305,33 +379,50 @@ class _NotifTile extends StatelessWidget {
                   Row(
                     children: [
                       Expanded(
-                        child: Text(notif.title,
-                            style: TextStyle(
-                                fontWeight: notif.read ? FontWeight.w600 : FontWeight.w800,
-                                fontSize: 13.5,
-                                color: muted ? _sub(context) : _txt(context))),
+                        child: Text(
+                          notif.title,
+                          style: TextStyle(
+                            fontWeight: notif.read
+                                ? FontWeight.w600
+                                : FontWeight.w800,
+                            fontSize: 13.5,
+                            color: muted ? _sub(context) : _txt(context),
+                          ),
+                        ),
                       ),
                       if (!notif.read)
                         Container(
-                          width: 8, height: 8,
-                          decoration: BoxDecoration(color: _color, shape: BoxShape.circle),
+                          width: 8,
+                          height: 8,
+                          decoration: BoxDecoration(
+                            color: _color,
+                            shape: BoxShape.circle,
+                          ),
                         ),
                     ],
                   ),
                   const SizedBox(height: 4),
-                  Text(notif.body,
-                      style: TextStyle(
-                          fontSize: 12,
-                          color: muted ? _sub(context).withOpacity(0.7) : _sub(context),
-                          height: 1.4),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis),
+                  Text(
+                    notif.body,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: muted
+                          ? _sub(context).withOpacity(0.7)
+                          : _sub(context),
+                      height: 1.4,
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
                   const SizedBox(height: 6),
-                  Text(_formatDate(notif.createdAt),
-                      style: TextStyle(
-                          fontSize: 11,
-                          color: muted ? _sub(context).withOpacity(0.6) : _color,
-                          fontWeight: muted ? FontWeight.w400 : FontWeight.w600)),
+                  Text(
+                    _formatDate(notif.createdAt),
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: muted ? _sub(context).withOpacity(0.6) : _color,
+                      fontWeight: muted ? FontWeight.w400 : FontWeight.w600,
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -350,20 +441,32 @@ class _EmptyState extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         Container(
-          width: 80, height: 80,
+          width: 80,
+          height: 80,
           decoration: BoxDecoration(
             color: _kGreen.withOpacity(0.08),
             shape: BoxShape.circle,
           ),
-          child: Icon(Icons.notifications_none_rounded,
-              size: 40, color: _kGreen.withOpacity(0.4)),
+          child: Icon(
+            Icons.notifications_none_rounded,
+            size: 40,
+            color: _kGreen.withOpacity(0.4),
+          ),
         ),
         const SizedBox(height: 16),
-        Text('Aucune notification',
-            style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: _sub(context))),
+        Text(
+          'Aucune notification',
+          style: TextStyle(
+            fontSize: 15,
+            fontWeight: FontWeight.w700,
+            color: _sub(context),
+          ),
+        ),
         const SizedBox(height: 6),
-        Text('Vous êtes à jour !',
-            style: TextStyle(fontSize: 12, color: _sub(context).withOpacity(0.6))),
+        Text(
+          'Vous êtes à jour !',
+          style: TextStyle(fontSize: 12, color: _sub(context).withOpacity(0.6)),
+        ),
       ],
     ),
   );

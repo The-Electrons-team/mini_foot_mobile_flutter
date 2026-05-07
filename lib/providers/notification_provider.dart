@@ -21,7 +21,7 @@ enum NotifType {
   // Anciens
   RESERVATION,
   MATCH,
-  CHAT
+  CHAT,
 }
 
 class NotificationModel {
@@ -50,8 +50,8 @@ class NotificationModel {
       body: json['body'],
       type: _parseType(json['type']),
       read: json['read'] ?? false,
-      createdAt: json['createdAt'] != null 
-          ? DateTime.parse(json['createdAt']) 
+      createdAt: json['createdAt'] != null
+          ? DateTime.parse(json['createdAt'])
           : DateTime.now(),
       data: json['data'],
     );
@@ -69,10 +69,13 @@ class NotificationProvider with ChangeNotifier {
   final String _base = dotenv.env['API_URL'] ?? 'http://localhost:3000/api/v1';
   List<NotificationModel> _notifications = [];
   bool _isLoading = false;
+  bool _isMarkingAllRead = false;
+  int _unreadCount = 0;
 
   List<NotificationModel> get notifications => _notifications;
   bool get isLoading => _isLoading;
-  int get unreadCount => _notifications.where((n) => !n.read).length;
+  bool get isMarkingAllRead => _isMarkingAllRead;
+  int get unreadCount => _unreadCount;
 
   Future<void> loadNotifications(String token) async {
     _isLoading = true;
@@ -83,14 +86,19 @@ class NotificationProvider with ChangeNotifier {
         Uri.parse('$_base/notifications'),
         headers: {'Authorization': 'Bearer $token'},
       );
-      
+
       debugPrint('Charge notifications: ${response.statusCode}');
       debugPrint('Corps réponse: ${response.body}');
 
       if (response.statusCode == 200) {
         final decoded = jsonDecode(response.body);
         final List<dynamic> data = decoded['data'] ?? [];
-        _notifications = data.map((n) => NotificationModel.fromJson(n)).toList();
+        _notifications = data
+            .map((n) => NotificationModel.fromJson(n))
+            .toList();
+        _unreadCount = decoded['unreadCount'] is int
+            ? decoded['unreadCount']
+            : _notifications.where((n) => !n.read).length;
       }
     } catch (e) {
       debugPrint('Error loading notifications: $e');
@@ -106,7 +114,7 @@ class NotificationProvider with ChangeNotifier {
         Uri.parse('$_base/notifications/$id/read'),
         headers: {'Authorization': 'Bearer $token'},
       );
-      
+
       final index = _notifications.indexWhere((n) => n.id == id);
       if (index != -1) {
         _notifications[index] = NotificationModel(
@@ -118,6 +126,7 @@ class NotificationProvider with ChangeNotifier {
           createdAt: _notifications[index].createdAt,
           data: _notifications[index].data,
         );
+        _unreadCount = _unreadCount > 0 ? _unreadCount - 1 : 0;
         notifyListeners();
       }
     } catch (e) {
@@ -126,24 +135,46 @@ class NotificationProvider with ChangeNotifier {
   }
 
   Future<void> markAllAsRead(String token) async {
+    if (_isMarkingAllRead || _unreadCount == 0) return;
+    _isMarkingAllRead = true;
+    notifyListeners();
+
+    final previousNotifications = List<NotificationModel>.from(_notifications);
+    final previousUnreadCount = _unreadCount;
+
     try {
-      await http.patch(
+      final response = await http.patch(
         Uri.parse('$_base/notifications/read-all'),
         headers: {'Authorization': 'Bearer $token'},
       );
-      
-      _notifications = _notifications.map((n) => NotificationModel(
-        id: n.id,
-        title: n.title,
-        body: n.body,
-        type: n.type,
-        read: true,
-        createdAt: n.createdAt,
-        data: n.data,
-      )).toList();
+
+      if (response.statusCode != 200 && response.statusCode != 204) {
+        throw Exception('Erreur lecture notifications: ${response.body}');
+      }
+
+      _notifications = _notifications
+          .map(
+            (n) => NotificationModel(
+              id: n.id,
+              title: n.title,
+              body: n.body,
+              type: n.type,
+              read: true,
+              createdAt: n.createdAt,
+              data: n.data,
+            ),
+          )
+          .toList();
+      _unreadCount = 0;
       notifyListeners();
     } catch (e) {
+      _notifications = previousNotifications;
+      _unreadCount = previousUnreadCount;
       debugPrint('Error marking all notifications as read: $e');
+      rethrow;
+    } finally {
+      _isMarkingAllRead = false;
+      notifyListeners();
     }
   }
 
@@ -153,11 +184,9 @@ class NotificationProvider with ChangeNotifier {
     try {
       final response = await http.post(
         Uri.parse('$_base/notifications/test'),
-        headers: {
-          'Authorization': 'Bearer $token',
-        },
+        headers: {'Authorization': 'Bearer $token'},
       );
-      
+
       if (response.statusCode == 200 || response.statusCode == 201) {
         // Rafraîchir la liste uniquement si l'envoi a réussi
         await loadNotifications(token);
