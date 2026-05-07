@@ -19,23 +19,25 @@ class TeamService {
     String? zone,
     String? address,
     String? color,
+    double? lat,
+    double? lng,
     List<int>? logoBytes,
     String? logoFilename,
   }) async {
     final request = http.MultipartRequest('POST', Uri.parse('$_baseUrl/teams'))
       ..headers['Authorization'] = 'Bearer $token'
       ..fields['name'] = name;
-    
+
     if (zone != null) request.fields['zone'] = zone;
     if (address != null) request.fields['address'] = address;
     if (color != null) request.fields['color'] = color;
-    
+    if (lat != null) request.fields['lat'] = lat.toString();
+    if (lng != null) request.fields['lng'] = lng.toString();
+
     if (logoBytes != null && logoFilename != null) {
-      request.files.add(http.MultipartFile.fromBytes(
-        'logo',
-        logoBytes,
-        filename: logoFilename,
-      ));
+      request.files.add(
+        http.MultipartFile.fromBytes('logo', logoBytes, filename: logoFilename),
+      );
     }
 
     final streamedResponse = await request.send();
@@ -45,6 +47,45 @@ class TeamService {
       return jsonDecode(response.body);
     } else {
       throw Exception('Erreur création équipe: ${response.body}');
+    }
+  }
+
+  Future<Map<String, dynamic>> updateTeam({
+    required String token,
+    required String teamId,
+    required String name,
+    String? zone,
+    String? address,
+    String? color,
+    double? lat,
+    double? lng,
+    List<int>? logoBytes,
+    String? logoFilename,
+  }) async {
+    final request =
+        http.MultipartRequest('PATCH', Uri.parse('$_baseUrl/teams/$teamId'))
+          ..headers['Authorization'] = 'Bearer $token'
+          ..fields['name'] = name;
+
+    if (zone != null) request.fields['zone'] = zone;
+    if (address != null) request.fields['address'] = address;
+    if (color != null) request.fields['color'] = color;
+    if (lat != null) request.fields['lat'] = lat.toString();
+    if (lng != null) request.fields['lng'] = lng.toString();
+
+    if (logoBytes != null && logoFilename != null) {
+      request.files.add(
+        http.MultipartFile.fromBytes('logo', logoBytes, filename: logoFilename),
+      );
+    }
+
+    final streamedResponse = await request.send();
+    final response = await http.Response.fromStream(streamedResponse);
+
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      return jsonDecode(response.body);
+    } else {
+      throw Exception('Erreur modification équipe: ${response.body}');
     }
   }
 
@@ -61,7 +102,10 @@ class TeamService {
     }
   }
 
-  Future<Map<String, dynamic>> getTeamDetail(String token, String teamId) async {
+  Future<Map<String, dynamic>> getTeamDetail(
+    String token,
+    String teamId,
+  ) async {
     final response = await http.get(
       Uri.parse('$_baseUrl/teams/$teamId'),
       headers: {'Authorization': 'Bearer $token'},
@@ -83,11 +127,16 @@ class TeamService {
     if (response.statusCode == 200 || response.statusCode == 201) {
       return jsonDecode(response.body);
     } else {
-      throw Exception('Erreur lors de la tentative de rejoindre: ${response.body}');
+      throw Exception(
+        'Erreur lors de la tentative de rejoindre: ${response.body}',
+      );
     }
   }
 
-  Future<Map<String, dynamic>> getComposition(String token, String teamId) async {
+  Future<Map<String, dynamic>> getComposition(
+    String token,
+    String teamId,
+  ) async {
     final response = await http.get(
       Uri.parse('$_baseUrl/teams/$teamId/composition'),
       headers: {'Authorization': 'Bearer $token'},
@@ -109,9 +158,12 @@ class TeamService {
     String token,
     String teamId,
     String formation,
-    List<Map<String, dynamic>> lineup,
-    {String format = '5v5', int playerCount = 5, String? name, bool? isDefault}
-  ) async {
+    List<Map<String, dynamic>> lineup, {
+    String format = '5v5',
+    int playerCount = 5,
+    String? name,
+    bool? isDefault,
+  }) async {
     final response = await http.put(
       Uri.parse('$_baseUrl/teams/$teamId/composition'),
       headers: {
@@ -127,25 +179,42 @@ class TeamService {
         if (isDefault != null) 'isDefault': isDefault,
       }),
     );
-    if (response.statusCode == 200 || response.statusCode == 201) return jsonDecode(response.body);
+    if (response.statusCode == 200 || response.statusCode == 201)
+      return jsonDecode(response.body);
     throw Exception('Erreur sauvegarde composition: ${response.body}');
   }
 
-  Future<List<dynamic>> searchTeams({String? zone, String? query, String? excludeId}) async {
+  Future<List<dynamic>> searchTeams({
+    String? zone,
+    String? query,
+    String? excludeId,
+  }) async {
     final params = <String, String>{};
-    if (zone != null && zone.isNotEmpty && zone != 'Toutes') params['zone'] = zone;
+    if (zone != null && zone.isNotEmpty && zone != 'Toutes')
+      params['zone'] = zone;
     if (query != null && query.isNotEmpty) params['query'] = query;
     if (excludeId != null) params['excludeId'] = excludeId;
 
-    final uri = Uri.parse('$_baseUrl/teams/search').replace(queryParameters: params.isNotEmpty ? params : null);
+    final uri = Uri.parse(
+      '$_baseUrl/teams/search',
+    ).replace(queryParameters: params.isNotEmpty ? params : null);
     final response = await http.get(uri).timeout(const Duration(seconds: 12));
     if (response.statusCode == 200) return jsonDecode(response.body);
     throw Exception('Erreur recherche équipes: ${response.body}');
   }
 
   Future<List<dynamic>> getZones() async {
-    final response = await http.get(Uri.parse('$_baseUrl/teams/zones')).timeout(const Duration(seconds: 12));
+    final response = await http
+        .get(Uri.parse('$_baseUrl/teams/zones'))
+        .timeout(const Duration(seconds: 12));
     if (response.statusCode == 200) return jsonDecode(response.body);
-    return ['Dakar', 'Guédiawaye', 'Pikine', 'Rufisque', 'Thiès', 'Saint-Louis'];
+    return [
+      'Dakar',
+      'Guédiawaye',
+      'Pikine',
+      'Rufisque',
+      'Thiès',
+      'Saint-Louis',
+    ];
   }
 }

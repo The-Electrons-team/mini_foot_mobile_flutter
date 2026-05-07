@@ -36,8 +36,11 @@ class User {
 
   factory User.fromJson(Map<String, dynamic> json) {
     final team = json['team'] as Map<String, dynamic>?;
-    final memberships = json['memberships'] is List ? json['memberships'] as List : const [];
-    final firstMembership = memberships.isNotEmpty && memberships.first is Map<String, dynamic>
+    final memberships = json['memberships'] is List
+        ? json['memberships'] as List
+        : const [];
+    final firstMembership =
+        memberships.isNotEmpty && memberships.first is Map<String, dynamic>
         ? memberships.first as Map<String, dynamic>
         : null;
     final membershipTeam = firstMembership?['team'] is Map<String, dynamic>
@@ -51,8 +54,14 @@ class User {
       lastName: json['lastName'],
       birthDate: json['birthDate'],
       position: firstMembership?['position'] ?? json['position'],
-      teamId: json['teamId']?.toString() ?? team?['id']?.toString() ?? membershipTeam?['id']?.toString(),
-      teamName: json['teamName']?.toString() ?? team?['name']?.toString() ?? membershipTeam?['name']?.toString(),
+      teamId:
+          json['teamId']?.toString() ??
+          team?['id']?.toString() ??
+          membershipTeam?['id']?.toString(),
+      teamName:
+          json['teamName']?.toString() ??
+          team?['name']?.toString() ??
+          membershipTeam?['name']?.toString(),
       matchesCount: json['stats']?['matches'] ?? 0,
       goalsCount: json['stats']?['goals'] ?? 0,
       assistsCount: json['stats']?['assists'] ?? 0,
@@ -97,14 +106,46 @@ class AuthProvider with ChangeNotifier {
     try {
       final result = await _authService.login(phone, password);
       _token = result['token'];
-      if (result['user'] == null) throw Exception('Données utilisateur manquantes');
-      
+      if (result['user'] == null) {
+        throw Exception('Données utilisateur manquantes');
+      }
+
       _user = User.fromJson(result['user']);
       NotificationService().init(_token);
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString('token', _token!);
     } catch (e) {
       rethrow;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<Map<String, dynamic>> forgotPassword(String phone) async {
+    _isLoading = true;
+    notifyListeners();
+    try {
+      return await _authService.forgotPassword(phone);
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> resetPassword({
+    required String phone,
+    required String code,
+    required String password,
+  }) async {
+    _isLoading = true;
+    notifyListeners();
+    try {
+      await _authService.resetPassword(
+        phone: phone,
+        code: code,
+        password: password,
+      );
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -177,7 +218,11 @@ class AuthProvider with ChangeNotifier {
     _isLoading = true;
     notifyListeners();
     try {
-      final userData = await _authService.uploadAvatar(_token!, bytes, filename);
+      final userData = await _authService.uploadAvatar(
+        _token!,
+        bytes,
+        filename,
+      );
       _user = User.fromJson(userData);
       notifyListeners();
     } finally {

@@ -5,7 +5,6 @@ import 'package:provider/provider.dart';
 import 'providers/auth_provider.dart';
 import 'home_screen.dart';
 
-
 const Color kGreen = Color(0xFF006F39);
 const Color kBeige = Color(0xFFF5F0E8);
 
@@ -110,10 +109,13 @@ class _AuthScreenState extends State<AuthScreen>
               isNewUser: true,
             ),
             transitionsBuilder: (_, animation, _, child) => SlideTransition(
-              position: Tween<Offset>(
-                begin: const Offset(1, 0),
-                end: Offset.zero,
-              ).animate(CurvedAnimation(parent: animation, curve: Curves.easeOut)),
+              position:
+                  Tween<Offset>(
+                    begin: const Offset(1, 0),
+                    end: Offset.zero,
+                  ).animate(
+                    CurvedAnimation(parent: animation, curve: Curves.easeOut),
+                  ),
               child: child,
             ),
             transitionDuration: const Duration(milliseconds: 450),
@@ -123,12 +125,22 @@ class _AuthScreenState extends State<AuthScreen>
     } catch (e) {
       final raw = e.toString();
       String title = 'Connexion impossible';
-      String message = 'Nos serveurs sont momentanément indisponibles. Veuillez réessayer dans quelques instants.';
+      String message =
+          'Nos serveurs sont momentanément indisponibles. Veuillez réessayer dans quelques instants.';
 
-      if (raw.contains('AUTH_INVALID') || raw.contains('COMPTE_NON_TROUVE') || raw.contains('Identifiants invalides')) {
+      if (raw.contains('AUTH_INVALID') ||
+          raw.contains('COMPTE_NON_TROUVE') ||
+          raw.contains('Identifiants invalides')) {
+        title = 'Identifiants incorrects';
         message = 'Mot de passe ou téléphone incorrect.';
-      } else if (raw.contains('SERVER_UNAVAILABLE') || raw.contains('SocketException') || raw.contains('TimeoutException')) {
-        message = 'Nos serveurs sont momentanément indisponibles. Veuillez réessayer dans quelques instants.';
+      } else if (raw.contains('SERVER_UNAVAILABLE') ||
+          raw.contains('SocketException') ||
+          raw.contains('TimeoutException')) {
+        message =
+            'Nos serveurs sont momentanément indisponibles. Veuillez réessayer dans quelques instants.';
+      } else if (raw.contains('Numéro sénégalais invalide')) {
+        title = 'Numéro invalide';
+        message = 'Saisis les 9 chiffres du numéro sans +221.';
       } else if (raw.contains('déjà utilisé')) {
         title = 'Inscription impossible';
         message = 'Ce numéro est déjà utilisé par un autre compte.';
@@ -156,14 +168,15 @@ class _AuthScreenState extends State<AuthScreen>
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(),
-            child: const Text('OK', style: TextStyle(color: kGreen, fontWeight: FontWeight.w800)),
+            child: const Text(
+              'OK',
+              style: TextStyle(color: kGreen, fontWeight: FontWeight.w800),
+            ),
           ),
         ],
       ),
     );
   }
-
-
 
   @override
   Widget build(BuildContext context) {
@@ -282,7 +295,8 @@ class _AuthScreenState extends State<AuthScreen>
                       icon: Icons.lock_outline_rounded,
                       isPassword: true,
                       obscureText: _obscurePassword,
-                      onToggleVisibility: () => setState(() => _obscurePassword = !_obscurePassword),
+                      onToggleVisibility: () =>
+                          setState(() => _obscurePassword = !_obscurePassword),
                       validator: (v) {
                         if (v == null || v.trim().isEmpty) {
                           return 'Le mot de passe est requis';
@@ -294,6 +308,29 @@ class _AuthScreenState extends State<AuthScreen>
                       },
                     ),
 
+                    if (_isLogin) ...[
+                      const SizedBox(height: 6),
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: TextButton(
+                          onPressed: () {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) => const ForgotPasswordScreen(),
+                              ),
+                            );
+                          },
+                          child: const Text(
+                            'Mot de passe oublié ?',
+                            style: TextStyle(
+                              color: kGreen,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+
                     if (!_isLogin) ...[
                       const SizedBox(height: 14),
                       _InputField(
@@ -302,7 +339,9 @@ class _AuthScreenState extends State<AuthScreen>
                         icon: Icons.lock_reset_rounded,
                         isPassword: true,
                         obscureText: _obscurePassword,
-                        onToggleVisibility: () => setState(() => _obscurePassword = !_obscurePassword),
+                        onToggleVisibility: () => setState(
+                          () => _obscurePassword = !_obscurePassword,
+                        ),
                         validator: (v) {
                           if (v != _passwordController.text) {
                             return 'Les mots de passe ne correspondent pas';
@@ -330,12 +369,16 @@ class _AuthScreenState extends State<AuthScreen>
                               elevation: 0,
                             ),
                             child: auth.isLoading
-                                ? const CircularProgressIndicator(color: Colors.white)
+                                ? const CircularProgressIndicator(
+                                    color: Colors.white,
+                                  )
                                 : Row(
                                     mainAxisAlignment: MainAxisAlignment.center,
                                     children: [
                                       Text(
-                                        _isLogin ? 'Se connecter' : 'S\'inscrire',
+                                        _isLogin
+                                            ? 'Se connecter'
+                                            : 'S\'inscrire',
                                         style: GoogleFonts.orbitron(
                                           color: Colors.white,
                                           fontSize: 14,
@@ -343,15 +386,17 @@ class _AuthScreenState extends State<AuthScreen>
                                         ),
                                       ),
                                       const SizedBox(width: 10),
-                                      const Icon(Icons.arrow_forward_rounded,
-                                          color: Colors.white, size: 20),
+                                      const Icon(
+                                        Icons.arrow_forward_rounded,
+                                        color: Colors.white,
+                                        size: 20,
+                                      ),
                                     ],
                                   ),
                           ),
                         );
                       },
                     ),
-
 
                     const SizedBox(height: 22),
 
@@ -367,7 +412,8 @@ class _AuthScreenState extends State<AuthScreen>
                                   ? 'Pas encore de compte ? '
                                   : 'Déjà un compte ? ',
                               style: TextStyle(
-                                  color: Colors.black.withOpacity(0.5)),
+                                color: Colors.black.withOpacity(0.5),
+                              ),
                             ),
                             TextSpan(
                               text: _isLogin ? 'S\'inscrire' : 'Se connecter',
@@ -428,7 +474,9 @@ class _InputField extends StatelessWidget {
         suffixIcon: isPassword
             ? IconButton(
                 icon: Icon(
-                  obscureText ? Icons.visibility_off_rounded : Icons.visibility_rounded,
+                  obscureText
+                      ? Icons.visibility_off_rounded
+                      : Icons.visibility_rounded,
                   color: kGreen.withOpacity(0.6),
                 ),
                 onPressed: onToggleVisibility,
@@ -555,15 +603,15 @@ class OtpScreen extends StatefulWidget {
     this.isNewUser = false,
   });
 
-
-
   @override
   State<OtpScreen> createState() => _OtpScreenState();
 }
 
 class _OtpScreenState extends State<OtpScreen> {
-  final List<TextEditingController> _controllers =
-      List.generate(6, (_) => TextEditingController());
+  final List<TextEditingController> _controllers = List.generate(
+    6,
+    (_) => TextEditingController(),
+  );
   final List<FocusNode> _focusNodes = List.generate(6, (_) => FocusNode());
 
   int _resendSeconds = 30;
@@ -656,7 +704,6 @@ class _OtpScreenState extends State<OtpScreen> {
             firstName: widget.firstName,
             lastName: widget.lastName,
           );
-
         }
 
         if (!mounted) return;
@@ -678,11 +725,14 @@ class _OtpScreenState extends State<OtpScreen> {
     }
   }
 
-
   @override
   void dispose() {
-    for (final c in _controllers) { c.dispose(); }
-    for (final f in _focusNodes) { f.dispose(); }
+    for (final c in _controllers) {
+      c.dispose();
+    }
+    for (final f in _focusNodes) {
+      f.dispose();
+    }
     super.dispose();
   }
 
@@ -826,7 +876,6 @@ class _OtpScreenState extends State<OtpScreen> {
                 },
               ),
 
-
               const SizedBox(height: 24),
 
               // Renvoyer
@@ -838,7 +887,9 @@ class _OtpScreenState extends State<OtpScreen> {
                     color: _canResend ? kGreen : Colors.black.withOpacity(0.35),
                     fontWeight: FontWeight.w700,
                     fontSize: 14,
-                    decoration: _canResend ? TextDecoration.underline : TextDecoration.none,
+                    decoration: _canResend
+                        ? TextDecoration.underline
+                        : TextDecoration.none,
                     decorationColor: kGreen,
                   ),
                   child: Text(
@@ -852,6 +903,319 @@ class _OtpScreenState extends State<OtpScreen> {
               const SizedBox(height: 40),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class ForgotPasswordScreen extends StatefulWidget {
+  const ForgotPasswordScreen({super.key});
+
+  @override
+  State<ForgotPasswordScreen> createState() => _ForgotPasswordScreenState();
+}
+
+class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
+  final _phoneFormKey = GlobalKey<FormState>();
+  final _resetFormKey = GlobalKey<FormState>();
+  final _phoneController = TextEditingController();
+  final _codeController = TextEditingController();
+  final _passwordController = TextEditingController();
+  final _confirmPasswordController = TextEditingController();
+
+  bool _codeSent = false;
+  bool _obscurePassword = true;
+  String? _phone;
+  String? _errorMessage;
+
+  @override
+  void dispose() {
+    _phoneController.dispose();
+    _codeController.dispose();
+    _passwordController.dispose();
+    _confirmPasswordController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _sendCode() async {
+    if (!(_phoneFormKey.currentState?.validate() ?? false)) return;
+
+    final phone = '+221${_phoneController.text.trim()}';
+    final authProvider = context.read<AuthProvider>();
+
+    try {
+      final result = await authProvider.forgotPassword(phone);
+      if (!mounted) return;
+      setState(() {
+        _phone = phone;
+        _codeSent = true;
+        _errorMessage = null;
+      });
+      final devCode = result['devCode'];
+      if (devCode != null) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Code dev : $devCode')));
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _errorMessage = _friendlyError(e));
+    }
+  }
+
+  Future<void> _resetPassword() async {
+    if (!(_resetFormKey.currentState?.validate() ?? false)) return;
+
+    try {
+      await context.read<AuthProvider>().resetPassword(
+        phone: _phone!,
+        code: _codeController.text.trim(),
+        password: _passwordController.text.trim(),
+      );
+      if (!mounted) return;
+      await showDialog<void>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(18),
+          ),
+          title: const Text(
+            'Mot de passe modifié',
+            style: TextStyle(fontWeight: FontWeight.w800, color: kGreen),
+          ),
+          content: const Text(
+            'Tu peux maintenant te connecter avec ton nouveau mot de passe.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: const Text(
+                'OK',
+                style: TextStyle(color: kGreen, fontWeight: FontWeight.w800),
+              ),
+            ),
+          ],
+        ),
+      );
+      if (mounted) Navigator.of(context).pop();
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _errorMessage = _friendlyError(e));
+    }
+  }
+
+  String _friendlyError(Object error) {
+    final raw = error.toString();
+    if (raw.contains('Compte non trouvé')) {
+      return 'Aucun compte ne correspond à ce numéro.';
+    }
+    if (raw.contains('Code OTP invalide') ||
+        raw.contains('invalide ou expiré')) {
+      return 'Code invalide ou expiré.';
+    }
+    if (raw.contains('Trop de demandes OTP')) {
+      return 'Trop de demandes. Réessaie plus tard.';
+    }
+    if (raw.contains('Numéro de téléphone')) {
+      return 'Saisis les 9 chiffres du numéro sans +221.';
+    }
+    return 'Impossible de réinitialiser le mot de passe pour le moment.';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: kBeige,
+      appBar: AppBar(
+        backgroundColor: kBeige,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: kGreen),
+          onPressed: () => Navigator.pop(context),
+        ),
+      ),
+      body: SafeArea(
+        child: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Text(
+                    'MINIFOOT',
+                    style: GoogleFonts.orbitron(
+                      color: kGreen,
+                      fontSize: 24,
+                      fontWeight: FontWeight.w900,
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 36),
+                Text(
+                  _codeSent ? 'Nouveau mot de passe' : 'Mot de passe oublié',
+                  style: GoogleFonts.orbitron(
+                    color: const Color(0xFF111111),
+                    fontSize: 22,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  _codeSent
+                      ? 'Entre le code reçu et choisis un nouveau mot de passe.'
+                      : 'Entre ton numéro pour recevoir un code de réinitialisation.',
+                  style: TextStyle(
+                    color: Colors.black.withOpacity(0.55),
+                    fontSize: 14,
+                    height: 1.5,
+                  ),
+                ),
+                const SizedBox(height: 28),
+                if (_codeSent) _buildResetForm() else _buildPhoneForm(),
+                if (_errorMessage != null) ...[
+                  const SizedBox(height: 14),
+                  Text(
+                    _errorMessage!,
+                    style: const TextStyle(color: Colors.red, fontSize: 13),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPhoneForm() {
+    return Form(
+      key: _phoneFormKey,
+      child: Column(
+        children: [
+          _PhoneField(
+            controller: _phoneController,
+            validator: (v) {
+              if (v == null || v.trim().isEmpty) return 'Le numéro est requis';
+              if (v.trim().length != 9) {
+                return 'Numéro invalide (9 chiffres après +221)';
+              }
+              return null;
+            },
+          ),
+          const SizedBox(height: 28),
+          _SubmitButton(label: 'Envoyer le code', onPressed: _sendCode),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildResetForm() {
+    return Form(
+      key: _resetFormKey,
+      child: Column(
+        children: [
+          _InputField(
+            controller: _codeController,
+            label: 'Code OTP',
+            icon: Icons.password_rounded,
+            validator: (v) {
+              if (v == null || v.trim().length != 6) {
+                return 'Saisis les 6 chiffres du code';
+              }
+              return null;
+            },
+          ),
+          const SizedBox(height: 14),
+          _InputField(
+            controller: _passwordController,
+            label: 'Nouveau mot de passe',
+            icon: Icons.lock_outline_rounded,
+            isPassword: true,
+            obscureText: _obscurePassword,
+            onToggleVisibility: () =>
+                setState(() => _obscurePassword = !_obscurePassword),
+            validator: (v) {
+              if (v == null || v.trim().isEmpty) {
+                return 'Le mot de passe est requis';
+              }
+              if (v.trim().length < 6) return 'Minimum 6 caractères';
+              return null;
+            },
+          ),
+          const SizedBox(height: 14),
+          _InputField(
+            controller: _confirmPasswordController,
+            label: 'Confirmer le mot de passe',
+            icon: Icons.lock_reset_rounded,
+            isPassword: true,
+            obscureText: _obscurePassword,
+            onToggleVisibility: () =>
+                setState(() => _obscurePassword = !_obscurePassword),
+            validator: (v) {
+              if (v != _passwordController.text) {
+                return 'Les mots de passe ne correspondent pas';
+              }
+              return null;
+            },
+          ),
+          const SizedBox(height: 28),
+          _SubmitButton(
+            label: 'Modifier le mot de passe',
+            onPressed: _resetPassword,
+          ),
+          const SizedBox(height: 10),
+          TextButton(
+            onPressed: () {
+              setState(() {
+                _codeSent = false;
+                _errorMessage = null;
+              });
+            },
+            child: const Text(
+              'Changer de numéro',
+              style: TextStyle(color: kGreen, fontWeight: FontWeight.w800),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SubmitButton extends StatelessWidget {
+  final String label;
+  final VoidCallback onPressed;
+
+  const _SubmitButton({required this.label, required this.onPressed});
+
+  @override
+  Widget build(BuildContext context) {
+    return Consumer<AuthProvider>(
+      builder: (context, auth, _) => SizedBox(
+        width: double.infinity,
+        height: 56,
+        child: ElevatedButton(
+          onPressed: auth.isLoading ? null : onPressed,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: kGreen,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(14),
+            ),
+            elevation: 0,
+          ),
+          child: auth.isLoading
+              ? const CircularProgressIndicator(color: Colors.white)
+              : Text(
+                  label,
+                  style: GoogleFonts.orbitron(
+                    color: Colors.white,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
         ),
       ),
     );

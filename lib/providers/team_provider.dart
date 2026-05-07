@@ -31,6 +31,8 @@ class TeamProvider with ChangeNotifier {
     String? zone,
     String? address,
     String? color,
+    double? lat,
+    double? lng,
     List<int>? logoBytes,
     String? logoFilename,
   }) async {
@@ -43,10 +45,54 @@ class TeamProvider with ChangeNotifier {
         zone: zone,
         address: address,
         color: color,
+        lat: lat,
+        lng: lng,
         logoBytes: logoBytes,
         logoFilename: logoFilename,
       );
       _myTeams.add(team);
+      return team;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<Map<String, dynamic>> updateTeam({
+    required String token,
+    required String teamId,
+    required String name,
+    String? zone,
+    String? address,
+    String? color,
+    double? lat,
+    double? lng,
+    List<int>? logoBytes,
+    String? logoFilename,
+  }) async {
+    _isLoading = true;
+    notifyListeners();
+    try {
+      final team = await _service.updateTeam(
+        token: token,
+        teamId: teamId,
+        name: name,
+        zone: zone,
+        address: address,
+        color: color,
+        lat: lat,
+        lng: lng,
+        logoBytes: logoBytes,
+        logoFilename: logoFilename,
+      );
+      final index = _myTeams.indexWhere(
+        (item) => item['id']?.toString() == teamId,
+      );
+      if (index >= 0) {
+        _myTeams[index] = team;
+      } else {
+        _myTeams.add(team);
+      }
       return team;
     } finally {
       _isLoading = false;
