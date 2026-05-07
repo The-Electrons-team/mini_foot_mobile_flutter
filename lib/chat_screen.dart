@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
+import 'providers/chat_provider.dart';
+import 'providers/auth_provider.dart';
 
 const Color _kBeige  = Color(0xFFF5F0E8);
 const Color _kGreen  = Color(0xFF006F39);
@@ -14,42 +17,6 @@ Color _sub(BuildContext c)  => _isDark(c)
     ? const Color(0xFFF0EBE0).withValues(alpha: 0.5)
     : Colors.black.withValues(alpha: 0.45);
 
-// ── CONTACTS FAKE DATA ──
-
-class _Contact {
-  final String name;
-  final String sub;
-  final String initials;
-  final Color color;
-  const _Contact({required this.name, required this.sub, required this.initials, required this.color});
-}
-
-const _teamsContacts = [
-  _Contact(name: 'Tigres FC',           sub: '11 membres · Dakar',    initials: 'TF', color: Color(0xFFE65100)),
-  _Contact(name: 'Étoiles du Plateau',  sub: '8 membres · Plateau',   initials: 'EP', color: Color(0xFF1565C0)),
-  _Contact(name: 'Black Panthers',      sub: '10 membres · Parcelles',initials: 'BP', color: Color(0xFF212121)),
-  _Contact(name: 'FC Médina',           sub: '9 membres · Médina',    initials: 'FM', color: Color(0xFF006F39)),
-  _Contact(name: 'Aigles de Pikine',    sub: '12 membres · Pikine',   initials: 'AP', color: Color(0xFF6A1B9A)),
-  _Contact(name: 'Warriors HLM',        sub: '7 membres · HLM',       initials: 'WH', color: Color(0xFFAD1457)),
-];
-
-const _managersContacts = [
-  _Contact(name: 'Gérant Dakar Arena',     sub: 'Diamniadio · 4 terrains', initials: 'DA', color: Color(0xFF1565C0)),
-  _Contact(name: 'Gérant Stade Léopold',   sub: 'Plateau · 2 terrains',    initials: 'SL', color: Color(0xFF006F39)),
-  _Contact(name: 'Gérant Terrain Point E', sub: 'Point E · 1 terrain',     initials: 'PE', color: Color(0xFF37474F)),
-  _Contact(name: 'Gérant HLM Complex',     sub: 'HLM · 3 terrains',        initials: 'HC', color: Color(0xFF6A1B9A)),
-  _Contact(name: 'Gérant Parcelles Arena', sub: 'Parcelles · 2 terrains',  initials: 'PA', color: Color(0xFFE65100)),
-];
-
-const _playersContacts = [
-  _Contact(name: 'Ibrahima Diallo', sub: 'Attaquant · 4.8 ★', initials: 'ID', color: Color(0xFF00695C)),
-  _Contact(name: 'Ousmane Seck',    sub: 'Milieu · 4.5 ★',    initials: 'OS', color: Color(0xFFAD1457)),
-  _Contact(name: 'Moussa Ndiaye',   sub: 'Défenseur · 4.7 ★', initials: 'MN', color: Color(0xFF1A237E)),
-  _Contact(name: 'Cheikh Fall',     sub: 'Gardien · 4.6 ★',   initials: 'CF', color: Color(0xFFE65100)),
-  _Contact(name: 'Aliou Badji',     sub: 'Attaquant · 4.4 ★', initials: 'AB', color: Color(0xFF006F39)),
-  _Contact(name: 'Pape Sarr',       sub: 'Milieu · 4.9 ★',    initials: 'PS', color: Color(0xFF6A1B9A)),
-  _Contact(name: 'Lamine Koné',     sub: 'Défenseur · 4.3 ★', initials: 'LK', color: Color(0xFF1565C0)),
-];
 
 // ── MODÈLES ──
 
@@ -79,89 +46,70 @@ class ChatPreview {
     this.isOnline = false,
     this.isSentByMe = false,
   });
+
+  factory ChatPreview.fromJson(Map<String, dynamic> json, String currentUserId) {
+    final String typeStr = json['type'] ?? 'DIRECT';
+    final List participants = json['participants'] ?? [];
+    
+    // Pour les équipes, on utilise le nom de la conversation directement
+    String name = json['name'] ?? "Conversation";
+    
+    // Pour les messages directs, on cherche le nom de l'autre personne
+    if (typeStr == 'DIRECT') {
+      try {
+        final other = participants.firstWhere(
+          (p) => p['userId'] != currentUserId, 
+          orElse: () => participants.first
+        );
+        final user = other['user'] ?? {};
+        if (user['firstName'] != null) {
+          name = "${user['firstName']} ${user['lastName']}";
+        }
+      } catch (e) {
+        name = "Chat Privé";
+      }
+    }
+
+    final List messages = json['messages'] ?? [];
+    final lastMsg = messages.isNotEmpty ? messages[0]['text'] : "Pas de messages";
+    
+    return ChatPreview(
+      id: json['id'],
+      name: name,
+      lastMessage: lastMsg,
+      time: '12:00', // À formater plus tard
+      unread: 0, // À récupérer du participant actuel
+      type: typeStr == 'DIRECT' ? ChatType.direct : typeStr == 'TEAM' ? ChatType.team : ChatType.manager,
+      initials: name.isNotEmpty ? name[0] : '?',
+      avatarColor: typeStr == 'TEAM' ? const Color(0xFF006F39) : Colors.blueGrey,
+    );
+  }
+
 }
 
 class ChatMessage {
   final String text;
   final bool isMe;
   final String time;
-  const ChatMessage({required this.text, required this.isMe, required this.time});
+  final String senderName; // Ajout du nom du sender
+
+  const ChatMessage({
+    required this.text,
+    required this.isMe,
+    required this.time,
+    required this.senderName,
+  });
+
+  factory ChatMessage.fromJson(Map<String, dynamic> json, String currentUserId) {
+    final sender = json['sender'] ?? {};
+    return ChatMessage(
+      text: json['text'] ?? '',
+      isMe: json['senderId'] == currentUserId,
+      time: '12:00', // À formater
+      senderName: sender['firstName'] != null ? "${sender['firstName']} ${sender['lastName']}" : "Utilisateur",
+    );
+  }
 }
-
-// ── DONNÉES ──
-
-final List<ChatPreview> _chats = [
-  const ChatPreview(
-    id: '1', name: 'Les Lions FC',
-    lastMessage: 'Rdv demain 10h au terrain !',
-    time: 'Maintenant', unread: 5, type: ChatType.team,
-    initials: 'LF', avatarColor: Color(0xFF006F39), isOnline: true,
-  ),
-  const ChatPreview(
-    id: '2', name: 'Gérant Dakar Arena',
-    lastMessage: 'Oui le terrain est disponible ce soir',
-    time: 'Il y a 2min', unread: 1, type: ChatType.manager,
-    initials: 'DA', avatarColor: Color(0xFF1565C0), isOnline: true,
-  ),
-  const ChatPreview(
-    id: '3', name: 'Équipe Plateau Stars',
-    lastMessage: 'On vous challenge ce samedi !',
-    time: '08:32', unread: 3, type: ChatType.team,
-    initials: 'PS', avatarColor: Color(0xFFE65100),
-  ),
-  const ChatPreview(
-    id: '4', name: 'Gérant Stade Léopold',
-    lastMessage: 'Votre réservation est confirmée',
-    time: '16:15', unread: 0, type: ChatType.manager,
-    initials: 'SL', avatarColor: Color(0xFF6A1B9A), isSentByMe: true,
-  ),
-  const ChatPreview(
-    id: '5', name: 'Ibrahima Diallo',
-    lastMessage: 'T\'es dispo ce soir pour jouer ?',
-    time: 'Hier', unread: 0, type: ChatType.direct,
-    initials: 'ID', avatarColor: Color(0xFF00695C),
-  ),
-  const ChatPreview(
-    id: '6', name: 'Ousmane Seck',
-    lastMessage: 'On cherche 2 joueurs pour compléter',
-    time: 'Hier', unread: 0, type: ChatType.direct,
-    initials: 'OS', avatarColor: Color(0xFFAD1457), isSentByMe: true,
-  ),
-  const ChatPreview(
-    id: '7', name: 'Gérant Terrain Point E',
-    lastMessage: 'Le tarif de nuit est 6 500 F/h',
-    time: '02/12', unread: 0, type: ChatType.manager,
-    initials: 'PE', avatarColor: Color(0xFF37474F),
-  ),
-  const ChatPreview(
-    id: '8', name: 'Moussa Ndiaye',
-    lastMessage: 'Super match hier',
-    time: '02/10', unread: 0, type: ChatType.direct,
-    initials: 'MN', avatarColor: Color(0xFF1A237E), isSentByMe: true,
-  ),
-];
-
-final Map<String, List<ChatMessage>> _messages = {
-  '1': [
-    const ChatMessage(text: 'Salut l\'équipe ! Rdv demain 10h au Terrain Dakar Arena', isMe: false, time: '09:00'),
-    const ChatMessage(text: 'Je serai là', isMe: true, time: '09:02'),
-    const ChatMessage(text: 'Moi aussi, on ramène le ballon ?', isMe: false, time: '09:05'),
-    const ChatMessage(text: 'Oui le terrain en fournit un mais amenez quand même', isMe: false, time: '09:06'),
-    const ChatMessage(text: 'OK top ! On se retrouve là-bas', isMe: true, time: '09:10'),
-    const ChatMessage(text: 'Rdv demain 10h au terrain !', isMe: false, time: 'Maintenant'),
-  ],
-  '2': [
-    const ChatMessage(text: 'Bonjour, est-ce que le terrain est disponible ce soir entre 18h et 20h ?', isMe: true, time: '14:30'),
-    const ChatMessage(text: 'Bonjour ! Oui le terrain est disponible ce soir', isMe: false, time: '14:35'),
-    const ChatMessage(text: 'Parfait ! Je fais la réservation sur l\'app', isMe: true, time: '14:36'),
-    const ChatMessage(text: 'Très bien, à ce soir !', isMe: false, time: '14:37'),
-  ],
-  '3': [
-    const ChatMessage(text: 'Salut ! On vous challenge ce samedi au terrain HLM', isMe: false, time: '08:30'),
-    const ChatMessage(text: 'Quel format ? 5v5 ou 7v7 ?', isMe: true, time: '08:31'),
-    const ChatMessage(text: 'On vous challenge ce samedi !', isMe: false, time: '08:32'),
-  ],
-};
 
 // ─────────────────────────────────────────────────────────────────────────────
 // CHAT LIST SCREEN
@@ -173,42 +121,41 @@ class ChatListScreen extends StatefulWidget {
   State<ChatListScreen> createState() => _ChatListScreenState();
 }
 
-class _ChatListScreenState extends State<ChatListScreen>
-    with SingleTickerProviderStateMixin {
-  late TabController _tabController;
+class _ChatListScreenState extends State<ChatListScreen> {
   final _searchController = TextEditingController();
   String _query = '';
-
-  final _invitations = [
-    _InvitationData(name: 'Tigres FC',   message: 'Veut jouer contre votre équipe',     time: 'Maintenant', color: const Color(0xFFE65100)),
-    _InvitationData(name: 'Diallo Ibra', message: 'Vous invite à rejoindre son équipe',  time: 'Il y a 1h',  color: const Color(0xFF1565C0)),
-  ];
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
-    _tabController.animation!.addListener(() => setState(() {}));
   }
 
   @override
   void dispose() {
-    _tabController.dispose();
     _searchController.dispose();
     super.dispose();
   }
 
-  List<ChatPreview> get _filtered => _chats
-      .where((c) =>
-          c.name.toLowerCase().contains(_query.toLowerCase()) ||
-          c.lastMessage.toLowerCase().contains(_query.toLowerCase()))
-      .toList();
 
-  int get _totalUnread => _chats.fold(0, (s, c) => s + c.unread);
-  int get _tabIndex => _tabController.index.clamp(0, 1);
+  List<ChatPreview> _getFiltered(List<dynamic> conversations, String currentUserId) {
+    return conversations
+        .map((c) => ChatPreview.fromJson(c, currentUserId))
+        .where((c) =>
+            c.name.toLowerCase().contains(_query.toLowerCase()) ||
+            c.lastMessage.toLowerCase().contains(_query.toLowerCase()))
+        .toList();
+  }
+
+  int _getTotalUnread(List<ChatPreview> chats) => chats.fold(0, (s, c) => s + c.unread);
 
   @override
   Widget build(BuildContext context) {
+    final chatProvider = context.watch<ChatProvider>();
+    final auth = context.read<AuthProvider>();
+    final currentUserId = auth.user?.id ?? '';
+    final chats = _getFiltered(chatProvider.conversations, currentUserId);
+    final totalUnread = _getTotalUnread(chats);
+
     return Scaffold(
       backgroundColor: _bg(context),
       floatingActionButton: FloatingActionButton(
@@ -228,78 +175,27 @@ class _ChatListScreenState extends State<ChatListScreen>
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   // Tab Chats
-                  GestureDetector(
-                    onTap: () => _tabController.animateTo(0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Chats${_totalUnread > 0 ? "($_totalUnread)" : ""}',
-                          style: GoogleFonts.orbitron(
-                            fontSize: _tabIndex == 0 ? 22 : 15,
-                            fontWeight: FontWeight.w900,
-                            color: _tabIndex == 0 ? _txt(context) : _sub(context),
-                          ),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Chats${totalUnread > 0 ? "($totalUnread)" : ""}',
+                        style: GoogleFonts.orbitron(
+                          fontSize: 22,
+                          fontWeight: FontWeight.w900,
+                          color: _txt(context),
                         ),
-                        if (_tabIndex == 0)
-                          Container(
-                            margin: const EdgeInsets.only(top: 4),
-                            height: 3,
-                            width: 32,
-                            decoration: BoxDecoration(
-                              color: _kGreen,
-                              borderRadius: BorderRadius.circular(2),
-                            ),
-                          ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 20),
-                  // Tab Invitations
-                  GestureDetector(
-                    onTap: () => _tabController.animateTo(1),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Text(
-                              'Invites',
-                              style: GoogleFonts.orbitron(
-                                fontSize: _tabIndex == 1 ? 22 : 15,
-                                fontWeight: FontWeight.w900,
-                                color: _tabIndex == 1 ? _txt(context) : _sub(context),
-                              ),
-                            ),
-                            const SizedBox(width: 5),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                              decoration: BoxDecoration(
-                                color: Colors.red.shade600,
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              child: Text(
-                                '${_invitations.length}',
-                                style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.w800),
-                              ),
-                            ),
-                          ],
+                      ),
+                      Container(
+                        margin: const EdgeInsets.only(top: 4),
+                        height: 3,
+                        width: 32,
+                        decoration: BoxDecoration(
+                          color: _kGreen,
+                          borderRadius: BorderRadius.circular(2),
                         ),
-                        if (_tabIndex == 1)
-                          Container(
-                            margin: const EdgeInsets.only(top: 4),
-                            height: 3,
-                            width: 32,
-                            decoration: BoxDecoration(
-                              color: _kGreen,
-                              borderRadius: BorderRadius.circular(2),
-                            ),
-                          ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
                   const SizedBox(width: 20),
                   // Tab Terrain+ — supprimé
@@ -352,36 +248,24 @@ class _ChatListScreenState extends State<ChatListScreen>
 
             // ── LISTE ──
             Expanded(
-              child: TabBarView(
-                controller: _tabController,
-                children: [
-                  // Discussions
-                  _filtered.isEmpty
-                      ? Center(
-                          child: Text('Aucun résultat',
-                              style: TextStyle(color: _sub(context))),
-                        )
-                      : ListView.builder(
-                          padding: const EdgeInsets.only(top: 8, bottom: 24),
-                          itemCount: _filtered.length,
-                          itemBuilder: (_, i) => _ChatTile(
-                            chat: _filtered[i],
-                            onTap: () => Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => ChatConversationScreen(chat: _filtered[i]),
-                              ),
-                            ),
+              child: chats.isEmpty
+                  ? Center(
+                      child: Text(chatProvider.isLoading ? 'Chargement...' : 'Aucun résultat',
+                          style: TextStyle(color: _sub(context))),
+                    )
+                  : ListView.builder(
+                      padding: const EdgeInsets.only(top: 8, bottom: 24),
+                      itemCount: chats.length,
+                      itemBuilder: (_, i) => _ChatTile(
+                        chat: chats[i],
+                        onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => ChatConversationScreen(chat: chats[i]),
                           ),
                         ),
-                  // Invitations
-                  ListView.builder(
-                    padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
-                    itemCount: _invitations.length,
-                    itemBuilder: (_, i) => _InvitationTile(data: _invitations[i]),
-                  ),
-                ],
-              ),
+                      ),
+                    ),
             ),
           ],
         ),
@@ -413,11 +297,7 @@ class _ChatListScreenState extends State<ChatListScreen>
               color: _kGreen,
               onTap: () {
                 Navigator.pop(context);
-                _showContactPicker(context,
-                    title: 'Choisir une équipe',
-                    contacts: _teamsContacts,
-                    type: ChatType.team,
-                    color: _kGreen);
+                // TODO: Implémenter la recherche d'équipes
               },
             ),
             const SizedBox(height: 12),
@@ -428,11 +308,7 @@ class _ChatListScreenState extends State<ChatListScreen>
               color: const Color(0xFF1565C0),
               onTap: () {
                 Navigator.pop(context);
-                _showContactPicker(context,
-                    title: 'Choisir un gérant',
-                    contacts: _managersContacts,
-                    type: ChatType.manager,
-                    color: const Color(0xFF1565C0));
+                // TODO: Implémenter la recherche de gérants
               },
             ),
             const SizedBox(height: 12),
@@ -443,11 +319,7 @@ class _ChatListScreenState extends State<ChatListScreen>
               color: const Color(0xFF6A1B9A),
               onTap: () {
                 Navigator.pop(context);
-                _showContactPicker(context,
-                    title: 'Choisir un joueur',
-                    contacts: _playersContacts,
-                    type: ChatType.direct,
-                    color: const Color(0xFF6A1B9A));
+                // TODO: Implémenter la recherche de joueurs
               },
             ),
             SizedBox(height: MediaQuery.of(context).padding.bottom + 8),
@@ -460,36 +332,11 @@ class _ChatListScreenState extends State<ChatListScreen>
   void _showContactPicker(
     BuildContext context, {
     required String title,
-    required List<_Contact> contacts,
+    required List<dynamic> contacts,
     required ChatType type,
     required Color color,
   }) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      isScrollControlled: true,
-      builder: (_) => _ContactPickerSheet(
-        title: title,
-        contacts: contacts,
-        type: type,
-        color: color,
-        onSelect: (contact) {
-          Navigator.pop(context);
-          final chat = ChatPreview(
-            id: 'new_${contact.name}',
-            name: contact.name,
-            lastMessage: contact.sub,
-            time: '',
-            unread: 0,
-            type: type,
-            initials: contact.initials,
-            avatarColor: contact.color,
-          );
-          Navigator.push(context,
-              MaterialPageRoute(builder: (_) => ChatConversationScreen(chat: chat)));
-        },
-      ),
-    );
+    // Temporairement désactivé car les constantes ont été supprimées
   }
 }
 
@@ -645,14 +492,13 @@ class ChatConversationScreen extends StatefulWidget {
 class _ChatConversationScreenState extends State<ChatConversationScreen> {
   final _msgController  = TextEditingController();
   final _scrollController = ScrollController();
-  late List<ChatMessage> _msgs;
 
   @override
   void initState() {
     super.initState();
-    _msgs = List.from(_messages[widget.chat.id] ?? [
-      ChatMessage(text: 'Bonjour, comment puis-je vous aider ?', isMe: false, time: _timeNow()),
-    ]);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<ChatProvider>().fetchMessages(widget.chat.id);
+    });
   }
 
   String _timeNow() {
@@ -663,16 +509,17 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
   void _send() {
     final text = _msgController.text.trim();
     if (text.isEmpty) return;
-    setState(() {
-      _msgs.add(ChatMessage(text: text, isMe: true, time: _timeNow()));
-      _msgController.clear();
-    });
+    context.read<ChatProvider>().sendMessage(widget.chat.id, text);
+    _msgController.clear();
+    
     Future.delayed(const Duration(milliseconds: 100), () {
-      _scrollController.animateTo(
-        _scrollController.position.maxScrollExtent,
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeOut,
-      );
+      if (_scrollController.hasClients) {
+        _scrollController.animateTo(
+          _scrollController.position.maxScrollExtent,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOut,
+        );
+      }
     });
   }
 
@@ -772,11 +619,34 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
       body: Column(
         children: [
           Expanded(
-            child: ListView.builder(
-              controller: _scrollController,
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-              itemCount: _msgs.length,
-              itemBuilder: (_, i) => _MessageBubble(msg: _msgs[i]),
+            child: Consumer<ChatProvider>(
+              builder: (context, chatProvider, child) {
+                final currentUserId = context.read<AuthProvider>().user?.id ?? '';
+                final messages = chatProvider.getMessages(widget.chat.id)
+                    .map((m) => ChatMessage.fromJson(m, currentUserId))
+                    .toList();
+                
+                if (messages.isEmpty && chatProvider.isLoading) {
+                   return const Center(child: CircularProgressIndicator());
+                }
+
+                return Column(
+                  children: [
+                    Expanded(
+                      child: ListView.builder(
+                        controller: _scrollController,
+                        padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                        itemCount: messages.length,
+                        itemBuilder: (_, i) => _MessageBubble(msg: messages[i]),
+                      ),
+                    ),
+                    if (messages.isEmpty && !chatProvider.isLoading)
+                      _QuickSuggestions(
+                        onSelect: (text) => context.read<ChatProvider>().sendMessage(widget.chat.id, text),
+                      ),
+                  ],
+                );
+              },
             ),
           ),
           // Input
@@ -845,135 +715,70 @@ class _MessageBubble extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final bool isMe = msg.isMe;
     return Align(
-      alignment: msg.isMe ? Alignment.centerRight : Alignment.centerLeft,
-      child: Container(
-        margin: EdgeInsets.only(
-          top: 4, bottom: 4,
-          left: msg.isMe ? 64 : 0,
-          right: msg.isMe ? 0 : 64,
-        ),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-        decoration: BoxDecoration(
-          color: msg.isMe ? _kDark : _card(context),
-          borderRadius: BorderRadius.only(
-            topLeft: const Radius.circular(16),
-            topRight: const Radius.circular(16),
-            bottomLeft: Radius.circular(msg.isMe ? 16 : 4),
-            bottomRight: Radius.circular(msg.isMe ? 4 : 16),
-          ),
-          boxShadow: [
-            BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 6),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: msg.isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
-          children: [
-            Text(msg.text,
-                style: TextStyle(
-                    fontSize: 14,
-                    color: msg.isMe ? Colors.white : _txt(context),
-                    height: 1.4)),
-            const SizedBox(height: 4),
-            Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(msg.time,
-                    style: TextStyle(
-                        fontSize: 10,
-                        color: msg.isMe
-                            ? Colors.white.withValues(alpha: 0.5)
-                            : _sub(context))),
-                if (msg.isMe) ...[
-                  const SizedBox(width: 4),
-                  Icon(Icons.done_all_rounded, size: 13,
-                      color: _kGreen.withValues(alpha: 0.8)),
-                ],
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// ── INVITATION TILE ──
-
-class _InvitationTile extends StatefulWidget {
-  final _InvitationData data;
-  const _InvitationTile({required this.data});
-  @override
-  State<_InvitationTile> createState() => _InvitationTileState();
-}
-
-class _InvitationTileState extends State<_InvitationTile> {
-  bool _handled = false;
-  @override
-  Widget build(BuildContext context) {
-    if (_handled) return const SizedBox();
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: Theme.of(context).cardColor,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 8)],
-      ),
-      child: Row(
+      alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
+      child: Column(
+        crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
         children: [
-          Container(
-            width: 44, height: 44,
-            decoration: BoxDecoration(color: widget.data.color, shape: BoxShape.circle),
-            child: Center(
-              child: Text(widget.data.name.substring(0, 1),
-                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 16)),
+          if (!isMe)
+            Padding(
+              padding: const EdgeInsets.only(left: 14, bottom: 2, top: 4),
+              child: Text(
+                msg.senderName,
+                style: GoogleFonts.orbitron(
+                  fontSize: 9,
+                  fontWeight: FontWeight.w900,
+                  color: _kGreen,
+                ),
+              ),
             ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(widget.data.name,
-                    style: TextStyle(fontWeight: FontWeight.w800, fontSize: 14, color: Theme.of(context).colorScheme.onSurface)),
-                const SizedBox(height: 3),
-                Text(widget.data.message,
-                    style: TextStyle(fontSize: 12, color: _sub(context))),
+          Container(
+            margin: EdgeInsets.only(
+              top: 2, bottom: 4,
+              left: isMe ? 64 : 0,
+              right: isMe ? 0 : 64,
+            ),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            decoration: BoxDecoration(
+              color: isMe ? _kDark : _card(context),
+              borderRadius: BorderRadius.only(
+                topLeft: const Radius.circular(16),
+                topRight: const Radius.circular(16),
+                bottomLeft: Radius.circular(isMe ? 16 : 4),
+                bottomRight: Radius.circular(isMe ? 4 : 16),
+              ),
+              boxShadow: [
+                BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 6),
               ],
             ),
-          ),
-          const SizedBox(width: 8),
-          Column(
-            children: [
-              GestureDetector(
-                onTap: () {
-                  setState(() => _handled = true);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Invitation acceptée !'), backgroundColor: _kGreen),
-                  );
-                },
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(color: _kGreen, borderRadius: BorderRadius.circular(8)),
-                  child: const Text('Accepter',
-                      style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w700)),
+            child: Column(
+              crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+              children: [
+                Text(msg.text,
+                    style: TextStyle(
+                        fontSize: 14,
+                        color: isMe ? Colors.white : _txt(context),
+                        height: 1.4)),
+                const SizedBox(height: 4),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(msg.time,
+                        style: TextStyle(
+                            fontSize: 10,
+                            color: isMe
+                                ? Colors.white.withValues(alpha: 0.5)
+                                : _sub(context))),
+                    if (isMe) ...[
+                      const SizedBox(width: 4),
+                      Icon(Icons.done_all_rounded, size: 13,
+                          color: _kGreen.withValues(alpha: 0.8)),
+                    ],
+                  ],
                 ),
-              ),
-              const SizedBox(height: 6),
-              GestureDetector(
-                onTap: () => setState(() => _handled = true),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: _sub(context).withValues(alpha: 0.08),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text('Refuser',
-                      style: TextStyle(color: _sub(context), fontSize: 11, fontWeight: FontWeight.w700)),
-                ),
-              ),
-            ],
+              ],
+            ),
           ),
         ],
       ),
@@ -981,13 +786,6 @@ class _InvitationTileState extends State<_InvitationTile> {
   }
 }
 
-class _InvitationData {
-  final String name;
-  final String message;
-  final String time;
-  final Color color;
-  const _InvitationData({required this.name, required this.message, required this.time, required this.color});
-}
 
 // ── NEW CHAT OPTION ──
 
@@ -1034,193 +832,52 @@ class _NewChatOption extends StatelessWidget {
   );
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// CONTACT PICKER SHEET
-// ─────────────────────────────────────────────────────────────────────────────
 
-class _ContactPickerSheet extends StatefulWidget {
-  final String title;
-  final List<_Contact> contacts;
-  final ChatType type;
-  final Color color;
-  final void Function(_Contact) onSelect;
-
-  const _ContactPickerSheet({
-    required this.title,
-    required this.contacts,
-    required this.type,
-    required this.color,
-    required this.onSelect,
-  });
-
-  @override
-  State<_ContactPickerSheet> createState() => _ContactPickerSheetState();
-}
-
-class _ContactPickerSheetState extends State<_ContactPickerSheet> {
-  final _searchCtrl = TextEditingController();
-  String _query = '';
-
-  List<_Contact> get _filtered => widget.contacts
-      .where((c) =>
-          c.name.toLowerCase().contains(_query.toLowerCase()) ||
-          c.sub.toLowerCase().contains(_query.toLowerCase()))
-      .toList();
-
-  @override
-  void dispose() {
-    _searchCtrl.dispose();
-    super.dispose();
-  }
+class _QuickSuggestions extends StatelessWidget {
+  final Function(String) onSelect;
+  const _QuickSuggestions({required this.onSelect});
 
   @override
   Widget build(BuildContext context) {
-    return DraggableScrollableSheet(
-      initialChildSize: 0.65,
-      minChildSize: 0.4,
-      maxChildSize: 0.92,
-      builder: (_, scrollCtrl) => Container(
-        decoration: BoxDecoration(
-          color: Theme.of(context).cardColor,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-        ),
-        child: Column(
-          children: [
-            Container(
-              margin: const EdgeInsets.only(top: 10, bottom: 6),
-              width: 36, height: 4,
-              decoration: BoxDecoration(
-                color: _sub(context).withValues(alpha: 0.2),
-                borderRadius: BorderRadius.circular(2),
-              ),
+    final suggestions = [
+      'Bonjour !',
+      'Quel est le prix ?',
+      'C\'est disponible ?',
+      'Où vous situez-vous ?',
+      'Merci !',
+    ];
+    return Container(
+      height: 50,
+      margin: const EdgeInsets.only(bottom: 8),
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        itemCount: suggestions.length,
+        itemBuilder: (_, i) => GestureDetector(
+          onTap: () => onSelect(suggestions[i]),
+          child: Container(
+            margin: const EdgeInsets.only(right: 8, top: 8, bottom: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            decoration: BoxDecoration(
+              color: _kGreen.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: _kGreen.withValues(alpha: 0.2)),
             ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 10, 20, 14),
-              child: Row(
-                children: [
-                  Container(
-                    width: 32, height: 32,
-                    decoration: BoxDecoration(
-                      color: widget.color.withValues(alpha: 0.1),
-                      shape: BoxShape.circle,
-                    ),
-                    child: Icon(
-                      widget.type == ChatType.team
-                          ? Icons.shield_rounded
-                          : widget.type == ChatType.manager
-                              ? Icons.sports_soccer_rounded
-                              : Icons.person_rounded,
-                      color: widget.color, size: 16,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Text(widget.title,
-                      style: TextStyle(
-                          color: Theme.of(context).colorScheme.onSurface, fontWeight: FontWeight.w800, fontSize: 16)),
-                ],
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
-              child: Container(
-                height: 42,
-                decoration: BoxDecoration(
-                  color: Theme.of(context).scaffoldBackgroundColor,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Row(
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 12),
-                      child: Icon(Icons.search_rounded,
-                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4), size: 18),
-                    ),
-                    Expanded(
-                      child: TextField(
-                        controller: _searchCtrl,
-                        onChanged: (v) => setState(() => _query = v),
-                        style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 14),
-                        decoration: InputDecoration(
-                          hintText: 'Rechercher...',
-                          hintStyle: TextStyle(
-                              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3), fontSize: 14),
-                          border: InputBorder.none,
-                        ),
-                      ),
-                    ),
-                  ],
+            child: Center(
+              child: Text(
+                suggestions[i],
+                style: TextStyle(
+                  color: _kGreen,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
             ),
-            Expanded(
-              child: _filtered.isEmpty
-                  ? Center(child: Text('Aucun résultat',
-                      style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4))))
-                  : ListView.builder(
-                      controller: scrollCtrl,
-                      itemCount: _filtered.length,
-                      itemBuilder: (_, i) {
-                        final c = _filtered[i];
-                        return GestureDetector(
-                          onTap: () => widget.onSelect(c),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 11),
-                            color: Colors.transparent,
-                            child: Row(
-                              children: [
-                                Container(
-                                  width: 46, height: 46,
-                                  decoration: BoxDecoration(color: c.color, shape: BoxShape.circle),
-                                  child: Center(
-                                    child: Text(c.initials,
-                                        style: const TextStyle(
-                                            color: Colors.white,
-                                            fontWeight: FontWeight.w800,
-                                            fontSize: 14)),
-                                  ),
-                                ),
-                                const SizedBox(width: 14),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(c.name,
-                                          style: TextStyle(
-                                              color: Theme.of(context).colorScheme.onSurface,
-                                              fontWeight: FontWeight.w600,
-                                              fontSize: 14)),
-                                      const SizedBox(height: 3),
-                                      Text(c.sub,
-                                          style: TextStyle(
-                                              color: _sub(context),
-                                              fontSize: 12)),
-                                    ],
-                                  ),
-                                ),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                                  decoration: BoxDecoration(
-                                    color: widget.color.withValues(alpha: 0.1),
-                                    borderRadius: BorderRadius.circular(8),
-                                    border: Border.all(color: widget.color.withValues(alpha: 0.25)),
-                                  ),
-                                  child: Text('Contacter',
-                                      style: TextStyle(
-                                          color: widget.color,
-                                          fontSize: 11,
-                                          fontWeight: FontWeight.w700)),
-                                ),
-                              ],
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-            ),
-            SizedBox(height: MediaQuery.of(context).padding.bottom + 8),
-          ],
+          ),
         ),
       ),
     );
   }
 }
+
+// ── FIN ──

@@ -3,6 +3,8 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:provider/provider.dart';
 import 'providers/auth_provider.dart';
 import 'providers/terrain_provider.dart';
+import 'providers/chat_provider.dart';
+import 'services/socket_service.dart';
 import 'splash_screen.dart';
 
 
@@ -25,6 +27,14 @@ class MinifootApp extends StatelessWidget {
       providers: [
         ChangeNotifierProvider(create: (_) => AuthProvider()),
         ChangeNotifierProvider(create: (_) => TerrainProvider()),
+        ChangeNotifierProvider(create: (_) => SocketService()),
+        ChangeNotifierProxyProvider2<AuthProvider, SocketService, ChatProvider>(
+          create: (context) => ChatProvider(
+            Provider.of<AuthProvider>(context, listen: false),
+            Provider.of<SocketService>(context, listen: false),
+          ),
+          update: (context, auth, socket, chat) => chat ?? ChatProvider(auth, socket),
+        ),
       ],
       child: ValueListenableBuilder<ThemeMode>(
         valueListenable: themeNotifier,

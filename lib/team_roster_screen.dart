@@ -1,6 +1,9 @@
 import 'dart:io' show File;
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
+import 'providers/auth_provider.dart';
+import 'services/team_service.dart';
 import 'team_screen.dart' show TeamData, TeamMember, MemberStatus, PlayerPositionLabel, InviteCard;
 
 const Color _kGreen = Color(0xFF006F39);
@@ -43,9 +46,38 @@ class _RosterPageState extends State<RosterPage>
     super.dispose();
   }
 
-  void _accept(TeamMember m) => setState(() {
-    m.status = MemberStatus.active;
-  });
+  Future<void> _accept(TeamMember m) async {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const Center(child: CircularProgressIndicator(color: _kGreen)),
+    );
+
+    try {
+      final auth = context.read<AuthProvider>();
+      final teamService = TeamService();
+      
+      // Appel au Backend pour accepter le membre
+      await teamService.acceptMember(team.id, m.id, auth.token!);
+
+      if (mounted) {
+        Navigator.pop(context); // Fermer loader
+        setState(() {
+          m.status = MemberStatus.active;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('${m.name} a rejoint l\'équipe !'), backgroundColor: _kGreen),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        Navigator.pop(context); // Fermer loader
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erreur: $e'), backgroundColor: Colors.red),
+        );
+      }
+    }
+  }
 
   void _refuse(TeamMember m) => setState(() {
     team.members.remove(m);

@@ -1,7 +1,11 @@
-﻿import 'dart:io';
+import 'dart:io';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:provider/provider.dart';
+import 'providers/auth_provider.dart';
+import 'providers/chat_provider.dart';
+import 'services/team_service.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:geolocator/geolocator.dart';
@@ -69,6 +73,7 @@ class TeamMember {
 }
 
 class TeamData {
+  String id;
   String name, zone, address;
   LatLng? location;
   Color color;
@@ -76,7 +81,7 @@ class TeamData {
   String inviteCode;
   List<TeamMember> members;
   TeamData({
-    required this.name, required this.zone, this.address = '',
+    required this.id, required this.name, required this.zone, this.address = '',
     this.location, required this.color, this.logoPath,
     required this.inviteCode, required this.members,
   });
@@ -104,11 +109,62 @@ final mockPlayers = [
   TeamMember(id:'p15', name:'Bamba Dieng',                        age:23, goals:11, assists:2,  matchesPlayed:17, position:PlayerPosition.attaquant, avatarUrl:'https://images.pexels.com/photos/1043474/pexels-photo-1043474.jpeg?auto=compress&cs=tinysrgb&w=200'),
 ];
 
-//  ENTRY POINT 
-class TeamScreen extends StatelessWidget {
+class TeamScreen extends StatefulWidget {
   const TeamScreen({super.key});
+
+  @override
+  State<TeamScreen> createState() => _TeamScreenState();
+}
+
+class _TeamScreenState extends State<TeamScreen> {
+  bool _loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadTeam();
+  }
+
+  Future<void> _loadTeam() async {
+    try {
+      final auth = context.read<AuthProvider>();
+      final teamService = TeamService();
+      final data = await teamService.getMyTeam(auth.token!);
+      
+      if (data != null) {
+        // Mapper les données du Back vers TeamData
+        final List membersRaw = data['members'] ?? [];
+        teamNotifier.value = TeamData(
+          id: data['id'],
+          name: data['name'],
+          zone: data['zone'],
+          address: data['address'] ?? '',
+          color: Color(int.parse(data['color'].replaceAll('#', '0xFF'))),
+          inviteCode: data['inviteCode'],
+          members: membersRaw.map((m) {
+            final user = m['user'] ?? {};
+            return TeamMember(
+              id: m['id'], // Utiliser l'ID du membre, pas le userId
+              name: '${user['firstName']} ${user['lastName']}',
+              isCaptain: m['isCaptain'] ?? false,
+              status: m['status'] == 'ACTIVE' ? MemberStatus.active : MemberStatus.pending,
+            );
+          }).toList(),
+        );
+      } else {
+        teamNotifier.value = null;
+      }
+    } catch (e) {
+      debugPrint('Erreur chargement équipe: $e');
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    if (_loading) return const Scaffold(body: Center(child: CircularProgressIndicator(color: _kGreen)));
+
     return ValueListenableBuilder<TeamData?>(
       valueListenable: teamNotifier,
       builder: (_, team, __) =>
@@ -156,21 +212,108 @@ class _NoTeamPage extends StatelessWidget {
         const SizedBox(height: 36),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 32),
-          child: GestureDetector(
-            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const _CreateTeamPage())),
-            child: Container(width: double.infinity, padding: const EdgeInsets.symmetric(vertical: 15),
-              decoration: BoxDecoration(color: _kGreen, borderRadius: BorderRadius.circular(16)),
-              child: const Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                Icon(Icons.add_rounded, color: Colors.white, size: 20),
-                SizedBox(width: 8),
-                Text('Creer mon equipe', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 15)),
-              ])),
+          child: Column(
+            children: [
+              GestureDetector(
+                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const _CreateTeamPage())),
+                child: Container(width: double.infinity, padding: const EdgeInsets.symmetric(vertical: 15),
+                  decoration: BoxDecoration(color: _kGreen, borderRadius: BorderRadius.circular(16)),
+                  child: const Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                    Icon(Icons.add_rounded, color: Colors.white, size: 20),
+                    SizedBox(width: 8),
+                    Text('Creer mon equipe', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 15)),
+                  ])),
+              ),
+              const SizedBox(height: 12),
+              GestureDetector(
+                onTap: () => _showJoinDialog(context),
+                child: Container(width: double.infinity, padding: const EdgeInsets.symmetric(vertical: 15),
+                  decoration: BoxDecoration(
+                    color: Colors.transparent, 
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: _kGreen, width: 2)
+                  ),
+                  child: const Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                    Icon(Icons.group_add_rounded, color: _kGreen, size: 20),
+                    SizedBox(width: 8),
+                    Text('Rejoindre une equipe', style: TextStyle(color: _kGreen, fontWeight: FontWeight.w800, fontSize: 15)),
+                  ])),
+              ),
+            ],
           ),
         ),
         const Spacer(),
       ])),
     );
   }
+
+  void _showJoinDialog(BuildContext context) {
+    final codeCtrl = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: _card(context),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Text('Rejoindre une equipe', style: GoogleFonts.orbitron(fontSize: 16, fontWeight: FontWeight.w900)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text('Saisis le code d\'invitation partagé par ton capitaine.', 
+                 style: TextStyle(fontSize: 13, color: _sub(context))),
+            const SizedBox(height: 16),
+            TextField(
+              controller: codeCtrl,
+              decoration: InputDecoration(
+                hintText: 'Ex: GFOOT-1234',
+                filled: true,
+                fillColor: _bg(context),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: Text('Annuler', style: TextStyle(color: _sub(context)))),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: _kGreen, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+            onPressed: () async {
+              final code = codeCtrl.text.trim();
+              if (code.isEmpty) return;
+              
+              Navigator.pop(ctx);
+              _handleJoin(context, code);
+            },
+            child: const Text('Valider', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _handleJoin(BuildContext context, String code) async {
+    showDialog(context: context, barrierDismissible: false, builder: (_) => const Center(child: CircularProgressIndicator(color: _kGreen)));
+    
+    try {
+      final auth = context.read<AuthProvider>();
+      final teamService = TeamService();
+      await teamService.joinTeam(code, auth.token!);
+      
+      if (context.mounted) {
+        Navigator.pop(context); // Fermer loader
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Demande envoyée ! Attends la validation du capitaine.'), backgroundColor: _kGreen),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        Navigator.pop(context); // Fermer loader
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erreur: $e'), backgroundColor: Colors.red),
+        );
+      }
+    }
+  }
+
 }
 
 //  COULEURS EQUIPE 
@@ -236,22 +379,64 @@ class _CreateTeamPageState extends State<_CreateTeamPage> {
     if (picked != null) setState(() => _logoPath = picked.path);
   }
 
-  void _create() {
+  Future<void> _create() async {
     final name = _nameCtrl.text.trim();
     if (name.isEmpty) { setState(() => _nameError = true); return; }
-    teamNotifier.value = TeamData(
-      name: name, zone: 'Dakar', color: _color,
-      address: _address, location: _location, logoPath: _logoPath,
-      inviteCode: _generateCode(name),
-      members: mockPlayers.map((p) => TeamMember(
-        id: p.id, name: p.name, isCaptain: p.isCaptain,
-        age: p.age, goals: p.goals, assists: p.assists,
-        matchesPlayed: p.matchesPlayed, position: p.position,
-        avatarUrl: p.avatarUrl, status: MemberStatus.active,
-      )).toList(),
+
+    // Afficher un indicateur de chargement
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const Center(child: CircularProgressIndicator(color: _kGreen)),
     );
-    Navigator.pop(context);
+
+    try {
+      final auth = context.read<AuthProvider>();
+      final teamService = TeamService();
+      
+      // Envoyer les données au Backend
+      final teamResponse = await teamService.createTeam({
+        'name': name,
+        'zone': 'DAKAR',
+        'address': _address,
+        'color': '#${_color.value.toRadixString(16).substring(2).toUpperCase()}',
+        'lat': _location?.latitude,
+        'lng': _location?.longitude,
+      }, auth.token!);
+
+      // Mettre à jour l'état local avec les vraies données du Back
+      teamNotifier.value = TeamData(
+        id: teamResponse['id'],
+        name: teamResponse['name'],
+        zone: teamResponse['zone'],
+        address: teamResponse['address'] ?? '',
+        color: _color,
+        inviteCode: teamResponse['inviteCode'],
+        members: [
+          TeamMember(
+            id: auth.user!.id,
+            name: '${auth.user!.firstName} ${auth.user!.lastName}',
+            isCaptain: true,
+            status: MemberStatus.active,
+          )
+        ],
+      );
+
+      if (mounted) {
+        // Rafraîchir les conversations de chat pour voir le nouveau groupe
+        context.read<ChatProvider>().fetchConversations();
+        
+        Navigator.pop(context); // Fermer loader
+        Navigator.pop(context); // Retourner à l'écran précédent
+      }
+    } catch (e) {
+      if (mounted) Navigator.pop(context); // Fermer loader
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Erreur: $e'), backgroundColor: Colors.red),
+      );
+    }
   }
+
 
   Widget _sectionTitle(String t) => Padding(
     padding: const EdgeInsets.only(top: 20, bottom: 8),
@@ -621,6 +806,7 @@ class _MyTeamPageState extends State<_MyTeamPage> {
       matchesPlayed: idx * 3, position: positions[idx]));
     // Forcer la notification en créant un nouveau TeamData
     teamNotifier.value = TeamData(
+      id: team.id,
       name: team.name, zone: team.zone, address: team.address,
       location: team.location, color: team.color, logoPath: team.logoPath,
       inviteCode: team.inviteCode, members: List.from(team.members),
