@@ -9,7 +9,9 @@ import 'providers/auth_provider.dart';
 import 'providers/terrain_provider.dart';
 import 'providers/notification_provider.dart';
 import 'providers/team_provider.dart';
+import 'providers/reservation_provider.dart';
 import 'splash_screen.dart';
+import 'app_navigator.dart';
 
 // ─── Notifier global ───────────────────────────────────────────────────────
 final themeNotifier = ValueNotifier<ThemeMode>(ThemeMode.light);
@@ -55,6 +57,7 @@ class MinifootApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => TerrainProvider()),
         ChangeNotifierProvider(create: (_) => NotificationProvider()),
         ChangeNotifierProvider(create: (_) => TeamProvider()),
+        ChangeNotifierProvider(create: (_) => ReservationProvider()),
       ],
       child: ValueListenableBuilder<ThemeMode>(
         valueListenable: themeNotifier,
@@ -104,6 +107,7 @@ class MinifootApp extends StatelessWidget {
             Locale('en', 'US'),
           ],
           locale: const Locale('fr', 'FR'),
+          navigatorKey: navigatorKey,
           home: const SplashScreen(),
         ),
       ),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'services/match_service.dart';
 import 'services/team_service.dart';
 import 'providers/auth_provider.dart';
@@ -21,7 +22,11 @@ Color _sub(BuildContext c)   => _isDark(c)
     : Colors.black.withOpacity(0.45);
 
 class MatchesScreen extends StatefulWidget {
-  const MatchesScreen({super.key});
+  /// Index de l'onglet à afficher au démarrage.
+  /// 0 = Mes Matchs, 1 = Organiser, 2 = Demandes
+  final int initialTab;
+
+  const MatchesScreen({super.key, this.initialTab = 0});
 
   @override
   State<MatchesScreen> createState() => _MatchesScreenState();
@@ -31,7 +36,7 @@ class _MatchesScreenState extends State<MatchesScreen> {
   final MatchService _matchService = MatchService();
   final TeamService _teamService = TeamService();
   final TextEditingController _searchCtrl = TextEditingController();
-  int _selectedTab = 0;
+  late int _selectedTab;
 
   // Pagination & Filtres pour Résultats
   final ScrollController _scrollCtrl = ScrollController();
@@ -52,6 +57,7 @@ class _MatchesScreenState extends State<MatchesScreen> {
   @override
   void initState() {
     super.initState();
+    _selectedTab = widget.initialTab;
     initializeDateFormatting('fr_FR', null);
     _scrollCtrl.addListener(_onScroll);
     _loadInitialData();
@@ -73,7 +79,7 @@ class _MatchesScreenState extends State<MatchesScreen> {
     setState(() => _isLoadingTeams = true);
     try {
       final teams = await _teamService.searchTeams(
-        zone: _selectedZone == 'Toutes' ? '' : _selectedZone,
+        zone: _selectedZone == 'Toutes' ? null : _selectedZone,
         query: _teamQuery,
         excludeId: auth.user?.teamId,
       );
@@ -451,15 +457,13 @@ class _MatchesScreenState extends State<MatchesScreen> {
   }
 
   Widget _buildDemandesView(AuthProvider auth) {
-    if (auth.user?.teamId == null) {
-      return const Center(child: Text('Vous devez avoir une équipe pour voir les demandes.'));
-    }
     return FutureBuilder<List<dynamic>>(
-      future: _matchService.getPendingChallenges(auth.token!, auth.user!.teamId!),
+      future: _loadTeamChallenges(auth),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator(color: _kGreen));
+        if (snapshot.hasError) return Center(child: Text('Impossible de charger les demandes.', style: TextStyle(color: _sub(context))));
         final challenges = snapshot.data ?? [];
-        if (challenges.isEmpty) return const Center(child: Text('Aucune demande en attente.'));
+        if (challenges.isEmpty) return const Center(child: Text('Aucune demande.'));
         return ListView.builder(
           padding: const EdgeInsets.symmetric(horizontal: 20),
           itemCount: challenges.length,
@@ -469,38 +473,159 @@ class _MatchesScreenState extends State<MatchesScreen> {
     );
   }
 
+  Future<List<dynamic>> _loadTeamChallenges(AuthProvider auth) async {
+    final token = auth.token;
+    if (token == null || token.isEmpty) return [];
+
+    var teamId = auth.user?.teamId;
+    if (teamId == null || teamId.isEmpty) {
+      final teams = await _teamService.getMyTeams(token);
+      if (teams.isEmpty) return [];
+      final userId = auth.user?.id;
+      final captainTeams = teams.where((team) => team['captainId']?.toString() == userId).toList();
+      teamId = (captainTeams.isNotEmpty ? captainTeams.first : teams.first)['id']?.toString();
+    }
+    if (teamId == null || teamId.isEmpty) return [];
+    return _matchService.getTeamChallenges(token, teamId);
+  }
+
   Widget _buildChallengeCard(dynamic challenge, AuthProvider auth) {
+    final terrain = challenge['terrain'];
+    final pricePerHour = (terrain?['pricePerHour'] as num?)?.toInt();
+    final halfPrice = pricePerHour != null ? pricePerHour ~/ 2 : null;
+    final myTeamId = auth.user?.teamId;
+    final outgoing = challenge['direction'] == 'OUTGOING' ||
+        (myTeamId != null && challenge['fromTeamId']?.toString() == myTeamId);
+    final otherTeam = outgoing ? challenge['toTeam'] : challenge['fromTeam'];
+    final status = challenge['status']?.toString() ?? 'PENDING';
+    final canRespond = !outgoing && status == 'PENDING';
+    final canPay = status == 'ACCEPTED';
+    final statusLabel = _challengeStatusLabel(status);
+    final statusColor = _challengeStatusColor(status);
+
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(color: _card(context), borderRadius: BorderRadius.circular(20)),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // ── En-tête équipe ──
           Row(
             children: [
-              _LogoCircle(url: challenge['fromTeam']['logoUrl'] ?? '', size: 40, color: _kGreen),
+              _LogoCircle(url: otherTeam?['logoUrl'] ?? '', size: 40, color: _kGreen),
               const SizedBox(width: 12),
               Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text(challenge['fromTeam']['name'], style: TextStyle(fontWeight: FontWeight.w800, fontSize: 14, color: _txt(context))),
-                Text('Défie votre équipe · ${challenge['format']}', style: TextStyle(color: _sub(context), fontSize: 11)),
+                Text(otherTeam?['name']?.toString() ?? 'Équipe',
+                    style: TextStyle(fontWeight: FontWeight.w800, fontSize: 14, color: _txt(context))),
+                Text('${outgoing ? 'Défi envoyé' : 'Défie votre équipe'} · ${challenge['format']}',
+                    style: TextStyle(color: _sub(context), fontSize: 11)),
               ])),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+                decoration: BoxDecoration(color: statusColor.withOpacity(0.12), borderRadius: BorderRadius.circular(999)),
+                child: Text(statusLabel, style: TextStyle(color: statusColor, fontSize: 10, fontWeight: FontWeight.w900)),
+              ),
             ],
           ),
-          const SizedBox(height: 16),
-          Row(
-            children: [
-              Icon(Icons.calendar_today, size: 14, color: _sub(context)),
+          const SizedBox(height: 12),
+          // ── Date + terrain ──
+          Row(children: [
+            Icon(Icons.calendar_today, size: 13, color: _sub(context)),
+            const SizedBox(width: 5),
+            Text(_formatMatchDate(challenge['date']),
+                style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12, color: _txt(context))),
+            const SizedBox(width: 12),
+            if (challenge['time'] != null) ...[
+              Icon(Icons.access_time_rounded, size: 13, color: _sub(context)),
+              const SizedBox(width: 4),
+              Text(challenge['time'].toString(),
+                  style: TextStyle(fontSize: 12, color: _sub(context))),
+            ],
+          ]),
+          if (terrain != null) ...[
+            const SizedBox(height: 6),
+            Row(children: [
+              Icon(Icons.stadium_rounded, size: 13, color: _sub(context)),
+              const SizedBox(width: 5),
+              Expanded(child: Text(terrain['name']?.toString() ?? '',
+                  maxLines: 1, overflow: TextOverflow.ellipsis,
+                  style: TextStyle(fontSize: 12, color: _sub(context)))),
+            ]),
+          ],
+          // ── Bandeau partage 50/50 ──
+          const SizedBox(height: 10),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+            decoration: BoxDecoration(
+              color: _kGreen.withOpacity(0.08),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Row(children: [
+              const Icon(Icons.payments_outlined, size: 14, color: _kGreen),
               const SizedBox(width: 6),
-              Text(_formatMatchDate(challenge['date']), style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12, color: _txt(context))),
-              const Spacer(),
-              _buildActionButton('Refuser', Colors.red, () => _respondChallenge(challenge['id'], auth, false)),
-              const SizedBox(width: 8),
-              _buildActionButton('Accepter', _kGreen, () => _respondChallenge(challenge['id'], auth, true)),
-            ],
+              Text(
+                halfPrice != null
+                    ? 'Chaque équipe paie ${halfPrice.toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (m) => '${m[1]} ')} FCFA'
+                    : 'Frais partagés 50/50',
+                style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: _kGreen),
+              ),
+            ]),
           ),
+          const SizedBox(height: 14),
+          // ── Actions ──
+          if (canRespond)
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                _buildActionButton('Refuser', Colors.red,
+                    () => _respondChallenge(challenge, auth, false)),
+                const SizedBox(width: 8),
+                _buildActionButton('Accepter', _kGreen,
+                    () => _respondChallenge(challenge, auth, true)),
+              ],
+            )
+          else if (canPay)
+            Align(
+              alignment: Alignment.centerRight,
+              child: _buildActionButton(
+                halfPrice != null ? 'Payer ma moitié' : 'Payer',
+                _kGreen,
+                () => _payChallenge(challenge, auth),
+              ),
+            )
+          else
+            Text(
+              status == 'PENDING'
+                  ? (outgoing ? 'En attente de réponse adverse.' : 'Répondez au défi pour débloquer le paiement.')
+                  : 'Paiement indisponible pour ce défi.',
+              style: TextStyle(fontSize: 11, color: _sub(context), fontWeight: FontWeight.w600),
+            ),
         ],
       ),
     );
+  }
+
+  String _challengeStatusLabel(String status) {
+    switch (status) {
+      case 'ACCEPTED':
+        return 'Accepté';
+      case 'REFUSED':
+        return 'Refusé';
+      default:
+        return 'En attente';
+    }
+  }
+
+  Color _challengeStatusColor(String status) {
+    switch (status) {
+      case 'ACCEPTED':
+        return Colors.green;
+      case 'REFUSED':
+        return Colors.red;
+      default:
+        return Colors.orange;
+    }
   }
 
   Widget _buildActionButton(String label, Color color, VoidCallback onTap) {
@@ -514,13 +639,48 @@ class _MatchesScreenState extends State<MatchesScreen> {
     );
   }
 
-  Future<void> _respondChallenge(String id, AuthProvider auth, bool accept) async {
+  Future<void> _respondChallenge(dynamic challenge, AuthProvider auth, bool accept) async {
     try {
-      await _matchService.respondChallenge(auth.token!, id, accept);
+      await _matchService.respondChallenge(auth.token!, challenge['id'], accept);
       setState(() {});
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(accept ? 'Défi accepté !' : 'Défi refusé.')));
+
+      if (!accept) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(const SnackBar(content: Text('Défi refusé.')));
+        return;
+      }
+
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(const SnackBar(content: Text('Défi accepté. Le paiement est maintenant disponible.'), backgroundColor: _kGreen));
+      }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Erreur: $e')));
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('Erreur: $e')));
+      }
+    }
+  }
+
+  Future<void> _payChallenge(dynamic challenge, AuthProvider auth) async {
+    try {
+      final token = auth.token;
+      if (token == null || token.isEmpty) throw Exception('Session expirée');
+      final data = await _matchService.getChallengePaymentLink(token, challenge['id'].toString());
+      final link = data['link']?.toString();
+      if (link == null || link.isEmpty) throw Exception('Lien de paiement indisponible');
+      final uri = Uri.parse(link);
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+      } else {
+        throw Exception('Impossible d’ouvrir le paiement');
+      }
+      if (mounted) setState(() {});
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('Erreur: $e'), backgroundColor: Colors.red));
+      }
     }
   }
 
@@ -662,9 +822,15 @@ class _MatchesScreenState extends State<MatchesScreen> {
         Container(width: 40, height: 4, decoration: BoxDecoration(color: _sub(context).withOpacity(0.2), borderRadius: BorderRadius.circular(2))),
         Padding(padding: const EdgeInsets.all(20), child: Text('Filtrer par adversaire', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 16, color: _txt(context)))),
         _buildFilterOption('Tous les matchs', null),
-        _buildFilterOption('Tigres FC', '3759eb5a-dc92-4958-afd6-7e7c0624bf7e'),
-        _buildFilterOption('Plateau Stars', 'c84d2cd8-1552-49bc-be97-b9f13b152b87'),
-        _buildFilterOption('Aigles de Pikine', '5ea4fffb-b7b0-4556-a943-cbf524992a20'),
+        ..._searchTeams.map((t) => _buildFilterOption(
+          t['name']?.toString() ?? 'Équipe',
+          t['id']?.toString(),
+        )),
+        if (_searchTeams.isEmpty)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+            child: Text('Aucune équipe disponible', style: TextStyle(color: _sub(context), fontSize: 13)),
+          ),
         if (_dateFilter != null) ListTile(leading: const Icon(Icons.event_busy_rounded, color: Colors.redAccent), title: const Text('Réinitialiser la date', style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.w600)), onTap: () { setState(() { _dateFilter = null; _loadResults(reset: true); }); Navigator.pop(context); }),
         const SizedBox(height: 20),
       ]),
@@ -744,35 +910,878 @@ class _TeamRow extends StatelessWidget {
   }
 }
 
-class _TeamProfilePage extends StatelessWidget {
+class _TeamProfilePage extends StatefulWidget {
   final dynamic team;
   const _TeamProfilePage({required this.team});
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(backgroundColor: _bg(context), appBar: AppBar(title: Text(team['name'], style: GoogleFonts.orbitron(fontSize: 16, fontWeight: FontWeight.w800)), centerTitle: true), body: SingleChildScrollView(padding: const EdgeInsets.all(20), child: Column(children: [
-      Center(child: _LogoCircle(url: team['logoUrl'] ?? '', size: 100, color: _kGreen)),
-      const SizedBox(height: 16),
-      Text(team['name'], style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: _txt(context))),
-      Text(team['zone'], style: TextStyle(color: _sub(context), fontSize: 14)),
-      const SizedBox(height: 32),
-      Row(mainAxisAlignment: MainAxisAlignment.spaceEvenly, children: [
-        _buildStatItem(context, 'Pts', '${team['pts'] ?? 0}'),
-        _buildStatItem(context, 'MJ', '${team['j'] ?? 0}'),
-        _buildStatItem(context, 'V', '${team['g'] ?? 0}'),
-        _buildStatItem(context, 'D', '${team['p'] ?? 0}'),
-      ]),
-      const SizedBox(height: 40),
-      Text('Historique des matchs à venir...', style: TextStyle(color: _sub(context), fontStyle: FontStyle.italic)),
-    ])));
+  State<_TeamProfilePage> createState() => _TeamProfilePageState();
+}
+
+class _TeamProfilePageState extends State<_TeamProfilePage> {
+  final TeamService _teamService = TeamService();
+  final MatchService _matchService = MatchService();
+  late Future<_TeamProfileData> _future;
+  String? _selectedCompositionFormat;
+
+  dynamic get team => widget.team;
+
+  @override
+  void initState() {
+    super.initState();
+    _future = _loadProfile();
   }
 
-  Widget _buildStatItem(BuildContext context, String label, String value) {
-    return Column(children: [
-      Text(value, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: _kGreen)),
-      Text(label, style: TextStyle(fontSize: 11, color: _sub(context), fontWeight: FontWeight.w700)),
+  Future<_TeamProfileData> _loadProfile() async {
+    final auth = context.read<AuthProvider>();
+    final teamId = team['id']?.toString();
+    dynamic detail = team;
+    List<dynamic> matches = [];
+    List<dynamic> compositions = [];
+
+    if (teamId != null && teamId.isNotEmpty && auth.token != null) {
+      try {
+        detail = await _teamService.getTeamDetail(auth.token!, teamId);
+      } catch (e) {
+        debugPrint('Erreur détail équipe: $e');
+      }
+
+      try {
+        matches = await _matchService.getMyTeamMatches(
+          auth.token!,
+          teamId,
+          status: 'FINISHED',
+          page: 1,
+          limit: 5,
+        );
+      } catch (e) {
+        debugPrint('Erreur derniers matchs équipe: $e');
+      }
+
+      try {
+        compositions = await _teamService.getCompositions(auth.token!, teamId);
+      } catch (e) {
+        debugPrint('Erreur composition équipe: $e');
+      }
+    }
+
+    return _TeamProfileData(team: detail, matches: matches, compositions: compositions);
+  }
+
+  String _teamName(dynamic value) => value['name']?.toString() ?? 'Équipe';
+  String _teamZone(dynamic value) => value['zone']?.toString() ?? '';
+  String _teamAddress(dynamic value) => value['address']?.toString() ?? '';
+  String _teamLogo(dynamic value) => value['logoUrl']?.toString() ?? '';
+
+  Color _teamColor(dynamic value) {
+    final raw = value['color']?.toString();
+    if (raw == null || raw.isEmpty) return _kGreen;
+    try {
+      var hex = raw.replaceAll('#', '');
+      if (hex.length == 6) hex = 'FF$hex';
+      return Color(int.parse(hex, radix: 16));
+    } catch (_) {
+      return _kGreen;
+    }
+  }
+
+  int _intValue(dynamic value, String key) {
+    final raw = value[key];
+    if (raw is int) return raw;
+    if (raw is num) return raw.toInt();
+    return int.tryParse(raw?.toString() ?? '') ?? 0;
+  }
+
+  List<dynamic> _activeMembers(dynamic value) {
+    final members = value['members'];
+    if (members is! List) return [];
+    return members.where((m) => m['status'] == null || m['status'] == 'ACTIVE').toList();
+  }
+
+  dynamic _memberById(List<dynamic> members, String? memberId) {
+    if (memberId == null) return null;
+    for (final member in members) {
+      if (member['id']?.toString() == memberId) return member;
+    }
+    return null;
+  }
+
+  int _compositionPlayerCount(dynamic composition) {
+    final lineup = composition?['lineup'];
+    if (lineup is List) {
+      for (final entry in lineup) {
+        if ((entry['slot'] as num?)?.toInt() == -1) {
+          return (entry['playerCount'] as num?)?.toInt() ?? 5;
+        }
+      }
+      return lineup.where((entry) => (entry['slot'] as num?)?.toInt() != -1).length;
+    }
+    return 0;
+  }
+
+  List<dynamic> _compositionSlots(dynamic composition) {
+    final lineup = composition?['lineup'];
+    if (lineup is! List) return [];
+    final slots = lineup.where((entry) => (entry['slot'] as num?)?.toInt() != -1).toList();
+    slots.sort((a, b) => ((a['slot'] as num?)?.toInt() ?? 0).compareTo((b['slot'] as num?)?.toInt() ?? 0));
+    return slots;
+  }
+
+  dynamic _selectedComposition(List<dynamic> compositions) {
+    if (compositions.isEmpty) return null;
+    final sorted = [...compositions];
+    sorted.sort((a, b) => _compositionPlayerCount(a).compareTo(_compositionPlayerCount(b)));
+    final availableFormats = sorted.map((c) => c['format']?.toString() ?? '').where((f) => f.isNotEmpty).toList();
+    final selectedFormat = availableFormats.contains(_selectedCompositionFormat)
+        ? _selectedCompositionFormat!
+        : availableFormats.first;
+    return sorted.firstWhere(
+      (c) => c['format']?.toString() == selectedFormat,
+      orElse: () => sorted.first,
+    );
+  }
+
+  List<dynamic> _remainingMembers(List<dynamic> members, dynamic composition) {
+    final usedIds = _compositionSlots(composition)
+        .map((slot) => slot['memberId']?.toString())
+        .whereType<String>()
+        .toSet();
+    return members.where((member) => !usedIds.contains(member['id']?.toString())).toList();
+  }
+
+  String _memberName(dynamic member) {
+    final user = member['user'];
+    if (user is Map) {
+      final firstName = user['firstName']?.toString() ?? '';
+      final lastName = user['lastName']?.toString() ?? '';
+      final fullName = '$firstName $lastName'.trim();
+      if (fullName.isNotEmpty) return fullName;
+      if (user['name'] != null) return user['name'].toString();
+    }
+    return 'Joueur';
+  }
+
+  String _memberAvatar(dynamic member) {
+    final user = member['user'];
+    if (user is Map) return user['avatarUrl']?.toString() ?? '';
+    return '';
+  }
+
+  String _positionLabel(dynamic value) {
+    switch (value?.toString()) {
+      case 'GARDIEN':
+        return 'Gardien';
+      case 'DEFENSEUR':
+        return 'Défenseur';
+      case 'ATTAQUANT':
+        return 'Attaquant';
+      case 'MILIEU':
+        return 'Milieu';
+      default:
+        return 'Joueur';
+    }
+  }
+
+  String _positionShort(dynamic value) {
+    switch (value?.toString()) {
+      case 'GARDIEN':
+        return 'GB';
+      case 'DEFENSEUR':
+        return 'DEF';
+      case 'ATTAQUANT':
+        return 'ATT';
+      case 'MILIEU':
+        return 'MIL';
+      default:
+        return 'J';
+    }
+  }
+
+  Color _positionColor(dynamic value) {
+    switch (value?.toString()) {
+      case 'GARDIEN':
+        return const Color(0xFFE6A800);
+      case 'DEFENSEUR':
+        return const Color(0xFF1565C0);
+      case 'ATTAQUANT':
+        return const Color(0xFFB71C1C);
+      case 'MILIEU':
+        return _kGreen;
+      default:
+        return _kGreen;
+    }
+  }
+
+  String _statusLabel(dynamic match) {
+    switch (match['status']?.toString()) {
+      case 'LIVE':
+        return 'En direct';
+      case 'FINISHED':
+        return 'Terminé';
+      default:
+        return 'À venir';
+    }
+  }
+
+  Color _statusColor(dynamic match) {
+    switch (match['status']?.toString()) {
+      case 'LIVE':
+        return Colors.redAccent;
+      case 'FINISHED':
+        return Colors.grey;
+      default:
+        return _kGreen;
+    }
+  }
+
+  String _formatProfileMatchDate(String? dateStr) {
+    if (dateStr == null) return 'Date inconnue';
+    try {
+      return DateFormat('EEE d MMM', 'fr_FR').format(DateTime.parse(dateStr));
+    } catch (_) {
+      return dateStr;
+    }
+  }
+
+  void _showChallengeSheet(dynamic opponent) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _ChallengeSheet(opponent: opponent),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: _bg(context),
+      appBar: AppBar(
+        backgroundColor: _bg(context),
+        elevation: 0,
+        foregroundColor: _txt(context),
+        title: Text(
+          _teamName(team),
+          style: GoogleFonts.orbitron(fontSize: 16, fontWeight: FontWeight.w800),
+        ),
+        centerTitle: true,
+      ),
+      body: FutureBuilder<_TeamProfileData>(
+        future: _future,
+        builder: (context, snapshot) {
+          final data = snapshot.data ?? _TeamProfileData(team: team, matches: const [], compositions: const []);
+          final currentTeam = data.team;
+          final members = _activeMembers(currentTeam);
+          final matches = data.matches.take(5).toList();
+          final selectedComposition = _selectedComposition(data.compositions);
+          final remainingMembers = _remainingMembers(members, selectedComposition);
+
+          return RefreshIndicator(
+            color: _kGreen,
+            onRefresh: () async {
+              setState(() => _future = _loadProfile());
+              await _future;
+            },
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(20, 8, 20, 28),
+              children: [
+                _buildHeader(currentTeam, snapshot.connectionState == ConnectionState.waiting),
+                const SizedBox(height: 18),
+                _buildStats(currentTeam),
+                const SizedBox(height: 18),
+                _buildRankings(currentTeam),
+                const SizedBox(height: 22),
+                _buildCompositionSelector(currentTeam, members, data.compositions),
+                const SizedBox(height: 22),
+                _buildSectionTitle('Joueurs restants', '${remainingMembers.length} joueur${remainingMembers.length > 1 ? 's' : ''}'),
+                const SizedBox(height: 10),
+                if (remainingMembers.isEmpty)
+                  _buildEmptyState(Icons.people_outline_rounded, 'Tous les joueurs disponibles sont dans cette composition')
+                else
+                  ...remainingMembers.map(_buildPlayerRow),
+                const SizedBox(height: 22),
+                _buildSectionTitle('5 derniers matchs', matches.isEmpty ? 'Aucun historique' : null),
+                const SizedBox(height: 10),
+                if (matches.isEmpty)
+                  _buildEmptyState(Icons.sports_soccer_rounded, 'Aucun match récent trouvé')
+                else
+                  ...matches.map((m) => _buildLastMatchRow(m, currentTeam)),
+                const SizedBox(height: 24),
+                GestureDetector(
+                  onTap: () => _showChallengeSheet(currentTeam),
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(vertical: 15),
+                    decoration: BoxDecoration(
+                      color: _kGreen,
+                      borderRadius: BorderRadius.circular(14),
+                      boxShadow: [BoxShadow(color: _kGreen.withOpacity(0.25), blurRadius: 14, offset: const Offset(0, 6))],
+                    ),
+                    child: Text(
+                      'Défier ${_teamName(currentTeam)}',
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 15),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildHeader(dynamic currentTeam, bool isLoading) => Container(
+    padding: const EdgeInsets.all(18),
+    decoration: BoxDecoration(color: _card(context), borderRadius: BorderRadius.circular(22)),
+    child: Row(children: [
+      _LogoCircle(url: _teamLogo(currentTeam), size: 78, color: _kGreen),
+      const SizedBox(width: 16),
+      Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text(_teamName(currentTeam), style: TextStyle(fontSize: 21, fontWeight: FontWeight.w900, color: _txt(context))),
+        const SizedBox(height: 5),
+        Row(children: [
+          Icon(Icons.location_on_rounded, size: 14, color: _sub(context)),
+          const SizedBox(width: 4),
+          Expanded(child: Text(_teamAddress(currentTeam).isNotEmpty ? _teamAddress(currentTeam) : _teamZone(currentTeam), maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12, color: _sub(context), fontWeight: FontWeight.w600))),
+        ]),
+        const SizedBox(height: 10),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+          decoration: BoxDecoration(color: _kGreen.withOpacity(0.1), borderRadius: BorderRadius.circular(20)),
+          child: Text(_teamZone(currentTeam), style: const TextStyle(fontSize: 11, color: _kGreen, fontWeight: FontWeight.w800)),
+        ),
+      ])),
+      if (isLoading) const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(color: _kGreen, strokeWidth: 2)),
+    ]),
+  );
+
+  Widget _buildStats(dynamic currentTeam) => Container(
+    padding: const EdgeInsets.symmetric(vertical: 16),
+    decoration: BoxDecoration(color: _card(context), borderRadius: BorderRadius.circular(20)),
+    child: Row(mainAxisAlignment: MainAxisAlignment.spaceEvenly, children: [
+      _buildStatItem('Pts', '${_intValue(currentTeam, 'pts')}'),
+      _buildStatItem('MJ', '${_intValue(currentTeam, 'j')}'),
+      _buildStatItem('V', '${_intValue(currentTeam, 'g')}'),
+      _buildStatItem('N', '${_intValue(currentTeam, 'n')}'),
+      _buildStatItem('D', '${_intValue(currentTeam, 'p')}'),
+    ]),
+  );
+
+  Widget _buildStatItem(String label, String value) => Column(children: [
+    Text(value, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: _kGreen)),
+    const SizedBox(height: 3),
+    Text(label, style: TextStyle(fontSize: 10, color: _sub(context), fontWeight: FontWeight.w800)),
+  ]);
+
+  Widget _buildRankings(dynamic currentTeam) => Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+    _buildSectionTitle('Classements', null),
+    const SizedBox(height: 10),
+    Row(children: [
+      Expanded(child: _buildRankingCard('Général', '#${currentTeam['globalRank'] ?? '-'}', Icons.public_rounded)),
+      const SizedBox(width: 10),
+      Expanded(child: _buildRankingCard(_teamZone(currentTeam), '#${currentTeam['zoneRank'] ?? '-'}', Icons.map_rounded)),
+    ]),
+  ]);
+
+  Widget _buildRankingCard(String label, String value, IconData icon) => Container(
+    padding: const EdgeInsets.all(14),
+    decoration: BoxDecoration(color: _card(context), borderRadius: BorderRadius.circular(16)),
+    child: Row(children: [
+      Container(width: 36, height: 36, decoration: BoxDecoration(color: _kGreen.withOpacity(0.1), shape: BoxShape.circle), child: Icon(icon, size: 18, color: _kGreen)),
+      const SizedBox(width: 10),
+      Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text(value, style: GoogleFonts.orbitron(fontSize: 18, fontWeight: FontWeight.w900, color: _txt(context))),
+        const SizedBox(height: 2),
+        Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: _sub(context))),
+      ])),
+    ]),
+  );
+
+  Widget _buildCompositionSelector(dynamic currentTeam, List<dynamic> members, List<dynamic> compositions) {
+    final sorted = [...compositions];
+    sorted.sort((a, b) => _compositionPlayerCount(a).compareTo(_compositionPlayerCount(b)));
+    if (sorted.isEmpty) {
+      return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        _buildSectionTitle('Composition', 'Aucun format'),
+        const SizedBox(height: 10),
+        _buildEmptyState(Icons.grid_view_rounded, 'Aucune composition enregistrée pour cette équipe'),
+      ]);
+    }
+
+    final availableFormats = sorted.map((c) => c['format']?.toString() ?? '').where((f) => f.isNotEmpty).toList();
+    final selectedFormat = availableFormats.contains(_selectedCompositionFormat)
+        ? _selectedCompositionFormat!
+        : availableFormats.first;
+    final selected = sorted.firstWhere(
+      (c) => c['format']?.toString() == selectedFormat,
+      orElse: () => sorted.first,
+    );
+    final formation = selected?['formation']?.toString() ?? '';
+    final slots = _compositionSlots(selected);
+    final playerCount = _compositionPlayerCount(selected);
+
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      _buildSectionTitle('Composition', '$formation · ${playerCount}v$playerCount'),
+      const SizedBox(height: 10),
+      _buildFormatButtons(sorted, selectedFormat),
+      const SizedBox(height: 10),
+      if (formation.isEmpty || slots.isEmpty)
+        _buildEmptyState(Icons.grid_view_rounded, 'Composition vide pour ce format')
+      else
+        Container(
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: _card(context),
+            borderRadius: BorderRadius.circular(22),
+            boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 12, offset: const Offset(0, 5))],
+          ),
+          child: _CompositionPreview(
+            formation: formation,
+            slots: slots,
+            members: members,
+            teamColor: _teamColor(currentTeam),
+            memberById: (memberId) => _memberById(members, memberId),
+            memberName: _memberName,
+            memberAvatar: _memberAvatar,
+            isCaptain: (member) => member['isCaptain'] == true,
+            positionLabel: _positionLabel,
+            positionShort: _positionShort,
+            positionColor: _positionColor,
+          ),
+        ),
     ]);
   }
+
+  Widget _buildFormatButtons(List<dynamic> compositions, String selectedFormat) => SizedBox(
+    height: 44,
+    child: ListView.separated(
+      scrollDirection: Axis.horizontal,
+      itemCount: compositions.length,
+      separatorBuilder: (_, __) => const SizedBox(width: 8),
+      itemBuilder: (_, index) {
+        final composition = compositions[index];
+        final format = composition['format']?.toString() ?? '';
+        final formation = composition['formation']?.toString() ?? '';
+        final selected = format == selectedFormat;
+        return GestureDetector(
+          onTap: () => setState(() => _selectedCompositionFormat = format),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 150),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+            decoration: BoxDecoration(
+              color: selected ? _kGreen : _card(context),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: selected ? _kGreen : _sub(context).withOpacity(0.2)),
+              boxShadow: selected ? [BoxShadow(color: _kGreen.withOpacity(0.3), blurRadius: 6)] : null,
+            ),
+            child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+              Text(format, style: GoogleFonts.orbitron(fontSize: 10, fontWeight: FontWeight.w900, color: selected ? Colors.white : _txt(context))),
+              const SizedBox(height: 2),
+              Text(formation, style: TextStyle(fontSize: 9, fontWeight: FontWeight.w800, color: selected ? Colors.white.withOpacity(0.78) : _sub(context))),
+            ]),
+          ),
+        );
+      },
+    ),
+  );
+
+  Widget _buildSectionTitle(String title, String? trailing) => Row(children: [
+    Text(title, style: GoogleFonts.orbitron(fontSize: 16, fontWeight: FontWeight.w800, color: _kGreen)),
+    const Spacer(),
+    if (trailing != null) Text(trailing, style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: _sub(context))),
+  ]);
+
+  Widget _buildPlayerRow(dynamic member) => Container(
+    margin: const EdgeInsets.only(bottom: 10),
+    padding: const EdgeInsets.all(12),
+    decoration: BoxDecoration(
+      color: _card(context),
+      borderRadius: BorderRadius.circular(16),
+      border: member['isCaptain'] == true ? Border.all(color: const Color(0xFFE6A800).withOpacity(0.45)) : null,
+    ),
+    child: Row(children: [
+      Stack(clipBehavior: Clip.none, children: [
+        _LogoCircle(url: _memberAvatar(member), size: 42, color: member['isCaptain'] == true ? const Color(0xFFE6A800) : _kGreen),
+        if (member['isCaptain'] == true)
+          Positioned(
+            top: -7,
+            right: -5,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFFD700),
+                borderRadius: BorderRadius.circular(8),
+                boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.18), blurRadius: 4)],
+              ),
+              child: const Text('C', style: TextStyle(fontSize: 8, fontWeight: FontWeight.w900, color: Colors.black)),
+            ),
+          ),
+      ]),
+      const SizedBox(width: 12),
+      Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [
+          Expanded(child: Text(_memberName(member), maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: _txt(context)))),
+          if (member['isCaptain'] == true) Container(padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3), decoration: BoxDecoration(color: const Color(0xFFFFD700).withOpacity(0.16), borderRadius: BorderRadius.circular(10)), child: const Text('Capitaine', style: TextStyle(fontSize: 9, color: Color(0xFFE6A800), fontWeight: FontWeight.w900))),
+        ]),
+        const SizedBox(height: 5),
+        Text(_positionLabel(member['position']),
+            maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 11, color: _sub(context), fontWeight: FontWeight.w600)),
+      ])),
+    ]),
+  );
+
+  Widget _buildLastMatchRow(dynamic match, dynamic currentTeam) {
+    final home = match['home'];
+    final away = match['away'];
+    final homeName = home?['name']?.toString() ?? 'Domicile';
+    final awayName = away?['name']?.toString() ?? 'Extérieur';
+    final isFinished = match['status'] == 'FINISHED';
+    final score = isFinished ? '${match['homeScore'] ?? 0} - ${match['awayScore'] ?? 0}' : (match['time']?.toString() ?? '--:--');
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(color: _card(context), borderRadius: BorderRadius.circular(16)),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [
+          Container(width: 8, height: 8, decoration: BoxDecoration(color: _statusColor(match), shape: BoxShape.circle)),
+          const SizedBox(width: 6),
+          Text(_statusLabel(match), style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: _statusColor(match))),
+          const Spacer(),
+          Text(_formatProfileMatchDate(match['date']?.toString()), style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: _sub(context))),
+        ]),
+        const SizedBox(height: 12),
+        Row(children: [
+          Expanded(child: _buildMatchTeam(homeName, home?['logoUrl']?.toString() ?? '', true)),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 10),
+            child: Text(score, style: GoogleFonts.orbitron(fontSize: 18, fontWeight: FontWeight.w900, color: _txt(context))),
+          ),
+          Expanded(child: _buildMatchTeam(awayName, away?['logoUrl']?.toString() ?? '', false)),
+        ]),
+        const SizedBox(height: 10),
+        Row(children: [
+          Icon(Icons.stadium_rounded, size: 13, color: _sub(context)),
+          const SizedBox(width: 5),
+          Expanded(child: Text(match['terrain']?['name']?.toString() ?? 'Terrain à confirmer', maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 11, color: _sub(context)))),
+        ]),
+      ]),
+    );
+  }
+
+  Widget _buildMatchTeam(String name, String logo, bool isLeft) => Row(
+    mainAxisAlignment: isLeft ? MainAxisAlignment.start : MainAxisAlignment.end,
+    children: isLeft
+        ? [_LogoCircle(url: logo, size: 30, color: _kGreen), const SizedBox(width: 7), Expanded(child: Text(name, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: _txt(context))))]
+        : [Expanded(child: Text(name, textAlign: TextAlign.right, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: _txt(context)))), const SizedBox(width: 7), _LogoCircle(url: logo, size: 30, color: _kGreen)],
+  );
+
+  Widget _buildEmptyState(IconData icon, String label) => Container(
+    padding: const EdgeInsets.all(18),
+    decoration: BoxDecoration(color: _card(context), borderRadius: BorderRadius.circular(16)),
+    child: Row(children: [
+      Icon(icon, size: 22, color: _sub(context)),
+      const SizedBox(width: 10),
+      Expanded(child: Text(label, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: _sub(context)))),
+    ]),
+  );
+}
+
+class _TeamProfileData {
+  final dynamic team;
+  final List<dynamic> matches;
+  final List<dynamic> compositions;
+
+  const _TeamProfileData({required this.team, required this.matches, required this.compositions});
+}
+
+class _CompositionPreview extends StatelessWidget {
+  final String formation;
+  final List<dynamic> slots;
+  final List<dynamic> members;
+  final Color teamColor;
+  final dynamic Function(String? memberId) memberById;
+  final String Function(dynamic member) memberName;
+  final String Function(dynamic member) memberAvatar;
+  final bool Function(dynamic member) isCaptain;
+  final String Function(dynamic value) positionLabel;
+  final String Function(dynamic value) positionShort;
+  final Color Function(dynamic value) positionColor;
+
+  const _CompositionPreview({
+    required this.formation,
+    required this.slots,
+    required this.members,
+    required this.teamColor,
+    required this.memberById,
+    required this.memberName,
+    required this.memberAvatar,
+    required this.isCaptain,
+    required this.positionLabel,
+    required this.positionShort,
+    required this.positionColor,
+  });
+
+  List<Offset> _positions() {
+    final parts = formation.split('-').map((p) => int.tryParse(p) ?? 0).where((p) => p > 0).toList();
+    final positions = <Offset>[const Offset(0.5, 0.90)];
+    final lineCount = parts.length;
+    final step = lineCount > 1 ? 0.58 / (lineCount - 1) : 0.0;
+    for (var line = 0; line < parts.length; line++) {
+      final count = parts[line];
+      final y = 0.72 - line * (lineCount > 1 ? step : 0.29);
+      for (var i = 0; i < count; i++) {
+        positions.add(Offset((i + 1) / (count + 1), y));
+      }
+    }
+    return positions;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final positions = _positions();
+    return AspectRatio(
+      aspectRatio: 0.70,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(20),
+        child: LayoutBuilder(builder: (context, constraints) {
+          final w = constraints.maxWidth;
+          final h = constraints.maxHeight;
+          return Stack(children: [
+            Positioned.fill(child: CustomPaint(painter: _ProfileGrassPainter())),
+            Positioned.fill(child: CustomPaint(painter: _ProfilePitchPainter())),
+            Positioned(
+              top: 10,
+              left: 0,
+              right: 0,
+              child: Center(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withOpacity(0.58),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: Colors.white.withOpacity(0.12)),
+                  ),
+                  child: Text(
+                    formation,
+                    style: GoogleFonts.orbitron(fontSize: 10, fontWeight: FontWeight.w900, color: Colors.white),
+                  ),
+                ),
+              ),
+            ),
+            ...List.generate(positions.length, (i) {
+              if (i >= slots.length) return const SizedBox.shrink();
+              final pos = positions[i];
+              final slot = slots[i];
+              final member = memberById(slot['memberId']?.toString());
+              return Positioned(
+                left: pos.dx * w - 32,
+                top: pos.dy * h - 44,
+                child: _CompositionToken(
+                  member: member,
+                  fallback: i == 0 ? 'GB' : '${i + 1}',
+                  teamColor: teamColor,
+                  memberName: memberName,
+                  memberAvatar: memberAvatar,
+                  isCaptain: isCaptain,
+                  positionLabel: positionLabel,
+                  positionShort: positionShort,
+                  positionColor: positionColor,
+                ),
+              );
+            }),
+          ]);
+        }),
+      ),
+    );
+  }
+}
+
+class _CompositionToken extends StatelessWidget {
+  final dynamic member;
+  final String fallback;
+  final Color teamColor;
+  final String Function(dynamic member) memberName;
+  final String Function(dynamic member) memberAvatar;
+  final bool Function(dynamic member) isCaptain;
+  final String Function(dynamic value) positionLabel;
+  final String Function(dynamic value) positionShort;
+  final Color Function(dynamic value) positionColor;
+
+  const _CompositionToken({
+    required this.member,
+    required this.fallback,
+    required this.teamColor,
+    required this.memberName,
+    required this.memberAvatar,
+    required this.isCaptain,
+    required this.positionLabel,
+    required this.positionShort,
+    required this.positionColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final hasMember = member != null;
+    final name = hasMember ? memberName(member) : fallback;
+    final initials = hasMember
+        ? name.split(' ').where((p) => p.isNotEmpty).map((p) => p[0]).take(2).join().toUpperCase()
+        : fallback;
+    final firstName = hasMember ? name.split(' ').first : fallback;
+    final avatar = hasMember ? memberAvatar(member) : '';
+    final posColor = hasMember ? positionColor(member['position']) : teamColor;
+
+    return SizedBox(
+      width: 64,
+      child: Column(mainAxisSize: MainAxisSize.min, children: [
+        Stack(
+          clipBehavior: Clip.none,
+          alignment: Alignment.center,
+          children: [
+            Container(
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.white,
+                border: Border.all(color: posColor, width: 2.5),
+                boxShadow: [
+                  BoxShadow(color: Colors.black.withOpacity(0.40), blurRadius: 8, offset: const Offset(0, 3)),
+                ],
+              ),
+              child: ClipOval(
+                child: avatar.isNotEmpty
+                    ? Image.network(
+                        avatar,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => _initialsWidget(initials, posColor),
+                      )
+                    : _initialsWidget(initials, posColor),
+              ),
+            ),
+            if (hasMember && isCaptain(member))
+              Positioned(
+                top: -10,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFFD700),
+                    borderRadius: BorderRadius.circular(8),
+                    boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.35), blurRadius: 4)],
+                  ),
+                  child: const Row(mainAxisSize: MainAxisSize.min, children: [
+                    Icon(Icons.star_rounded, size: 8, color: Colors.black),
+                    SizedBox(width: 2),
+                    Text('C', style: TextStyle(fontSize: 8, fontWeight: FontWeight.w900, color: Colors.black)),
+                  ]),
+                ),
+              ),
+          ],
+        ),
+        const SizedBox(height: 5),
+        Container(
+          constraints: const BoxConstraints(maxWidth: 62),
+          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+          decoration: BoxDecoration(
+            color: Colors.black.withOpacity(0.72),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: Colors.white.withOpacity(0.15), width: 0.5),
+          ),
+          child: Text(
+            firstName,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            textAlign: TextAlign.center,
+            style: GoogleFonts.orbitron(color: Colors.white, fontSize: 7.5, fontWeight: FontWeight.w900),
+          ),
+        ),
+        if (hasMember) ...[
+          const SizedBox(height: 2),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+            decoration: BoxDecoration(color: posColor.withOpacity(0.85), borderRadius: BorderRadius.circular(4)),
+            child: Text(
+              positionShort(member['position']),
+              style: const TextStyle(color: Colors.white, fontSize: 6, fontWeight: FontWeight.w900),
+            ),
+          ),
+        ],
+      ]),
+    );
+  }
+
+  Widget _initialsWidget(String text, Color color) => Container(
+    decoration: BoxDecoration(
+      gradient: LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [color.withOpacity(0.18), color.withOpacity(0.08)],
+      ),
+    ),
+    child: Center(
+      child: Text(
+        text,
+        style: GoogleFonts.orbitron(fontSize: 13, fontWeight: FontWeight.w900, color: color),
+      ),
+    ),
+  );
+}
+
+class _ProfileGrassPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    const stripeCount = 10;
+    final width = size.width / stripeCount;
+    for (var i = 0; i < stripeCount; i++) {
+      final paint = Paint()
+        ..color = i.isEven ? const Color(0xFF1B5E20) : const Color(0xFF1A5C1E);
+      canvas.drawRect(Rect.fromLTWH(i * width, 0, width, size.height), paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(_ProfileGrassPainter oldDelegate) => false;
+}
+
+class _ProfilePitchPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final p = Paint()
+      ..color = Colors.white.withOpacity(0.55)
+      ..strokeWidth = 1.5
+      ..style = PaintingStyle.stroke;
+
+    final w = size.width;
+    final h = size.height;
+
+    canvas.drawRect(Rect.fromLTWH(0, 0, w, h), p);
+    canvas.drawLine(Offset(0, h / 2), Offset(w, h / 2), p);
+    canvas.drawCircle(Offset(w / 2, h / 2), h * 0.1, p);
+    canvas.drawCircle(Offset(w / 2, h / 2), 2, Paint()..color = Colors.white.withOpacity(0.55));
+
+    final boxWidth = w * 0.55;
+    final boxHeight = h * 0.14;
+    canvas.drawRect(Rect.fromLTWH((w - boxWidth) / 2, 0, boxWidth, boxHeight), p);
+    canvas.drawRect(Rect.fromLTWH((w - boxWidth) / 2, h - boxHeight, boxWidth, boxHeight), p);
+
+    final smallWidth = w * 0.3;
+    final smallHeight = h * 0.07;
+    canvas.drawRect(Rect.fromLTWH((w - smallWidth) / 2, 0, smallWidth, smallHeight), p);
+    canvas.drawRect(Rect.fromLTWH((w - smallWidth) / 2, h - smallHeight, smallWidth, smallHeight), p);
+
+    canvas.drawArc(Rect.fromCenter(center: Offset(w / 2, boxHeight), width: w * 0.3, height: h * 0.1), 3.14, 3.14, false, p);
+    canvas.drawArc(Rect.fromCenter(center: Offset(w / 2, h - boxHeight), width: w * 0.3, height: h * 0.1), 0, 3.14, false, p);
+
+    final goalWidth = w * 0.2;
+    final goalHeight = h * 0.025;
+    canvas.drawRect(Rect.fromLTWH((w - goalWidth) / 2, -goalHeight, goalWidth, goalHeight), p);
+    canvas.drawRect(Rect.fromLTWH((w - goalWidth) / 2, h, goalWidth, goalHeight), p);
+  }
+
+  @override
+  bool shouldRepaint(_ProfilePitchPainter oldDelegate) => false;
 }
 
 // ── CHALLENGE SHEET ──────────────────────────────────────────────────────────
@@ -884,18 +1893,47 @@ class _ChallengeSheetState extends State<_ChallengeSheet> {
       setState(() => _terrainError = true);
       return;
     }
+
+    final token = auth.token;
+    final fromTeamId = await _resolveFromTeamId(auth);
+    final opponentTeamId = widget.opponent['id']?.toString();
+    final terrainId = _selectedTerrain?.id;
+    final terrainName = _selectedTerrain?.name;
+    final opponentZone = widget.opponent['zone']?.toString();
+    final zone = opponentZone == null || opponentZone.isEmpty ? 'DAKAR' : opponentZone;
+    if (token == null || token.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Session expirée, reconnectez-vous.'), backgroundColor: Colors.red));
+      return;
+    }
+    if (fromTeamId == null || fromTeamId.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Aucune équipe active trouvée. Ouvrez la page Équipe puis réessayez.'), backgroundColor: Colors.red));
+      return;
+    }
+    if (opponentTeamId == null || opponentTeamId.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Équipe adverse introuvable.'), backgroundColor: Colors.red));
+      return;
+    }
+    if (terrainId == null || terrainId.isEmpty) {
+      setState(() => _terrainError = true);
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Terrain invalide, choisissez un autre terrain.'), backgroundColor: Colors.red));
+      return;
+    }
     
     setState(() => _isLoading = true);
     try {
       final matchService = MatchService();
       final dt = DateTime(_date.year, _date.month, _date.day, _startH, _startM);
       await matchService.sendChallenge(
-        token: auth.token!,
-        fromTeamId: auth.user!.teamId!,
-        opponentTeamId: widget.opponent['id'],
+        token: token,
+        fromTeamId: fromTeamId,
+        opponentTeamId: opponentTeamId,
         date: dt.toIso8601String(),
+        time: '${_startH.toString().padLeft(2, '0')}:${_startM.toString().padLeft(2, '0')}',
+        zone: zone,
         format: _format,
-        terrainId: _selectedTerrain!.id,
+        terrainId: terrainId,
+        subTerrainId: _selectedTerrain!.subTerrainId,
+        terrainName: terrainName,
       );
       if (mounted) {
         Navigator.pop(context);
@@ -908,6 +1946,29 @@ class _ChallengeSheetState extends State<_ChallengeSheet> {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Erreur: $e'), backgroundColor: Colors.red));
     } finally {
       if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Future<String?> _resolveFromTeamId(AuthProvider auth) async {
+    final currentTeamId = auth.user?.teamId;
+    if (currentTeamId != null && currentTeamId.isNotEmpty) return currentTeamId;
+
+    final token = auth.token;
+    if (token == null || token.isEmpty) return null;
+
+    try {
+      final teams = await TeamService().getMyTeams(token);
+      if (teams.isEmpty) return null;
+
+      final userId = auth.user?.id;
+      final captainTeam = teams.cast<dynamic>().where((team) => team['captainId']?.toString() == userId).toList();
+      final team = captainTeam.isNotEmpty ? captainTeam.first : teams.first;
+      final teamId = team['id']?.toString();
+      debugPrint('[ChallengeSheet] teamId récupéré via /teams/mine: $teamId');
+      return teamId;
+    } catch (e) {
+      debugPrint('[ChallengeSheet] Impossible de récupérer mes équipes: $e');
+      return null;
     }
   }
 

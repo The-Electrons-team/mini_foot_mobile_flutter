@@ -21,8 +21,8 @@ class BookingConfirmationScreen extends StatefulWidget {
   final String startSlot;
   final String endSlot;
   final int finalPrice;
-  final String paymentMethod;
   final String reference;
+  final String? qrData;
   final bool fromReservations;
 
   const BookingConfirmationScreen({
@@ -33,8 +33,8 @@ class BookingConfirmationScreen extends StatefulWidget {
     required this.startSlot,
     required this.endSlot,
     required this.finalPrice,
-    required this.paymentMethod,
     required this.reference,
+    this.qrData,
     this.fromReservations = false,
   });
 
@@ -52,7 +52,7 @@ class _BookingConfirmationScreenState extends State<BookingConfirmationScreen> {
     return '${days[widget.date.weekday - 1]} ${widget.date.day} ${months[widget.date.month - 1]}';
   }
 
-  String get _qrData =>
+  String get _qrData => widget.qrData ??
       'MINIFOOT:ref=${widget.reference}&terrain=${widget.terrain.id}'
       '${widget.subTerrain != null ? '&sub=${widget.subTerrain!.id}' : ''}'
       '&date=${widget.date.toIso8601String().substring(0, 10)}'

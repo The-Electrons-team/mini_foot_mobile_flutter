@@ -1,13 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
 import 'terrain_data.dart';
 import 'booking_confirmation_screen.dart';
-
-// Données mock pour l'affichage des réservations (à remplacer par l'API)
-const _mockT1 = Terrain(id: '1', name: 'Terrain Dakar Arena', address: 'Diamniadio, Dakar', zone: 'DAKAR', pricePerHour: 5000, rating: 4.8, lat: 14.7645, lng: -17.3660, imageUrl: 'https://images.pexels.com/photos/12486370/pexels-photo-12486370.jpeg?auto=compress&cs=tinysrgb&w=800');
-const _mockT2 = Terrain(id: '2', name: 'Stade Léopold Sédar', address: 'Plateau, Dakar', zone: 'DAKAR', pricePerHour: 8000, rating: 4.5, lat: 14.6760, lng: -17.4469, imageUrl: 'https://images.pexels.com/photos/13783930/pexels-photo-13783930.jpeg?auto=compress&cs=tinysrgb&w=800');
-const _mockT3 = Terrain(id: '3', name: 'Terrain Point E', address: 'Point E, Dakar', zone: 'DAKAR', pricePerHour: 6500, rating: 4.3, lat: 14.6928, lng: -17.4571, imageUrl: 'https://images.pexels.com/photos/7160121/pexels-photo-7160121.jpeg?auto=compress&cs=tinysrgb&w=800');
-const _mockT4 = Terrain(id: '4', name: 'Terrain HLM', address: 'HLM Grand Yoff, Dakar', zone: 'DAKAR', pricePerHour: 4000, rating: 4.1, lat: 14.7120, lng: -17.4620, imageUrl: 'https://images.pexels.com/photos/13890306/pexels-photo-13890306.jpeg?auto=compress&cs=tinysrgb&w=800');
+import 'providers/auth_provider.dart';
+import 'providers/reservation_provider.dart';
 
 const Color kGreen = Color(0xFF006F39);
 const Color kDark = Color(0xFF1A1A1A);
@@ -31,6 +28,8 @@ class Reservation {
   final String endSlot;
   final int price;
   final String reference;
+  final String? qrData;
+  final String status;
   bool cancelled;
 
   Reservation({
@@ -41,66 +40,68 @@ class Reservation {
     required this.endSlot,
     required this.price,
     required this.reference,
+    this.qrData,
+    this.status = 'PENDING_PAYMENT',
     this.cancelled = false,
   });
 
-  bool get isPast => cancelled || date.isBefore(DateTime.now().subtract(const Duration(days: 1)));
+  bool get isPast =>
+      cancelled ||
+      status == 'CANCELLED' ||
+      status == 'COMPLETED' ||
+      date.isBefore(DateTime.now().subtract(const Duration(days: 1)));
   bool get isActive => !isPast;
+
+  factory Reservation.fromApiJson(Map<String, dynamic> json) {
+    final t = json['terrain'] as Map<String, dynamic>? ?? {};
+    final images = t['images'] as List<dynamic>?;
+    final imageUrl = images != null && images.isNotEmpty
+        ? images.first['url'] as String? ?? ''
+        : t['imageUrl'] as String? ?? '';
+
+    final terrain = Terrain(
+      id: t['id'] as String? ?? '',
+      name: t['name'] as String? ?? '',
+      address: t['address'] as String? ?? '',
+      zone: t['zone'] as String? ?? 'DAKAR',
+      pricePerHour: (t['pricePerHour'] as num?)?.toInt() ?? 0,
+      rating: (t['rating'] as num?)?.toDouble() ?? 0,
+      lat: (t['lat'] as num?)?.toDouble() ?? 0,
+      lng: (t['lng'] as num?)?.toDouble() ?? 0,
+      imageUrl: imageUrl,
+    );
+
+    final rawDate = json['date'] as String? ?? '';
+    final date = rawDate.isNotEmpty ? DateTime.tryParse(rawDate) ?? DateTime.now() : DateTime.now();
+
+    return Reservation(
+      id: json['id'] as String? ?? '',
+      terrain: terrain,
+      date: date,
+      startSlot: json['startSlot'] as String? ?? '',
+      endSlot: json['endSlot'] as String? ?? '',
+      price: (json['finalPrice'] as num?)?.toInt() ?? 0,
+      reference: json['reference'] as String? ?? '',
+      qrData: json['qrData'] as String?,
+      status: json['status'] as String? ?? 'PENDING_PAYMENT',
+    );
+  }
 }
 
-final _now = DateTime.now();
+class _CancellationPreview {
+  final int penaltyPercent;
+  final int penaltyAmount;
+  final int refundAmount;
+  final int hoursBeforeStart;
 
-List<Reservation> buildFakeReservations() => [
-  Reservation(
-    id: '1',
-    terrain: _mockT1,
-    date: _now,
-    startSlot: '10h00', endSlot: '11h30',
-    price: 7500, reference: 'MF-1A4892',
-  ),
-  Reservation(
-    id: '2',
-    terrain: _mockT2,
-    date: _now.add(const Duration(days: 2)),
-    startSlot: '13h00', endSlot: '14h00',
-    price: 8000, reference: 'MF-2B5123',
-  ),
-  Reservation(
-    id: '3',
-    terrain: _mockT3,
-    date: _now.add(const Duration(days: 4)),
-    startSlot: '16h00', endSlot: '17h30',
-    price: 9750, reference: 'MF-3C6074',
-  ),
-  Reservation(
-    id: '4',
-    terrain: _mockT4,
-    date: _now.add(const Duration(days: 6)),
-    startSlot: '08h00', endSlot: '09h00',
-    price: 4000, reference: 'MF-4D7238',
-  ),
-  Reservation(
-    id: '5',
-    terrain: _mockT1,
-    date: _now.add(const Duration(days: 9)),
-    startSlot: '18h00', endSlot: '19h30',
-    price: 7500, reference: 'MF-5E8341',
-  ),
-  Reservation(
-    id: '6',
-    terrain: _mockT2,
-    date: _now.subtract(const Duration(days: 3)),
-    startSlot: '11h00', endSlot: '12h00',
-    price: 8000, reference: 'MF-6F9102',
-  ),
-  Reservation(
-    id: '7',
-    terrain: _mockT3,
-    date: _now.subtract(const Duration(days: 8)),
-    startSlot: '09h00', endSlot: '10h00',
-    price: 6500, reference: 'MF-7G0215',
-  ),
-];
+  const _CancellationPreview({
+    required this.penaltyPercent,
+    required this.penaltyAmount,
+    required this.refundAmount,
+    required this.hoursBeforeStart,
+  });
+}
+
 
 class ReservationsScreen extends StatefulWidget {
   const ReservationsScreen({super.key});
@@ -113,13 +114,35 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
   DateTime _selectedDay = DateTime.now();
   late DateTime _weekStart;
   int _filterIndex = 0; // 0 = En cours, 1 = Terminées
-  late List<Reservation> _reservations;
+  List<Reservation> _reservations = [];
+  bool _loaded = false;
 
   @override
   void initState() {
     super.initState();
     _weekStart = _mondayOf(_selectedDay);
-    _reservations = buildFakeReservations();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_loaded) {
+      _loaded = true;
+      _loadReservations();
+    }
+  }
+
+  Future<void> _loadReservations() async {
+    final token = context.read<AuthProvider>().token;
+    if (token == null) return;
+    final provider = context.read<ReservationProvider>();
+    await provider.loadReservations(token);
+    if (!mounted) return;
+    setState(() {
+      _reservations = provider.reservations
+          .map((r) => Reservation.fromApiJson(r))
+          .toList();
+    });
   }
 
   DateTime _mondayOf(DateTime d) =>
@@ -166,6 +189,7 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
       _filtered.any((r) => _sameDay(r.date, day));
 
   Future<void> _cancelReservation(Reservation r) async {
+    final policy = _cancellationPreview(r);
     final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -198,6 +222,43 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
               ),
             ),
             const SizedBox(height: 10),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: policy.penaltyPercent == 0
+                    ? kGreen.withOpacity(0.08)
+                    : Colors.orange.withOpacity(0.10),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    policy.penaltyPercent == 0
+                        ? 'Annulation sans pénalité'
+                        : 'Pénalité: ${policy.penaltyPercent}%',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w800,
+                      color: policy.penaltyPercent == 0 ? kGreen : Colors.orange.shade800,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    policy.penaltyPercent == 0
+                        ? 'Vous êtes à plus de 24h du match.'
+                        : 'Dans les dernières 24h, chaque heure entamée retire 10%.',
+                    style: TextStyle(fontSize: 11, color: _sub(ctx)),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    'Remboursement estimé: ${_formatMoney(policy.refundAmount)} F',
+                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: Theme.of(ctx).colorScheme.onSurface),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 10),
             Text('Cette action est irréversible.',
                 style: TextStyle(fontSize: 12, color: Colors.red.withOpacity(0.7))),
           ],
@@ -225,18 +286,70 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
     );
 
     if (confirm == true) {
-      setState(() => r.cancelled = true);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('Réservation annulée'),
-            backgroundColor: Colors.red.shade700,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          ),
-        );
+      final token = context.read<AuthProvider>().token;
+      if (token == null) return;
+      try {
+        final result = await context.read<ReservationProvider>().cancelReservation(token, r.id);
+        await _loadReservations();
+        if (mounted) {
+          final cancellation = result['cancellation'] as Map<String, dynamic>?;
+          final refundAmount = (cancellation?['refundAmount'] as num?)?.toInt();
+          final penaltyPercent = (cancellation?['penaltyPercent'] as num?)?.toInt();
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                refundAmount != null && penaltyPercent != null
+                    ? 'Réservation annulée · Remboursement ${_formatMoney(refundAmount)} F · Pénalité $penaltyPercent%'
+                    : 'Réservation annulée',
+              ),
+              backgroundColor: Colors.red.shade700,
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(e.toString().replaceFirst('Exception: ', '')),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
       }
     }
+  }
+
+  _CancellationPreview _cancellationPreview(Reservation r) {
+    final start = _reservationStartAt(r);
+    final msBeforeStart = start.difference(DateTime.now()).inMilliseconds;
+    final hoursBeforeStart = msBeforeStart <= 0 ? 0 : msBeforeStart ~/ Duration.millisecondsPerHour;
+    final lateHours = msBeforeStart <= 0 ? 24 : (24 - hoursBeforeStart).clamp(0, 24).toInt();
+    final penaltyPercent = (lateHours * 10).clamp(0, 100).toInt();
+    final penaltyAmount = (r.price * penaltyPercent ~/ 100);
+    final refundAmount = (r.price - penaltyAmount).clamp(0, r.price).toInt();
+    return _CancellationPreview(
+      penaltyPercent: penaltyPercent,
+      penaltyAmount: penaltyAmount,
+      refundAmount: refundAmount,
+      hoursBeforeStart: hoursBeforeStart,
+    );
+  }
+
+  DateTime _reservationStartAt(Reservation r) {
+    final normalized = r.startSlot.replaceAll(':', 'h');
+    final parts = normalized.split('h');
+    final hour = int.tryParse(parts.isNotEmpty ? parts[0] : '') ?? 0;
+    final minute = int.tryParse(parts.length > 1 ? parts[1] : '') ?? 0;
+    return DateTime(r.date.year, r.date.month, r.date.day, hour, minute);
+  }
+
+  String _formatMoney(int value) {
+    return value.toString().replaceAllMapped(
+      RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
+      (m) => '${m[1]} ',
+    );
   }
 
   @override
@@ -393,7 +506,9 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
 
             // ── LISTE ──
             Expanded(
-              child: _filtered.isEmpty
+              child: context.watch<ReservationProvider>().isLoading
+                  ? const Center(child: CircularProgressIndicator())
+                  : _filtered.isEmpty
                   ? Center(
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
@@ -429,8 +544,8 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
                                   startSlot: selected.startSlot,
                                   endSlot: selected.endSlot,
                                   finalPrice: selected.price,
-                                  paymentMethod: 'Wave',
                                   reference: selected.reference,
+                                  qrData: selected.qrData,
                                   fromReservations: true,
                                 ),
                               ),
@@ -478,8 +593,8 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
                                         startSlot: r.startSlot,
                                         endSlot: r.endSlot,
                                         finalPrice: r.price,
-                                        paymentMethod: 'Wave',
                                         reference: r.reference,
+                                        qrData: r.qrData,
                                         fromReservations: true,
                                       ),
                                     ),

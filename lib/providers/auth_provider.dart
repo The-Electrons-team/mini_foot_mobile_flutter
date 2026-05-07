@@ -35,15 +35,24 @@ class User {
   });
 
   factory User.fromJson(Map<String, dynamic> json) {
+    final team = json['team'] as Map<String, dynamic>?;
+    final memberships = json['memberships'] is List ? json['memberships'] as List : const [];
+    final firstMembership = memberships.isNotEmpty && memberships.first is Map<String, dynamic>
+        ? memberships.first as Map<String, dynamic>
+        : null;
+    final membershipTeam = firstMembership?['team'] is Map<String, dynamic>
+        ? firstMembership!['team'] as Map<String, dynamic>
+        : null;
+
     return User(
       id: json['id'] ?? '',
       phone: json['phone'] ?? '',
       firstName: json['firstName'],
       lastName: json['lastName'],
       birthDate: json['birthDate'],
-      position: json['position'],
-      teamId: json['team']?['id'], // Récupération de l'ID de l'équipe
-      teamName: json['team']?['name'],
+      position: firstMembership?['position'] ?? json['position'],
+      teamId: json['teamId']?.toString() ?? team?['id']?.toString() ?? membershipTeam?['id']?.toString(),
+      teamName: json['teamName']?.toString() ?? team?['name']?.toString() ?? membershipTeam?['name']?.toString(),
       matchesCount: json['stats']?['matches'] ?? 0,
       goalsCount: json['stats']?['goals'] ?? 0,
       assistsCount: json['stats']?['assists'] ?? 0,
