@@ -10,6 +10,8 @@ import 'terrain_map_screen.dart';
 import 'services/terrain_service.dart';
 import 'providers/auth_provider.dart';
 import 'providers/terrain_provider.dart';
+import 'chat_screen.dart';
+import 'providers/chat_provider.dart';
 
 const Color kGreen = Color(0xFF006F39);
 const Color kDark = Color(0xFF1A1A1A);
@@ -52,9 +54,9 @@ class _TerrainDetailScreenState extends State<TerrainDetailScreen> {
   @override
   Widget build(BuildContext context) {
     final t = widget.terrain;
-    final currentImage = t.imageUrls.isNotEmpty 
-        ? t.imageUrls[_selectedImageIndex] 
-        : t.imageUrl;
+    // Sécurité si la liste d'images est vide
+    final List<String> images = t.imageUrls.isNotEmpty ? t.imageUrls : [t.imageUrl];
+    final currentImage = images.isNotEmpty ? images[_selectedImageIndex.clamp(0, images.length - 1)] : '';
 
     return Scaffold(
       backgroundColor: _bg(context),
@@ -127,13 +129,14 @@ class _TerrainDetailScreenState extends State<TerrainDetailScreen> {
                   ),
                 ),
                 // Miniatures centrées en bas (sur l'image)
-                Positioned(
-                  bottom: 10,
+                if (images.length > 1)
+                  Positioned(
+                    bottom: 10,
                   left: 0,
                   right: 0,
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
-                    children: List.generate(t.imageUrls.length, (i) {
+                    children: List.generate(images.length, (i) {
                       final selected = _selectedImageIndex == i;
                       return GestureDetector(
                         onTap: () => setState(() => _selectedImageIndex = i),
@@ -152,7 +155,7 @@ class _TerrainDetailScreenState extends State<TerrainDetailScreen> {
                           child: ClipRRect(
                             borderRadius: BorderRadius.circular(6),
                             child: Image.network(
-                              t.imageUrls[i],
+                              images[i],
                               fit: BoxFit.cover,
                               errorBuilder: (_, _, _) =>
                                   Container(color: Colors.grey.shade400),
@@ -275,6 +278,50 @@ class _TerrainDetailScreenState extends State<TerrainDetailScreen> {
               ],
             ),
             const Spacer(),
+            // Bouton Message
+            if (t.managerId != null) ...[
+              GestureDetector(
+                onTap: () async {
+                  final chatProvider = context.read<ChatProvider>();
+                  final auth = context.read<AuthProvider>();
+                  
+                  // Afficher un loader
+                  showDialog(
+                    context: context,
+                    barrierDismissible: false,
+                    builder: (_) => const Center(child: CircularProgressIndicator(color: kGreen)),
+                  );
+
+                  try {
+                    final convData = await chatProvider.getOrCreateDirectConversation(t.managerId!);
+                    Navigator.pop(context); // Fermer le loader
+                    
+                    final chat = ChatPreview.fromJson(convData, auth.user?.id ?? '');
+                    
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => ChatConversationScreen(chat: chat)),
+                    );
+                  } catch (e) {
+                    Navigator.pop(context); // Fermer le loader
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Erreur: $e')),
+                    );
+                  }
+                },
+                child: Container(
+                  width: 50,
+                  height: 50,
+                  decoration: BoxDecoration(
+                    color: kGreen.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: kGreen.withValues(alpha: 0.2)),
+                  ),
+                  child: const Icon(Icons.chat_bubble_outline_rounded, color: kGreen, size: 22),
+                ),
+              ),
+              const SizedBox(width: 10),
+            ],
             GestureDetector(
               onTap: (_selectedSub != null || t.subTerrains.isEmpty) ? () {
                 Navigator.push(context, MaterialPageRoute(

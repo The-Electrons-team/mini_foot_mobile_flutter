@@ -1,0 +1,117 @@
+Resolving dependencies...
+Downloading packages...
+  async 2.13.0 (2.13.1 available)
+  cupertino_icons 1.0.8 (1.0.9 available)
+  flutter_dotenv 5.2.1 (6.0.1 available)
+  flutter_map 7.0.2 (8.3.0 available)
+  flutter_plugin_android_lifecycle 2.0.33 (2.0.34 available)
+  geolocator 13.0.4 (14.0.2 available)
+  geolocator_android 4.6.2 (5.0.2 available)
+  google_fonts 6.3.3 (8.1.0 available)
+  hooks 1.0.2 (1.0.3 available)
+  image_picker 1.2.1 (1.2.2 available)
+  image_picker_android 0.8.13+14 (0.8.13+17 available)
+  latlong2 0.9.1 (0.10.1 available)
+  lottie 3.3.2 (3.3.3 available)
+  matcher 0.12.19 (0.12.20 available)
+  meta 1.17.0 (1.18.2 available)
+  mgrs_dart 2.0.0 (3.0.0 available)
+  native_toolchain_c 0.17.6 (0.18.0 available)
+  path_provider_android 2.2.22 (2.3.1 available)
+  proj4dart 2.1.0 (3.0.0 available)
+  share_plus 10.1.4 (13.1.0 available)
+  share_plus_platform_interface 5.0.2 (7.1.0 available)
+  test_api 0.7.10 (0.7.12 available)
+  unicode 0.3.1 (1.1.9 available)
+  url_launcher_android 6.3.28 (6.3.29 available)
+  vector_math 2.2.0 (2.3.0 available)
+  vm_service 15.0.2 (15.2.0 available)
+  win32 5.15.0 (6.1.0 available)
+  xml 6.6.1 (7.0.1 available)
+Got dependencies!
+28 packages have newer versions incompatible with dependency constraints.
+Try `flutter pub outdated` for more information.
+Analyzing mini_foot_mobile_flutter...                           
+
+   info • The import of 'dart:typed_data' is unnecessary because all of the used elements are also provided by the import of 'package:flutter/services.dart' • lib/booking_confirmation_screen.dart:1:8 • unnecessary_import
+warning • The declaration '_kBeige' isn't referenced • lib/chat_screen.dart:4:13 • unused_element
+warning • Unused import: 'terrain_data.dart' • lib/home_screen.dart:7:8 • unused_import
+   info • Constructors for public widgets should have a named 'key' parameter • lib/home_screen.dart:69:9 • use_key_in_widget_constructors
+   info • Constructors for public widgets should have a named 'key' parameter • lib/home_screen.dart:161:9 • use_key_in_widget_constructors
+   info • Unnecessary use of multiple underscores • lib/home_screen.dart:291:50 • unnecessary_underscores
+   info • Unnecessary use of multiple underscores • lib/home_screen.dart:298:61 • unnecessary_underscores
+   info • Unnecessary use of multiple underscores • lib/home_screen.dart:655:43 • unnecessary_underscores
+   info • Unnecessary use of multiple underscores • lib/home_screen.dart:655:47 • unnecessary_underscores
+warning • The declaration '_FeedPreview' isn't referenced • lib/home_screen.dart:728:7 • unused_element
+   info • Unnecessary use of multiple underscores • lib/home_screen.dart:812:39 • unnecessary_underscores
+   info • Unnecessary use of multiple underscores • lib/home_screen.dart:812:43 • unnecessary_underscores
+   info • Unnecessary use of multiple underscores • lib/home_screen.dart:978:43 • unnecessary_underscores
+   info • Unnecessary use of multiple underscores • lib/home_screen.dart:978:47 • unnecessary_underscores
+warning • The declaration '_kDark' isn't referenced • lib/match_screen.dart:8:13 • unused_element
+   info • The private field _query could be 'final' • lib/match_screen.dart:160:10 • prefer_final_fields
+warning • The value of the field '_query' isn't used • lib/match_screen.dart:160:10 • unused_field
+warning • The value of the local variable 'isAccepted' isn't used • lib/match_screen.dart:492:11 • unused_local_variable
+   info • Unnecessary use of multiple underscores • lib/match_screen.dart:759:35 • unnecessary_underscores
+   info • The variable name '_SectionLabel' isn't a lowerCamelCase identifier • lib/match_screen.dart:820:8 • non_constant_identifier_names
+   info • Unnecessary use of multiple underscores • lib/match_screen.dart:848:35 • unnecessary_underscores
+   info • Unnecessary use of multiple underscores • lib/match_screen.dart:848:39 • unnecessary_underscores
+warning • The value of the field '_showTerrains' isn't used • lib/match_screen.dart:1370:12 • unused_field
+   info • Unnecessary use of string interpolation • lib/match_screen.dart:1584:25 • unnecessary_string_interpolations
+   info • Unnecessary use of multiple underscores • lib/match_screen.dart:1648:45 • unnecessary_underscores
+   info • Unnecessary use of multiple underscores • lib/match_screen.dart:1648:49 • unnecessary_underscores
+   info • Unnecessary use of multiple underscores • lib/match_screen.dart:1760:47 • unnecessary_underscores
+   info • Unnecessary use of multiple underscores • lib/match_screen.dart:1760:51 • unnecessary_underscores
+   info • Unnecessary use of multiple underscores • lib/match_screen.dart:1842:29 • unnecessary_underscores
+   info • Unnecessary use of multiple underscores • lib/match_screen.dart:1842:33 • unnecessary_underscores
+warning • The declaration '_kBeige' isn't referenced • lib/profile_screen.dart:13:13 • unused_element
+   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/profile_screen.dart:325:30 • use_build_context_synchronously
+   info • Statements in an if should be enclosed in a block • lib/profile_screen.dart:639:72 • curly_braces_in_flow_control_structures
+   info • Unnecessary use of multiple underscores • lib/ranking_screen.dart:172:31 • unnecessary_underscores
+   info • Unnecessary use of multiple underscores • lib/ranking_screen.dart:172:35 • unnecessary_underscores
+   info • The variable name '_ColHeader' isn't a lowerCamelCase identifier • lib/ranking_screen.dart:342:8 • non_constant_identifier_names
+   info • The variable name '_ColHeaderPts' isn't a lowerCamelCase identifier • lib/ranking_screen.dart:348:8 • non_constant_identifier_names
+   info • Unnecessary use of multiple underscores • lib/ranking_screen.dart:461:31 • unnecessary_underscores
+   info • Unnecessary use of multiple underscores • lib/ranking_screen.dart:461:35 • unnecessary_underscores
+   info • Unnecessary use of multiple underscores • lib/ranking_screen.dart:592:33 • unnecessary_underscores
+   info • Unnecessary use of multiple underscores • lib/ranking_screen.dart:592:37 • unnecessary_underscores
+   info • The variable name '_Cell' isn't a lowerCamelCase identifier • lib/ranking_screen.dart:654:8 • non_constant_identifier_names
+   info • Use the null-aware marker '?' rather than a null check via an 'if' • lib/services/auth_service.dart:71:9 • use_null_aware_elements
+   info • Unnecessary use of multiple underscores • lib/social_feed_screen.dart:348:33 • unnecessary_underscores
+   info • Unnecessary use of multiple underscores • lib/social_feed_screen.dart:348:37 • unnecessary_underscores
+   info • The private field _loading could be 'final' • lib/social_feed_screen.dart:613:8 • prefer_final_fields
+warning • The value of the field '_loading' isn't used • lib/social_feed_screen.dart:613:8 • unused_field
+warning • Unused import: 'dart:io' • lib/team_composition_screen.dart:1:8 • unused_import
+warning • The declaration '_isDark' isn't referenced • lib/team_composition_screen.dart:7:6 • unused_element
+   info • Unnecessary use of multiple underscores • lib/team_composition_screen.dart:290:45 • unnecessary_underscores
+   info • Unnecessary use of multiple underscores • lib/team_composition_screen.dart:436:39 • unnecessary_underscores
+   info • Unnecessary use of multiple underscores • lib/team_composition_screen.dart:436:43 • unnecessary_underscores
+   info • Unnecessary use of multiple underscores • lib/team_composition_screen.dart:577:37 • unnecessary_underscores
+   info • Unnecessary use of multiple underscores • lib/team_composition_screen.dart:664:35 • unnecessary_underscores
+   info • Unnecessary use of multiple underscores • lib/team_composition_screen.dart:664:39 • unnecessary_underscores
+   info • Unnecessary use of multiple underscores • lib/team_publications_screen.dart:565:29 • unnecessary_underscores
+   info • Unnecessary use of multiple underscores • lib/team_publications_screen.dart:565:33 • unnecessary_underscores
+   info • Unnecessary use of multiple underscores • lib/team_publications_screen.dart:569:27 • unnecessary_underscores
+   info • Unnecessary use of multiple underscores • lib/team_publications_screen.dart:569:31 • unnecessary_underscores
+warning • Unused import: 'dart:io' • lib/team_roster_screen.dart:1:8 • unused_import
+   info • Unnecessary use of multiple underscores • lib/team_roster_screen.dart:331:39 • unnecessary_underscores
+   info • Unnecessary use of multiple underscores • lib/team_roster_screen.dart:331:43 • unnecessary_underscores
+   info • Unnecessary use of multiple underscores • lib/team_screen.dart:114:26 • unnecessary_underscores
+   info • 'value' is deprecated and shouldn't be used. Use component accessors like .r or .g, or toARGB32 for an explicit conversion • lib/team_screen.dart:319:49 • deprecated_member_use
+   info • 'value' is deprecated and shouldn't be used. Use component accessors like .r or .g, or toARGB32 for an explicit conversion • lib/team_screen.dart:407:31 • deprecated_member_use
+   info • 'value' is deprecated and shouldn't be used. Use component accessors like .r or .g, or toARGB32 for an explicit conversion • lib/team_screen.dart:450:25 • deprecated_member_use
+   info • 'value' is deprecated and shouldn't be used. Use component accessors like .r or .g, or toARGB32 for an explicit conversion • lib/team_screen.dart:450:43 • deprecated_member_use
+   info • Unnecessary use of multiple underscores • lib/team_screen.dart:649:48 • unnecessary_underscores
+   info • Unnecessary use of multiple underscores • lib/team_screen.dart:649:52 • unnecessary_underscores
+warning • The declaration '_TabDelegate' isn't referenced • lib/team_tournaments_screen.dart:276:7 • unused_element
+warning • The value of the field '_isRegistered' isn't used • lib/team_tournaments_screen.dart:798:8 • unused_field
+warning • The declaration '_showJoinDialog' isn't referenced • lib/team_tournaments_screen.dart:805:8 • unused_element
+warning • The '!' will have no effect because the receiver can't be null • lib/team_tournaments_screen.dart:1838:35 • unnecessary_non_null_assertion
+warning • The '!' will have no effect because the receiver can't be null • lib/team_tournaments_screen.dart:1839:35 • unnecessary_non_null_assertion
+warning • The declaration '_GCell' isn't referenced • lib/team_tournaments_screen.dart:1902:7 • unused_element
+warning • A value for optional parameter 'highlight' isn't ever given • lib/team_tournaments_screen.dart:1906:66 • unused_element_parameter
+warning • Unused import: 'terrain_data.dart' • lib/terrain_map_screen.dart:12:8 • unused_import
+   info • Unnecessary use of multiple underscores • lib/terrain_map_screen.dart:188:26 • unnecessary_underscores
+   info • Unnecessary use of multiple underscores • lib/terrain_map_screen.dart:434:20 • unnecessary_underscores
+warning • The value of the local variable 'dividerColor' isn't used • lib/terrain_map_screen.dart:497:11 • unused_local_variable
+
+80 issues found. (ran in 15.5s)

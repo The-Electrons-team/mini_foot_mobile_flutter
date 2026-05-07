@@ -61,6 +61,7 @@ class Terrain {
   final List<String> imageUrls;
   final List<String> features;
   final String description;
+  final String? managerId;
   final bool isActive;
   final List<SubTerrain> subTerrains;
 
@@ -75,6 +76,7 @@ class Terrain {
     required this.lat,
     required this.lng,
     required this.imageUrl,
+    this.managerId,
     this.imageUrls = const [],
     this.features = const [],
     this.description = '',
@@ -109,6 +111,7 @@ class Terrain {
       lat: _asDouble(json['lat']),
       lng: _asDouble(json['lng']),
       imageUrl: json['imageUrl']?.toString() ?? json['image_url']?.toString() ?? '',
+      managerId: json['managerId']?.toString(),
       imageUrls: parseList(json['imageUrls'] ?? json['image_urls']),
       features: parseList(json['features']),
       description: json['description']?.toString() ?? '',

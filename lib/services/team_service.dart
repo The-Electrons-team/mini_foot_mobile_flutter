@@ -217,4 +217,16 @@ class TeamService {
       'Saint-Louis',
     ];
   }
+  Future<void> acceptMember(String teamId, String memberId, String token) async {
+    final response = await http.patch(
+      Uri.parse('$_baseUrl/teams/$teamId/members/$memberId/accept'),
+      headers: {
+        'Authorization': 'Bearer $token',
+      },
+    );
+
+    if (response.statusCode != 200 && response.statusCode != 201) {
+      throw Exception('Erreur lors de l\'acceptation du membre: ${response.body}');
+    }
+  }
 }

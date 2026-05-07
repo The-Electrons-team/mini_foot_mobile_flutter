@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
+import 'providers/chat_provider.dart';
+import 'providers/auth_provider.dart';
 
 const Color _kBeige  = Color(0xFFF5F0E8);
 const Color _kGreen  = Color(0xFF006F39);
@@ -79,13 +82,60 @@ class ChatPreview {
     this.isOnline = false,
     this.isSentByMe = false,
   });
+
+  factory ChatPreview.fromJson(Map<String, dynamic> json, String currentUserId) {
+    final String typeStr = json['type'] ?? 'DIRECT';
+    final List participants = json['participants'] ?? [];
+    
+    String name = json['name'] ?? "Conversation";
+    
+    if (typeStr == 'DIRECT') {
+      try {
+        final other = participants.firstWhere(
+          (p) => p['userId'] != currentUserId, 
+          orElse: () => participants.first
+        );
+        final user = other['user'] ?? {};
+        if (user['firstName'] != null) {
+          name = "${user['firstName']} ${user['lastName']}";
+        }
+      } catch (e) {
+        name = "Chat Privé";
+      }
+    }
+
+    final List messages = json['messages'] ?? [];
+    final lastMsg = messages.isNotEmpty ? messages[0]['text'] : "Pas de messages";
+    
+    return ChatPreview(
+      id: json['id'],
+      name: name,
+      lastMessage: lastMsg,
+      time: '12:00', // À formater plus tard
+      unread: 0,
+      type: typeStr == 'DIRECT' ? ChatType.direct : typeStr == 'TEAM' ? ChatType.team : ChatType.manager,
+      initials: name.isNotEmpty ? name[0] : '?',
+      avatarColor: typeStr == 'TEAM' ? const Color(0xFF006F39) : Colors.blueGrey,
+    );
+  }
 }
 
 class ChatMessage {
   final String text;
   final bool isMe;
   final String time;
-  const ChatMessage({required this.text, required this.isMe, required this.time});
+  final String senderName;
+  const ChatMessage({required this.text, required this.isMe, required this.time, this.senderName = "Utilisateur"});
+
+  factory ChatMessage.fromJson(Map<String, dynamic> json, String currentUserId) {
+    final sender = json['sender'] ?? {};
+    return ChatMessage(
+      text: json['text'] ?? '',
+      isMe: json['senderId'] == currentUserId,
+      time: '12:00', // À formater
+      senderName: sender['firstName'] != null ? "${sender['firstName']} ${sender['lastName']}" : "Utilisateur",
+    );
+  }
 }
 
 // ── DONNÉES ──
@@ -645,34 +695,29 @@ class ChatConversationScreen extends StatefulWidget {
 class _ChatConversationScreenState extends State<ChatConversationScreen> {
   final _msgController  = TextEditingController();
   final _scrollController = ScrollController();
-  late List<ChatMessage> _msgs;
 
   @override
   void initState() {
     super.initState();
-    _msgs = List.from(_messages[widget.chat.id] ?? [
-      ChatMessage(text: 'Bonjour, comment puis-je vous aider ?', isMe: false, time: _timeNow()),
-    ]);
-  }
-
-  String _timeNow() {
-    final now = DateTime.now();
-    return '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<ChatProvider>().fetchMessages(widget.chat.id);
+    });
   }
 
   void _send() {
     final text = _msgController.text.trim();
     if (text.isEmpty) return;
-    setState(() {
-      _msgs.add(ChatMessage(text: text, isMe: true, time: _timeNow()));
-      _msgController.clear();
-    });
+    context.read<ChatProvider>().sendMessage(widget.chat.id, text);
+    _msgController.clear();
+    
     Future.delayed(const Duration(milliseconds: 100), () {
-      _scrollController.animateTo(
-        _scrollController.position.maxScrollExtent,
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeOut,
-      );
+      if (_scrollController.hasClients) {
+        _scrollController.animateTo(
+          _scrollController.position.maxScrollExtent,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOut,
+        );
+      }
     });
   }
 
@@ -772,11 +817,34 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
       body: Column(
         children: [
           Expanded(
-            child: ListView.builder(
-              controller: _scrollController,
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-              itemCount: _msgs.length,
-              itemBuilder: (_, i) => _MessageBubble(msg: _msgs[i]),
+            child: Consumer<ChatProvider>(
+              builder: (context, chatProvider, child) {
+                final currentUserId = context.read<AuthProvider>().user?.id ?? '';
+                final messages = chatProvider.getMessages(widget.chat.id)
+                    .map((m) => ChatMessage.fromJson(m, currentUserId))
+                    .toList();
+                
+                if (messages.isEmpty && chatProvider.isLoading) {
+                   return const Center(child: CircularProgressIndicator());
+                }
+
+                return Column(
+                  children: [
+                    Expanded(
+                      child: ListView.builder(
+                        controller: _scrollController,
+                        padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                        itemCount: messages.length,
+                        itemBuilder: (_, i) => _MessageBubble(msg: messages[i]),
+                      ),
+                    ),
+                    if (messages.isEmpty && !chatProvider.isLoading)
+                      _QuickSuggestions(
+                        onSelect: (text) => context.read<ChatProvider>().sendMessage(widget.chat.id, text),
+                      ),
+                  ],
+                );
+              },
             ),
           ),
           // Input
@@ -845,54 +913,72 @@ class _MessageBubble extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final bool isMe = msg.isMe;
     return Align(
-      alignment: msg.isMe ? Alignment.centerRight : Alignment.centerLeft,
-      child: Container(
-        margin: EdgeInsets.only(
-          top: 4, bottom: 4,
-          left: msg.isMe ? 64 : 0,
-          right: msg.isMe ? 0 : 64,
-        ),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-        decoration: BoxDecoration(
-          color: msg.isMe ? _kDark : _card(context),
-          borderRadius: BorderRadius.only(
-            topLeft: const Radius.circular(16),
-            topRight: const Radius.circular(16),
-            bottomLeft: Radius.circular(msg.isMe ? 16 : 4),
-            bottomRight: Radius.circular(msg.isMe ? 4 : 16),
-          ),
-          boxShadow: [
-            BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 6),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: msg.isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
-          children: [
-            Text(msg.text,
-                style: TextStyle(
-                    fontSize: 14,
-                    color: msg.isMe ? Colors.white : _txt(context),
-                    height: 1.4)),
-            const SizedBox(height: 4),
-            Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(msg.time,
-                    style: TextStyle(
-                        fontSize: 10,
-                        color: msg.isMe
-                            ? Colors.white.withOpacity(0.5)
-                            : _sub(context))),
-                if (msg.isMe) ...[
-                  const SizedBox(width: 4),
-                  Icon(Icons.done_all_rounded, size: 13,
-                      color: _kGreen.withOpacity(0.8)),
-                ],
+      alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
+      child: Column(
+        crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+        children: [
+          if (!isMe)
+            Padding(
+              padding: const EdgeInsets.only(left: 14, bottom: 2, top: 4),
+              child: Text(
+                msg.senderName,
+                style: GoogleFonts.orbitron(
+                  fontSize: 9,
+                  fontWeight: FontWeight.w900,
+                  color: _kGreen,
+                ),
+              ),
+            ),
+          Container(
+            margin: EdgeInsets.only(
+              top: 2, bottom: 4,
+              left: isMe ? 64 : 0,
+              right: isMe ? 0 : 64,
+            ),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            decoration: BoxDecoration(
+              color: isMe ? _kDark : _card(context),
+              borderRadius: BorderRadius.only(
+                topLeft: const Radius.circular(16),
+                topRight: const Radius.circular(16),
+                bottomLeft: Radius.circular(isMe ? 16 : 4),
+                bottomRight: Radius.circular(isMe ? 4 : 16),
+              ),
+              boxShadow: [
+                BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 6),
               ],
             ),
-          ],
-        ),
+            child: Column(
+              crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+              children: [
+                Text(msg.text,
+                    style: TextStyle(
+                        fontSize: 14,
+                        color: isMe ? Colors.white : _txt(context),
+                        height: 1.4)),
+                const SizedBox(height: 4),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(msg.time,
+                        style: TextStyle(
+                            fontSize: 10,
+                            color: isMe
+                                ? Colors.white.withOpacity(0.5)
+                                : _sub(context))),
+                    if (isMe) ...[
+                      const SizedBox(width: 4),
+                      Icon(Icons.done_all_rounded, size: 13,
+                          color: _kGreen.withOpacity(0.8)),
+                    ],
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -1219,6 +1305,55 @@ class _ContactPickerSheetState extends State<_ContactPickerSheet> {
             ),
             SizedBox(height: MediaQuery.of(context).padding.bottom + 8),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── QUICK SUGGESTIONS ──
+
+class _QuickSuggestions extends StatelessWidget {
+  final Function(String) onSelect;
+  const _QuickSuggestions({required this.onSelect});
+
+  @override
+  Widget build(BuildContext context) {
+    final suggestions = [
+      'Bonjour !',
+      'Quel est le prix ?',
+      'C\'est disponible ?',
+      'Où vous situez-vous ?',
+      'Merci !',
+    ];
+    return Container(
+      height: 50,
+      margin: const EdgeInsets.only(bottom: 8),
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        itemCount: suggestions.length,
+        itemBuilder: (_, i) => GestureDetector(
+          onTap: () => onSelect(suggestions[i]),
+          child: Container(
+            margin: const EdgeInsets.only(right: 8, top: 8, bottom: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            decoration: BoxDecoration(
+              color: _kGreen.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: _kGreen.withOpacity(0.2)),
+            ),
+            child: Center(
+              child: Text(
+                suggestions[i],
+                style: const TextStyle(
+                  color: _kGreen,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ),
         ),
       ),
     );

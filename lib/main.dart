@@ -10,6 +10,8 @@ import 'providers/terrain_provider.dart';
 import 'providers/notification_provider.dart';
 import 'providers/team_provider.dart';
 import 'providers/reservation_provider.dart';
+import 'providers/chat_provider.dart';
+import 'services/socket_service.dart';
 import 'splash_screen.dart';
 import 'app_navigator.dart';
 
@@ -58,6 +60,14 @@ class MinifootApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => NotificationProvider()),
         ChangeNotifierProvider(create: (_) => TeamProvider()),
         ChangeNotifierProvider(create: (_) => ReservationProvider()),
+        ChangeNotifierProvider(create: (_) => SocketService()),
+        ChangeNotifierProxyProvider2<AuthProvider, SocketService, ChatProvider>(
+          create: (context) => ChatProvider(
+            Provider.of<AuthProvider>(context, listen: false),
+            Provider.of<SocketService>(context, listen: false),
+          ),
+          update: (context, auth, socket, chat) => chat ?? ChatProvider(auth, socket),
+        ),
       ],
       child: ValueListenableBuilder<ThemeMode>(
         valueListenable: themeNotifier,
