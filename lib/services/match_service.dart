@@ -32,7 +32,7 @@ class MatchService {
     if (limit != null) queries.add('limit=$limit');
     
     if (queries.isNotEmpty) {
-      url += '?' + queries.join('&');
+      url += '?${queries.join('&')}';
     }
 
     final response = await http.get(

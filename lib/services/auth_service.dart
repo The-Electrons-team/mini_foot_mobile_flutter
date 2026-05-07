@@ -3,6 +3,17 @@ import 'dart:async';
 import 'package:http/http.dart' as http;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
+String _parseApiError(String body, String defaultMsg) {
+  try {
+    final data = jsonDecode(body) as Map<String, dynamic>;
+    final msg = data['message'];
+    if (msg is List) return msg.join(', ');
+    return msg?.toString() ?? defaultMsg;
+  } catch (_) {
+    return defaultMsg;
+  }
+}
+
 class AuthService {
   static String _resolveBaseUrl() {
     try {
@@ -52,7 +63,7 @@ class AuthService {
     if (response.statusCode == 200 || response.statusCode == 201) {
       return jsonDecode(response.body);
     } else {
-      throw Exception('Erreur d\'inscription: ${response.body}');
+      throw Exception(_parseApiError(response.body, 'Erreur lors de l\'inscription'));
     }
   }
 
@@ -66,7 +77,7 @@ class AuthService {
     if (response.statusCode == 200 || response.statusCode == 201) {
       return jsonDecode(response.body);
     } else {
-      throw Exception('Erreur d\'envoi OTP: ${response.body}');
+      throw Exception(_parseApiError(response.body, 'Erreur lors de l\'envoi du code'));
     }
   }
 
@@ -80,7 +91,7 @@ class AuthService {
     if (response.statusCode == 200 || response.statusCode == 201) {
       return jsonDecode(response.body);
     } else {
-      throw Exception('Erreur de vérification OTP: ${response.body}');
+      throw Exception(_parseApiError(response.body, 'Code OTP invalide ou expiré'));
     }
   }
 
@@ -104,7 +115,7 @@ class AuthService {
     if (response.statusCode == 200 || response.statusCode == 201) {
       return jsonDecode(response.body);
     } else {
-      throw Exception('Erreur d\'inscription: ${response.body}');
+      throw Exception(_parseApiError(response.body, 'Erreur lors de l\'inscription'));
     }
   }
 
@@ -134,7 +145,7 @@ class AuthService {
     if (response.statusCode == 200 || response.statusCode == 201) {
       return jsonDecode(response.body);
     } else {
-      throw Exception('Erreur de mise à jour: ${response.body}');
+      throw Exception(_parseApiError(response.body, 'Erreur lors de la mise à jour du profil'));
     }
   }
 

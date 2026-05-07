@@ -127,7 +127,9 @@ class ReservationService {
   String _parseError(String body) {
     try {
       final data = jsonDecode(body) as Map<String, dynamic>;
-      return data['message']?.toString() ?? 'Erreur serveur';
+      final msg = data['message'];
+      if (msg is List) return msg.join(', ');
+      return msg?.toString() ?? 'Erreur serveur';
     } catch (_) {
       return 'Erreur serveur';
     }
