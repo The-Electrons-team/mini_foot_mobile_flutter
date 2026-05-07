@@ -2,6 +2,87 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'team_screen.dart' show TeamData;
 
+class TournamentsPage extends StatelessWidget {
+  final TeamData team;
+
+  const TournamentsPage({super.key, required this.team});
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final background = Theme.of(context).scaffoldBackgroundColor;
+    final textColor = Theme.of(context).colorScheme.onSurface;
+    final subtitleColor = isDark
+        ? const Color(0xFFF0EBE0).withOpacity(0.58)
+        : Colors.black.withOpacity(0.52);
+
+    return Scaffold(
+      backgroundColor: background,
+      appBar: AppBar(
+        backgroundColor: background,
+        elevation: 0,
+        foregroundColor: textColor,
+        title: Text(
+          'Tournois',
+          style: GoogleFonts.orbitron(
+            fontSize: 18,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+      ),
+      body: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(28),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 86,
+                height: 86,
+                decoration: BoxDecoration(
+                  color: team.color.withOpacity(isDark ? 0.18 : 0.12),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.emoji_events_rounded,
+                  color: team.color,
+                  size: 42,
+                ),
+              ),
+              const SizedBox(height: 24),
+              Text(
+                'Fonctionnalites non disponibles',
+                textAlign: TextAlign.center,
+                style: GoogleFonts.orbitron(
+                  color: textColor,
+                  fontSize: 20,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              const SizedBox(height: 10),
+              Text(
+                'La gestion des tournois pour ${team.name} sera activee prochainement.',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: subtitleColor,
+                  fontSize: 14,
+                  height: 1.45,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/*
+import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'team_screen.dart' show TeamData;
+
 const Color _kGreen = Color(0xFF006F39);
 const Color _kGold  = Color(0xFFE6A800);
 
@@ -2194,3 +2275,4 @@ class _BracketPainter extends CustomPainter {
   @override
   bool shouldRepaint(_BracketPainter old) => old.lineColor != lineColor;
 }
+*/

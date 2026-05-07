@@ -3,7 +3,15 @@ import 'package:http/http.dart' as http;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class TeamService {
-  final String _baseUrl = dotenv.get('API_URL');
+  static String _resolveBaseUrl() {
+    try {
+      return dotenv.env['API_URL'] ?? 'http://localhost:3000/api/v1';
+    } catch (_) {
+      return 'http://localhost:3000/api/v1';
+    }
+  }
+
+  final String _baseUrl = _resolveBaseUrl();
 
   Future<Map<String, dynamic>> createTeam({
     required String token,
@@ -88,11 +96,21 @@ class TeamService {
     throw Exception('Erreur chargement composition: ${response.body}');
   }
 
+  Future<List<dynamic>> getCompositions(String token, String teamId) async {
+    final response = await http.get(
+      Uri.parse('$_baseUrl/teams/$teamId/compositions'),
+      headers: {'Authorization': 'Bearer $token'},
+    );
+    if (response.statusCode == 200) return jsonDecode(response.body);
+    throw Exception('Erreur chargement compositions: ${response.body}');
+  }
+
   Future<Map<String, dynamic>> saveComposition(
     String token,
     String teamId,
     String formation,
     List<Map<String, dynamic>> lineup,
+    {String format = '5v5', int playerCount = 5, String? name, bool? isDefault}
   ) async {
     final response = await http.put(
       Uri.parse('$_baseUrl/teams/$teamId/composition'),
@@ -100,7 +118,14 @@ class TeamService {
         'Authorization': 'Bearer $token',
         'Content-Type': 'application/json',
       },
-      body: jsonEncode({'formation': formation, 'lineup': lineup}),
+      body: jsonEncode({
+        'format': format,
+        'playerCount': playerCount,
+        'formation': formation,
+        'lineup': lineup,
+        if (name != null) 'name': name,
+        if (isDefault != null) 'isDefault': isDefault,
+      }),
     );
     if (response.statusCode == 200 || response.statusCode == 201) return jsonDecode(response.body);
     throw Exception('Erreur sauvegarde composition: ${response.body}');
@@ -109,7 +134,7 @@ class TeamService {
   Future<List<dynamic>> searchTeams({String? zone, String? query, String? excludeId}) async {
     var url = '$_baseUrl/teams/search';
     List<String> params = [];
-    if (zone != null && zone != 'Toutes') params.add('zone=$zone');
+    if (zone != null && zone.isNotEmpty && zone != 'Toutes') params.add('zone=$zone');
     if (query != null && query.isNotEmpty) params.add('query=$query');
     if (excludeId != null) params.add('excludeId=$excludeId');
     if (params.isNotEmpty) url += '?' + params.join('&');

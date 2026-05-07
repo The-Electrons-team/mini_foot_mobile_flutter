@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'providers/auth_provider.dart';
 import 'providers/notification_provider.dart';
 import 'package:intl/intl.dart';
+import 'matches_screen.dart';
 
 const Color _kGreen = Color(0xFF006F39);
 
@@ -149,18 +150,14 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                               const _SectionLabel(label: 'Nouvelles'),
                               ...unread.map((n) => _NotifTile(
                                     notif: n,
-                                    onTap: () {
-                                      if (authProv.token != null) {
-                                        notifProv.markAsRead(authProv.token!, n.id);
-                                      }
-                                    },
+                                    onTap: () => _openNotification(n, authProv, notifProv),
                                   )),
                             ],
                             if (read.isNotEmpty) ...[
                               const _SectionLabel(label: 'Précédentes'),
                               ...read.map((n) => _NotifTile(
                                     notif: n,
-                                    onTap: () {},
+                                    onTap: () => _openNotification(n, authProv, notifProv),
                                   )),
                             ],
                           ],
@@ -170,6 +167,28 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         ),
       ),
     );
+  }
+
+  void _openNotification(
+    NotificationModel notification,
+    AuthProvider authProv,
+    NotificationProvider notifProv,
+  ) {
+    if (authProv.token != null && !notification.read) {
+      notifProv.markAsRead(authProv.token!, notification.id);
+    }
+
+    final isChallenge = notification.type == NotifType.CHALLENGE_RECEIVED ||
+        notification.type == NotifType.CHALLENGE_RESPONSE;
+    final targetScreen = notification.data?['screen']?.toString();
+
+    if (isChallenge || targetScreen == 'matches') {
+      final tabIndex = int.tryParse(notification.data?['tabIndex']?.toString() ?? '') ?? 2;
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => MatchesScreen(initialTab: tabIndex)),
+      );
+    }
   }
 }
 
@@ -191,6 +210,10 @@ class _NotifTile extends StatelessWidget {
   final NotificationModel notif;
   final VoidCallback onTap;
   const _NotifTile({required this.notif, required this.onTap});
+
+  bool get _isActionableChallenge =>
+      notif.type == NotifType.CHALLENGE_RECEIVED ||
+      notif.type == NotifType.CHALLENGE_RESPONSE;
 
   IconData get _icon {
     switch (notif.type) {
@@ -243,6 +266,7 @@ class _NotifTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final muted = notif.read && !_isActionableChallenge;
     final readCardColor = _isDark(context)
         ? _card(context).withOpacity(0.5)
         : Colors.white.withOpacity(0.6);
@@ -253,12 +277,12 @@ class _NotifTile extends StatelessWidget {
         margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: notif.read ? readCardColor : _card(context),
+          color: muted ? readCardColor : _card(context),
           borderRadius: BorderRadius.circular(18),
-          boxShadow: notif.read
+          boxShadow: muted
               ? null
               : [BoxShadow(color: Colors.black.withOpacity(0.06), blurRadius: 10, offset: const Offset(0, 3))],
-          border: notif.read
+          border: muted
               ? null
               : Border.all(color: _color.withOpacity(0.12)),
         ),
@@ -268,10 +292,10 @@ class _NotifTile extends StatelessWidget {
             Container(
               width: 42, height: 42,
               decoration: BoxDecoration(
-                color: _color.withOpacity(notif.read ? 0.07 : 0.12),
+                color: _color.withOpacity(muted ? 0.07 : 0.12),
                 borderRadius: BorderRadius.circular(13),
               ),
-              child: Icon(_icon, color: _color.withOpacity(notif.read ? 0.5 : 1.0), size: 20),
+              child: Icon(_icon, color: _color.withOpacity(muted ? 0.5 : 1.0), size: 20),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -285,7 +309,7 @@ class _NotifTile extends StatelessWidget {
                             style: TextStyle(
                                 fontWeight: notif.read ? FontWeight.w600 : FontWeight.w800,
                                 fontSize: 13.5,
-                                color: notif.read ? _sub(context) : _txt(context))),
+                                color: muted ? _sub(context) : _txt(context))),
                       ),
                       if (!notif.read)
                         Container(
@@ -298,7 +322,7 @@ class _NotifTile extends StatelessWidget {
                   Text(notif.body,
                       style: TextStyle(
                           fontSize: 12,
-                          color: notif.read ? _sub(context).withOpacity(0.7) : _sub(context),
+                          color: muted ? _sub(context).withOpacity(0.7) : _sub(context),
                           height: 1.4),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis),
@@ -306,8 +330,8 @@ class _NotifTile extends StatelessWidget {
                   Text(_formatDate(notif.createdAt),
                       style: TextStyle(
                           fontSize: 11,
-                          color: notif.read ? _sub(context).withOpacity(0.6) : _color,
-                          fontWeight: notif.read ? FontWeight.w400 : FontWeight.w600)),
+                          color: muted ? _sub(context).withOpacity(0.6) : _color,
+                          fontWeight: muted ? FontWeight.w400 : FontWeight.w600)),
                 ],
               ),
             ),

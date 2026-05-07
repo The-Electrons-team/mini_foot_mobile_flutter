@@ -1,26 +1,44 @@
 import 'dart:convert';
+import 'dart:async';
 import 'package:http/http.dart' as http;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class AuthService {
-  final String _baseUrl = dotenv.get('API_URL');
+  static String _resolveBaseUrl() {
+    try {
+      return dotenv.env['API_URL'] ?? 'http://localhost:3000/api/v1';
+    } catch (_) {
+      return 'http://localhost:3000/api/v1';
+    }
+  }
+
+  final String _baseUrl = _resolveBaseUrl();
 
   Future<Map<String, dynamic>> login(String phone, String password) async {
-    final response = await http.post(
-      Uri.parse('$_baseUrl/auth/login'),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({
-        'phone': phone,
-        'password': password,
-      }),
-    );
+    try {
+      final response = await http.post(
+        Uri.parse('$_baseUrl/auth/login'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'phone': phone,
+          'password': password,
+        }),
+      ).timeout(const Duration(seconds: 12));
 
-    if (response.statusCode == 200 || response.statusCode == 201) {
-      return jsonDecode(response.body);
-    } else if (response.statusCode == 404) {
-      throw Exception('COMPTE_NON_TROUVE');
-    } else {
-      throw Exception('Erreur de connexion: ${response.body}');
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return jsonDecode(response.body);
+      }
+      if (response.statusCode == 401 || response.statusCode == 404) {
+        throw Exception('AUTH_INVALID');
+      }
+      if (response.statusCode >= 500) {
+        throw Exception('SERVER_UNAVAILABLE');
+      }
+      throw Exception('SERVER_UNAVAILABLE');
+    } on TimeoutException {
+      throw Exception('SERVER_UNAVAILABLE');
+    } on http.ClientException {
+      throw Exception('SERVER_UNAVAILABLE');
     }
   }
 

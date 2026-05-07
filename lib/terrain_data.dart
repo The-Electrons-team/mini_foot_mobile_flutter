@@ -39,16 +39,17 @@ class SubTerrain {
     return SubTerrain(
       id: json['id']?.toString() ?? '',
       name: json['name']?.toString() ?? '',
-      capacity: (json['capacity'] ?? 10).toInt(),
+      capacity: _asInt(json['capacity'], fallback: 10),
       type: json['type']?.toString() ?? '5v5',
       surface: json['surface']?.toString(),
-      pricePerHour: (json['pricePerHour'] ?? json['price_per_hour'])?.toInt(),
+      pricePerHour: _asNullableInt(json['pricePerHour'] ?? json['price_per_hour']),
     );
   }
 }
 
 class Terrain {
   final String id;
+  final String? subTerrainId;
   final String name;
   final String address;
   final String zone;
@@ -65,6 +66,7 @@ class Terrain {
 
   const Terrain({
     required this.id,
+    this.subTerrainId,
     required this.name,
     required this.address,
     required this.zone,
@@ -98,19 +100,21 @@ class Terrain {
 
     return Terrain(
       id: json['id']?.toString() ?? '',
+      subTerrainId: json['subTerrainId']?.toString() ?? json['sub_terrain_id']?.toString(),
       name: json['name']?.toString() ?? '',
       address: json['address']?.toString() ?? '',
       zone: json['zone']?.toString() ?? '',
-      pricePerHour: (json['pricePerHour'] ?? json['price_per_hour'] ?? 0).toInt(),
-      rating: (json['rating'] ?? 0).toDouble(),
-      lat: (json['lat'] ?? 0).toDouble(),
-      lng: (json['lng'] ?? 0).toDouble(),
+      pricePerHour: _asInt(json['pricePerHour'] ?? json['price_per_hour']),
+      rating: _asDouble(json['rating']),
+      lat: _asDouble(json['lat']),
+      lng: _asDouble(json['lng']),
       imageUrl: json['imageUrl']?.toString() ?? json['image_url']?.toString() ?? '',
       imageUrls: parseList(json['imageUrls'] ?? json['image_urls']),
       features: parseList(json['features']),
       description: json['description']?.toString() ?? '',
-      isActive: json['isActive'] ?? json['is_active'] ?? true,
+      isActive: json['isActive'] is bool ? json['isActive'] as bool : json['is_active'] is bool ? json['is_active'] as bool : true,
       subTerrains: (json['subTerrains'] as List? ?? [])
+          .whereType<Map<String, dynamic>>()
           .map((s) => SubTerrain.fromJson(s))
           .toList(),
     );
@@ -129,6 +133,24 @@ class Terrain {
     if (RegExp(r'\d+ x \d+').hasMatch(f)) return Icons.straighten_rounded;
     return Icons.check_circle_outline_rounded;
   }
+}
+
+int _asInt(dynamic value, {int fallback = 0}) {
+  if (value == null) return fallback;
+  if (value is num) return value.toInt();
+  return int.tryParse(value.toString()) ?? fallback;
+}
+
+int? _asNullableInt(dynamic value) {
+  if (value == null) return null;
+  if (value is num) return value.toInt();
+  return int.tryParse(value.toString());
+}
+
+double _asDouble(dynamic value, {double fallback = 0}) {
+  if (value == null) return fallback;
+  if (value is num) return value.toDouble();
+  return double.tryParse(value.toString()) ?? fallback;
 }
 
 class TerrainReview {

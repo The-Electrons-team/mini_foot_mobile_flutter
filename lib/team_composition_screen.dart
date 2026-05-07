@@ -158,7 +158,7 @@ class _CompositionPageState extends State<CompositionPage> {
         ...lineupData,
         // slot spécial -1 pour stocker le playerCount
         {'slot': -1, 'memberId': null, 'playerCount': _playerCount},
-      ]);
+      ], format: '${_playerCount}v$_playerCount', playerCount: _playerCount, name: 'Composition ${_playerCount}v$_playerCount');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(

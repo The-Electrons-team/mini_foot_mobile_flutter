@@ -5,7 +5,15 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import '../terrain_data.dart';
 
 class TerrainService {
-  final String _base = dotenv.get('API_URL');
+  static String _resolveBaseUrl() {
+    try {
+      return dotenv.env['API_URL'] ?? 'http://localhost:3000/api/v1';
+    } catch (_) {
+      return 'http://localhost:3000/api/v1';
+    }
+  }
+
+  final String _base = _resolveBaseUrl();
 
   Future<List<Terrain>> fetchTerrains({String? search, String? zone, int page = 1, int limit = 20, double? lat, double? lng}) async {
     final params = <String, String>{

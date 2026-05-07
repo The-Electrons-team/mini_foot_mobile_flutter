@@ -81,8 +81,9 @@ class _AuthScreenState extends State<AuthScreen>
         // --- MODE CONNEXION ---
         final password = _passwordController.text.trim();
         if (password.isEmpty) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Veuillez saisir votre mot de passe')),
+          _showAuthErrorDialog(
+            title: 'Mot de passe requis',
+            message: 'Veuillez saisir votre mot de passe.',
           );
           return;
         }
@@ -120,18 +121,46 @@ class _AuthScreenState extends State<AuthScreen>
         );
       }
     } catch (e) {
-      String message = 'Une erreur est survenue';
-      if (e.toString().contains('COMPTE_NON_TROUVE')) {
-        message = 'Compte non trouvé. Veuillez vous inscrire.';
-      } else if (e.toString().contains('déjà utilisé')) {
+      final raw = e.toString();
+      String title = 'Connexion impossible';
+      String message = 'Nos serveurs sont momentanément indisponibles. Veuillez réessayer dans quelques instants.';
+
+      if (raw.contains('AUTH_INVALID') || raw.contains('COMPTE_NON_TROUVE') || raw.contains('Identifiants invalides')) {
+        message = 'Mot de passe ou téléphone incorrect.';
+      } else if (raw.contains('SERVER_UNAVAILABLE') || raw.contains('SocketException') || raw.contains('TimeoutException')) {
+        message = 'Nos serveurs sont momentanément indisponibles. Veuillez réessayer dans quelques instants.';
+      } else if (raw.contains('déjà utilisé')) {
+        title = 'Inscription impossible';
         message = 'Ce numéro est déjà utilisé par un autre compte.';
-      } else {
-        message = e.toString().replaceAll('Exception: ', '');
       }
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(message)),
-      );
+
+      if (!mounted) return;
+      _showAuthErrorDialog(title: title, message: message);
     }
+  }
+
+  void _showAuthErrorDialog({required String title, required String message}) {
+    if (!mounted) return;
+    showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+        title: Text(
+          title,
+          style: const TextStyle(fontWeight: FontWeight.w800, color: kGreen),
+        ),
+        content: Text(
+          message,
+          style: TextStyle(color: Colors.black.withOpacity(0.72), height: 1.35),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text('OK', style: TextStyle(color: kGreen, fontWeight: FontWeight.w800)),
+          ),
+        ],
+      ),
+    );
   }
 
 
