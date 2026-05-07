@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'terrain_data.dart';
+import 'services/terrain_service.dart';
 import 'payment_screen.dart';
 
 const Color kGreen = Color(0xFF006F39);
@@ -9,21 +10,37 @@ const Color kBeige = Color(0xFFF5F0E8);
 
 class TerrainBookingScreen extends StatefulWidget {
   final Terrain terrain;
-  const TerrainBookingScreen({super.key, required this.terrain});
+  final SubTerrain? initialSubTerrain;
+  const TerrainBookingScreen({super.key, required this.terrain, this.initialSubTerrain});
 
   @override
   State<TerrainBookingScreen> createState() => _TerrainBookingScreenState();
 }
 
 class _TerrainBookingScreenState extends State<TerrainBookingScreen> {
+  final TerrainService _service = TerrainService();
+
   DateTime _focusedMonth = DateTime.now();
   DateTime? _selectedDay;
 
-  // Heure sous forme de minutes depuis minuit (08h = 480, 00h = 1440)
-  int? _startMin;
-  int? _endMin;
+  SubTerrain? _selectedSubTerrain;
 
-  static const List<int> _minutes = [0, 15, 30, 45];
+  List<TerrainSlot> _slots = [];
+  bool _slotsLoading = false;
+  int _selectedDuration = 60; // en minutes
+  int? _selectedStartMin;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.initialSubTerrain != null) {
+      _selectedSubTerrain = widget.initialSubTerrain;
+    } else if (widget.terrain.subTerrains.isNotEmpty) {
+      _selectedSubTerrain = widget.terrain.subTerrains.first;
+    }
+  }
+
+  static const List<int> _minutes = [0, 30];
 
   // Convertit heure+min en minutes (0 = minuit → 1440)
   int _toMin(int hour, int min) => hour == 0 ? 1440 + min : hour * 60 + min;
@@ -35,36 +52,53 @@ class _TerrainBookingScreenState extends State<TerrainBookingScreen> {
     return '${h.toString().padLeft(2,'0')}h${m.toString().padLeft(2,'0')}';
   }
 
+  Future<void> _loadSlots(DateTime day) async {
+    setState(() { _slotsLoading = true; _slots = []; });
+    try {
+      final date = '${day.year}-${day.month.toString().padLeft(2, '0')}-${day.day.toString().padLeft(2, '0')}';
+      _slots = await _service.fetchSlots(
+        widget.terrain.id, 
+        date, 
+        subTerrainId: _selectedSubTerrain?.id
+      );
+    } catch (_) {
+    } finally {
+      if (mounted) setState(() => _slotsLoading = false);
+    }
+  }
+
   // Slot grisé ?
   bool _isBooked(int hour, int min) {
+    if (_slots.isEmpty) return false;
     final label = '${hour.toString().padLeft(2,'0')}h${min.toString().padLeft(2,'0')}';
-    return widget.terrain.bookedSlots.contains(label);
+    final slot = _slots.firstWhere(
+      (s) => s.slot == label,
+      orElse: () => TerrainSlot(slot: label, available: true),
+    );
+    return !slot.available;
   }
 
-  // Prix par 15 min
+  // Prix par 30 min
   int get _pricePerSlot {
-    final raw = int.tryParse(
-        widget.terrain.price.replaceAll(RegExp(r'[^0-9]'), '')) ?? 0;
-    return raw ~/ 4;
+    final price = _selectedSubTerrain?.pricePerHour ?? widget.terrain.pricePerHour;
+    return price ~/ 2;
   }
 
-  int get _intervals =>
-      _startMin != null && _endMin != null
-          ? (_endMin! - _startMin!) ~/ 15
-          : 0;
+  int get _intervals => _selectedDuration ~/ 30;
 
   int get _totalPrice => _intervals * _pricePerSlot;
 
   String get _durationLabel {
-    final m = _intervals * 15;
-    final h = m ~/ 60;
-    final min = m % 60;
-    if (h == 0) return '${m}min';
+    final h = _selectedDuration ~/ 60;
+    final min = _selectedDuration % 60;
+    if (h == 0) return '${_selectedDuration}min';
     if (min == 0) return '${h}h';
-    return '${h}h${min.toString().padLeft(2,'0')}';
+    return '${h}h${min.toString().padLeft(2, '0')}';
   }
 
-  bool get _canConfirm => _selectedDay != null && _startMin != null && _endMin != null;
+  bool get _canConfirm => _selectedStartMin != null && _selectedDay != null;
+
+  int get _endMin => (_selectedStartMin ?? 0) + _selectedDuration;
 
   // ── CALENDRIER ──
   List<DateTime> _daysInMonth() {
@@ -132,6 +166,59 @@ class _TerrainBookingScreenState extends State<TerrainBookingScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    // ── SÉLECTION DU TERRAIN ──
+                    if (widget.terrain.subTerrains.isNotEmpty) ...[
+                      const Text('Choisir un terrain',
+                          style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15, color: kDark)),
+                      const SizedBox(height: 10),
+                      SizedBox(
+                        height: 54,
+                        child: ListView.builder(
+                          scrollDirection: Axis.horizontal,
+                          itemCount: widget.terrain.subTerrains.length,
+                          itemBuilder: (context, i) {
+                            final s = widget.terrain.subTerrains[i];
+                            final selected = _selectedSubTerrain?.id == s.id;
+                            return GestureDetector(
+                              onTap: () {
+                                setState(() {
+                                  _selectedSubTerrain = s;
+                                  _selectedStartMin = null;
+                                });
+                                if (_selectedDay != null) _loadSlots(_selectedDay!);
+                              },
+                              child: AnimatedContainer(
+                                duration: const Duration(milliseconds: 180),
+                                margin: const EdgeInsets.only(right: 12),
+                                padding: const EdgeInsets.symmetric(horizontal: 16),
+                                decoration: BoxDecoration(
+                                  color: selected ? kDark : Colors.white,
+                                  borderRadius: BorderRadius.circular(14),
+                                  border: Border.all(color: selected ? kDark : const Color(0xFFEEEEEE)),
+                                ),
+                                child: Center(
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Text(s.name, style: TextStyle(
+                                        color: selected ? Colors.white : kDark,
+                                        fontWeight: FontWeight.w700,
+                                        fontSize: 12
+                                      )),
+                                      Text('${s.type} · ${s.capacity} pers', style: TextStyle(
+                                        color: selected ? Colors.white70 : Colors.black45,
+                                        fontSize: 10
+                                      )),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                      const SizedBox(height: 22),
+                    ],
 
                     // ── CALENDRIER ──
                     Container(
@@ -140,7 +227,7 @@ class _TerrainBookingScreenState extends State<TerrainBookingScreen> {
                         border: Border.all(color: const Color(0xFFEEEEEE)),
                         borderRadius: BorderRadius.circular(18),
                         boxShadow: [BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.03),
+                            color: Colors.black.withOpacity(0.03),
                             blurRadius: 10)],
                         color: Colors.white,
                       ),
@@ -191,7 +278,7 @@ class _TerrainBookingScreenState extends State<TerrainBookingScreen> {
                                     style: TextStyle(
                                         fontSize: 11,
                                         fontWeight: FontWeight.w600,
-                                        color: Colors.black.withValues(alpha: 0.35))),
+                                        color: Colors.black.withOpacity(0.35))),
                               )).toList(),
                           ),
                           const SizedBox(height: 6),
@@ -212,11 +299,13 @@ class _TerrainBookingScreenState extends State<TerrainBookingScreen> {
                                   day.month == DateTime.now().month &&
                                   day.year == DateTime.now().year;
                               return GestureDetector(
-                                onTap: past ? null : () => setState(() {
-                                  _selectedDay = day;
-                                  _startMin = null;
-                                  _endMin = null;
-                                }),
+                                onTap: past ? null : () {
+                                  setState(() {
+                                    _selectedDay = day;
+                                    _selectedStartMin = null;
+                                  });
+                                  _loadSlots(day);
+                                },
                                 child: AnimatedContainer(
                                   duration: const Duration(milliseconds: 180),
                                   margin: const EdgeInsets.all(2),
@@ -224,7 +313,7 @@ class _TerrainBookingScreenState extends State<TerrainBookingScreen> {
                                     color: selected
                                         ? kDark
                                         : isToday
-                                            ? kGreen.withValues(alpha: 0.12)
+                                            ? kGreen.withOpacity(0.12)
                                             : Colors.transparent,
                                     shape: BoxShape.circle,
                                   ),
@@ -238,7 +327,7 @@ class _TerrainBookingScreenState extends State<TerrainBookingScreen> {
                                             color: selected
                                                 ? Colors.white
                                                 : past
-                                                    ? Colors.black.withValues(alpha: 0.2)
+                                                    ? Colors.black.withOpacity(0.2)
                                                     : kDark)),
                                   ),
                                 ),
@@ -270,7 +359,7 @@ class _TerrainBookingScreenState extends State<TerrainBookingScreen> {
                           Text('Indisponible',
                               style: TextStyle(
                                   fontSize: 10,
-                                  color: Colors.black.withValues(alpha: 0.4))),
+                                  color: Colors.black.withOpacity(0.4))),
                         ]),
                       ],
                     ),
@@ -279,17 +368,15 @@ class _TerrainBookingScreenState extends State<TerrainBookingScreen> {
 
                     // Indication de sélection
                     Text(
-                      _startMin == null
-                          ? 'Touchez une plage pour le début'
-                          : _endMin == null
-                              ? 'Maintenant choisissez la fin  (${_fmt(_startMin!)} → ...)'
-                              : '${_fmt(_startMin!)} → ${_fmt(_endMin!)}  ·  $_durationLabel  ·  $_totalPrice F',
+                      _selectedStartMin == null
+                          ? 'Choisissez une heure de début'
+                          : '${_fmt(_selectedStartMin!)} → ${_fmt(_endMin)}  ·  $_durationLabel  ·  $_totalPrice F',
                       style: TextStyle(
                           fontSize: 12,
-                          color: _startMin != null && _endMin != null
+                          color: _selectedStartMin != null
                               ? kGreen
-                              : Colors.black.withValues(alpha: 0.45),
-                          fontWeight: _startMin != null && _endMin != null
+                              : Colors.black.withOpacity(0.45),
+                          fontWeight: _selectedStartMin != null
                               ? FontWeight.w600
                               : FontWeight.normal),
                     ),
@@ -303,36 +390,37 @@ class _TerrainBookingScreenState extends State<TerrainBookingScreen> {
                         border: Border.all(color: const Color(0xFFEEEEEE)),
                         borderRadius: BorderRadius.circular(14),
                       ),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(14),
-                        child: SingleChildScrollView(
-                          padding: const EdgeInsets.symmetric(
-                              vertical: 8, horizontal: 10),
-                          child: Column(
-                            children: _buildTimeRows(),
-                          ),
-                        ),
-                      ),
+                      child: _slotsLoading
+                          ? const Center(child: CircularProgressIndicator())
+                          : ClipRRect(
+                              borderRadius: BorderRadius.circular(14),
+                              child: SingleChildScrollView(
+                                padding: const EdgeInsets.symmetric(
+                                    vertical: 8, horizontal: 10),
+                                child: Column(
+                                  children: _buildTimeRows(),
+                                ),
+                              ),
+                            ),
                     ),
 
-                    if (_startMin != null)
+                    if (_selectedStartMin != null)
                       Padding(
                         padding: const EdgeInsets.only(top: 8),
                         child: GestureDetector(
                           onTap: () => setState(() {
-                            _startMin = null;
-                            _endMin = null;
+                            _selectedStartMin = null;
                           }),
                           child: Row(
                             children: [
                               Icon(Icons.refresh_rounded,
                                   size: 14,
-                                  color: Colors.black.withValues(alpha: 0.4)),
+                                  color: Colors.black.withOpacity(0.4)),
                               const SizedBox(width: 4),
-                              Text('Réinitialiser la sélection',
+                              const Text('Réinitialiser la sélection',
                                   style: TextStyle(
                                       fontSize: 12,
-                                      color: Colors.black.withValues(alpha: 0.4))),
+                                      color: Colors.black54)),
                             ],
                           ),
                         ),
@@ -351,7 +439,7 @@ class _TerrainBookingScreenState extends State<TerrainBookingScreen> {
               decoration: BoxDecoration(
                 color: kBeige,
                 boxShadow: [BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.06),
+                    color: Colors.black.withOpacity(0.06),
                     blurRadius: 12,
                     offset: const Offset(0, -3))],
               ),
@@ -364,16 +452,16 @@ class _TerrainBookingScreenState extends State<TerrainBookingScreen> {
                           horizontal: 14, vertical: 10),
                       margin: const EdgeInsets.only(bottom: 10),
                       decoration: BoxDecoration(
-                        color: kGreen.withValues(alpha: 0.06),
+                        color: kGreen.withOpacity(0.06),
                         borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: kGreen.withValues(alpha: 0.2)),
+                        border: Border.all(color: kGreen.withOpacity(0.2)),
                       ),
                       child: Row(
                         children: [
                           const Icon(Icons.access_time_rounded,
                               color: kGreen, size: 16),
                           const SizedBox(width: 8),
-                          Text('${_fmt(_startMin!)} → ${_fmt(_endMin!)}  ·  $_durationLabel',
+                          Text('${_fmt(_selectedStartMin!)} → ${_fmt(_endMin)}  ·  $_durationLabel',
                               style: const TextStyle(
                                   fontSize: 12,
                                   fontWeight: FontWeight.w600,
@@ -394,9 +482,10 @@ class _TerrainBookingScreenState extends State<TerrainBookingScreen> {
                             Navigator.push(context, MaterialPageRoute(
                               builder: (_) => PaymentScreen(
                                 terrain: widget.terrain,
+                                subTerrain: _selectedSubTerrain,
                                 date: _selectedDay!,
-                                startSlot: _fmt(_startMin!),
-                                endSlot: _fmt(_endMin!),
+                                startSlot: _fmt(_selectedStartMin!),
+                                endSlot: _fmt(_endMin),
                                 totalPrice: _totalPrice,
                                 intervals: _intervals,
                               ),
@@ -445,124 +534,134 @@ class _TerrainBookingScreenState extends State<TerrainBookingScreen> {
     );
   }
 
-  // ── CONSTRUCTION DE LA GRILLE ──
+  // ── NOUVELLE UI BASÉE SUR LA DURÉE ──
   List<Widget> _buildTimeRows() {
-    final rows = <Widget>[];
-
-    // Lignes de 08h à 23h (start) + ligne 00h (fin uniquement si startMin set)
-    for (int h = 8; h <= 23; h++) {
-      rows.add(_buildHourRow(h));
-    }
-    // Ligne minuit (00h00) uniquement comme heure de fin possible
-    if (_startMin != null) {
-      rows.add(_buildHourRow(0, endOnly: true));
-    }
-
-    return rows;
+    return [
+      _buildDurationSelector(),
+      const SizedBox(height: 24),
+      const Text('Heure de début', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 14, color: kDark)),
+      const SizedBox(height: 16),
+      _buildStartTimeGrid(),
+      const SizedBox(height: 40),
+    ];
   }
 
-  Widget _buildHourRow(int hour, {bool endOnly = false}) {
-    final label = hour == 0 ? '00h' : '${hour}h';
-
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 5),
+  Widget _buildDurationSelector() {
+    final durations = [60, 90, 120];
+    return Container(
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF2F2F2),
+        borderRadius: BorderRadius.circular(12),
+      ),
       child: Row(
-        children: [
-          SizedBox(
-            width: 32,
-            child: Text(label,
-                style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.black.withValues(alpha: 0.4))),
-          ),
-          Expanded(
-            child: Row(
-              children: _minutes.map((min) {
-                // Pour 00h on n'affiche que 00
-                if (hour == 0 && min > 0) return const Expanded(child: SizedBox());
-
-                final totalMin = _toMin(hour, min);
-                final booked = _isBooked(hour, min);
-
-                // Logique de sélection
-                final isStart = _startMin != null && _startMin == totalMin;
-                final isEnd = _endMin != null && _endMin == totalMin;
-                final isBetween = _startMin != null &&
-                    _endMin != null &&
-                    totalMin > _startMin! &&
-                    totalMin < _endMin!;
-
-                // Peut-on sélectionner ?
-                bool canTap;
-                if (booked) {
-                  canTap = false;
-                } else if (_startMin == null) {
-                  // Phase 1 : sélection début (pas 00h)
-                  canTap = !endOnly;
-                } else if (_endMin == null) {
-                  // Phase 2 : sélection fin (doit être après début)
-                  canTap = totalMin > _startMin!;
-                } else {
-                  // Reset
-                  canTap = true;
-                }
-
-                Color bgColor;
-                Color textColor;
-                if (booked) {
-                  bgColor = const Color(0xFFEEEEEE);
-                  textColor = const Color(0xFFBBBBBB);
-                } else if (isStart || isEnd) {
-                  bgColor = kDark;
-                  textColor = Colors.white;
-                } else if (isBetween) {
-                  bgColor = kGreen.withValues(alpha: 0.12);
-                  textColor = kGreen;
-                } else {
-                  bgColor = const Color(0xFFF2F2F2);
-                  textColor = canTap ? Colors.black54 : const Color(0xFFCCCCCC);
-                }
-
-                return Expanded(
-                  child: GestureDetector(
-                    onTap: canTap
-                        ? () => setState(() {
-                              if (_startMin == null || _endMin != null) {
-                                // Nouveau début
-                                _startMin = totalMin;
-                                _endMin = null;
-                              } else {
-                                // Fin
-                                _endMin = totalMin;
-                              }
-                            })
-                        : null,
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 120),
-                      margin: const EdgeInsets.symmetric(horizontal: 2),
-                      padding: const EdgeInsets.symmetric(vertical: 6),
-                      decoration: BoxDecoration(
-                        color: bgColor,
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Center(
-                        child: Text(
-                          min.toString().padLeft(2, '0'),
-                          style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w700,
-                              color: textColor),
-                        ),
-                      ),
+        children: durations.map((d) {
+          final isSel = _selectedDuration == d;
+          return Expanded(
+            child: GestureDetector(
+              onTap: () => setState(() { 
+                _selectedDuration = d; 
+                _selectedStartMin = null; // Reset start on duration change
+              }),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                padding: const EdgeInsets.symmetric(vertical: 10),
+                decoration: BoxDecoration(
+                  color: isSel ? Colors.white : Colors.transparent,
+                  borderRadius: BorderRadius.circular(10),
+                  boxShadow: isSel ? [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 4, offset: const Offset(0, 2))] : null,
+                ),
+                child: Center(
+                  child: Text(
+                    '${d} min',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: isSel ? FontWeight.w800 : FontWeight.w600,
+                      color: isSel ? kGreen : kDark.withOpacity(0.5),
                     ),
                   ),
-                );
-              }).toList(),
+                ),
+              ),
             ),
-          ),
-        ],
+          );
+        }).toList(),
       ),
     );
+  }
+
+  Widget _buildStartTimeGrid() {
+    final startTimes = _getAvailableStartTimes();
+    if (startTimes.isEmpty) {
+      return Container(
+        padding: const EdgeInsets.symmetric(vertical: 40),
+        child: Center(
+          child: Column(
+            children: [
+              Icon(Icons.event_busy_rounded, size: 40, color: kDark.withOpacity(0.1)),
+              const SizedBox(height: 12),
+              Text('Aucun créneau disponible pour cette durée', 
+                  style: TextStyle(color: kDark.withOpacity(0.4), fontSize: 13)),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return Wrap(
+      spacing: 10,
+      runSpacing: 10,
+      children: startTimes.map((t) {
+        final isSel = _selectedStartMin == t;
+        return GestureDetector(
+          onTap: () => setState(() => _selectedStartMin = t),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 150),
+            width: (MediaQuery.of(context).size.width - 64) / 4,
+            height: 44,
+            decoration: BoxDecoration(
+              color: isSel ? kGreen : Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: isSel ? kGreen : const Color(0xFFE0E0E0)),
+              boxShadow: isSel ? [BoxShadow(color: kGreen.withOpacity(0.2), blurRadius: 8, offset: const Offset(0, 4))] : null,
+            ),
+            child: Center(
+              child: Text(
+                _fmt(t),
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: isSel ? FontWeight.w800 : FontWeight.w600,
+                  color: isSel ? Colors.white : kDark,
+                ),
+              ),
+            ),
+          ),
+        );
+      }).toList(),
+    );
+  }
+
+  List<int> _getAvailableStartTimes() {
+    final available = <int>[];
+    // On cherche de 08h à 23h30
+    for (int h = 8; h < 24; h++) {
+      for (int m in _minutes) {
+        final start = _toMin(h, m);
+        final end = start + _selectedDuration;
+        if (end > 1440) continue; // Pas après minuit
+
+        // Vérifier si toute la plage [start, end[ est libre
+        bool allFree = true;
+        for (int check = start; check < end; check += 30) {
+          final hh = (check ~/ 60) % 24;
+          final mm = check % 60;
+          if (_isBooked(hh, mm)) {
+            allFree = false;
+            break;
+          }
+        }
+        if (allFree) available.add(start);
+      }
+    }
+    return available;
   }
 }

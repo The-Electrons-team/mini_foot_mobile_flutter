@@ -1,10 +1,46 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:provider/provider.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:intl/date_symbol_data_local.dart';
+import 'providers/auth_provider.dart';
+import 'providers/terrain_provider.dart';
+import 'providers/notification_provider.dart';
+import 'providers/team_provider.dart';
 import 'splash_screen.dart';
 
 // ─── Notifier global ───────────────────────────────────────────────────────
 final themeNotifier = ValueNotifier<ThemeMode>(ThemeMode.light);
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await dotenv.load(fileName: '.env');
+  
+  // Configuration Web lue depuis le .env
+  final firebaseOptions = FirebaseOptions(
+    apiKey: dotenv.get('FIREBASE_API_KEY'),
+    authDomain: dotenv.get('FIREBASE_AUTH_DOMAIN'),
+    projectId: dotenv.get('FIREBASE_PROJECT_ID'),
+    storageBucket: dotenv.get('FIREBASE_STORAGE_BUCKET'),
+    messagingSenderId: dotenv.get('FIREBASE_MESSAGING_SENDER_ID'),
+    appId: dotenv.get('FIREBASE_APP_ID'),
+    measurementId: dotenv.get('FIREBASE_MEASUREMENT_ID'),
+  );
+
+  try {
+    if (kIsWeb) {
+      await Firebase.initializeApp(options: firebaseOptions);
+    } else {
+      await Firebase.initializeApp();
+    }
+    debugPrint("Firebase initialisé avec succès !");
+  } catch (e) {
+    debugPrint("Erreur initialisation Firebase : $e");
+  }
+
+  await initializeDateFormatting('fr_FR', null);
   runApp(const MinifootApp());
 }
 
@@ -13,46 +49,65 @@ class MinifootApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ValueListenableBuilder<ThemeMode>(
-      valueListenable: themeNotifier,
-      builder: (_, mode, child) => MaterialApp(
-        title: 'MiniFoot',
-        debugShowCheckedModeBanner: false,
-        themeMode: mode,
-        theme: ThemeData(
-          brightness: Brightness.light,
-          scaffoldBackgroundColor: const Color(0xFFF5F0E8),
-          cardColor: Colors.white,
-          useMaterial3: true,
-          colorScheme: const ColorScheme.light(
-            primary: Color(0xFF006F39),
-            surface: Colors.white,
-            onSurface: Color(0xFF1A1A1A),
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => AuthProvider()),
+        ChangeNotifierProvider(create: (_) => TerrainProvider()),
+        ChangeNotifierProvider(create: (_) => NotificationProvider()),
+        ChangeNotifierProvider(create: (_) => TeamProvider()),
+      ],
+      child: ValueListenableBuilder<ThemeMode>(
+        valueListenable: themeNotifier,
+        builder: (_, mode, child) => MaterialApp(
+          title: 'MiniFoot',
+          debugShowCheckedModeBanner: false,
+          themeMode: mode,
+          theme: ThemeData(
+            brightness: Brightness.light,
+            scaffoldBackgroundColor: const Color(0xFFF5F0E8),
+            cardColor: Colors.white,
+            useMaterial3: true,
+            colorScheme: const ColorScheme.light(
+              primary: Color(0xFF006F39),
+              surface: Colors.white,
+              onSurface: Color(0xFF1A1A1A),
+            ),
+            appBarTheme: const AppBarTheme(
+              backgroundColor: Colors.white,
+              surfaceTintColor: Colors.transparent,
+              elevation: 0,
+            ),
           ),
-          appBarTheme: const AppBarTheme(
-            backgroundColor: Colors.white,
-            surfaceTintColor: Colors.transparent,
-            elevation: 0,
+          darkTheme: ThemeData(
+            brightness: Brightness.dark,
+            scaffoldBackgroundColor: const Color(0xFF0F0F0F),
+            cardColor: const Color(0xFF1C1C1C),
+            useMaterial3: true,
+            colorScheme: const ColorScheme.dark(
+              primary: Color(0xFF00C264),
+              surface: Color(0xFF1C1C1C),
+              onSurface: Color(0xFFF0EBE0),
+            ),
+            appBarTheme: const AppBarTheme(
+              backgroundColor: Color(0xFF1C1C1C),
+              surfaceTintColor: Colors.transparent,
+              elevation: 0,
+            ),
           ),
+          localizationsDelegates: const [
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          supportedLocales: const [
+            Locale('fr', 'FR'),
+            Locale('en', 'US'),
+          ],
+          locale: const Locale('fr', 'FR'),
+          home: const SplashScreen(),
         ),
-        darkTheme: ThemeData(
-          brightness: Brightness.dark,
-          scaffoldBackgroundColor: const Color(0xFF0F0F0F),
-          cardColor: const Color(0xFF1C1C1C),
-          useMaterial3: true,
-          colorScheme: const ColorScheme.dark(
-            primary: Color(0xFF00C264),
-            surface: Color(0xFF1C1C1C),
-            onSurface: Color(0xFFF0EBE0),
-          ),
-          appBarTheme: const AppBarTheme(
-            backgroundColor: Color(0xFF1C1C1C),
-            surfaceTintColor: Colors.transparent,
-            elevation: 0,
-          ),
-        ),
-        home: const SplashScreen(),
       ),
     );
   }
+
 }

@@ -18,22 +18,19 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   final List<_OnboardingData> _pages = const [
     _OnboardingData(
-      imageUrl:
-          'https://images.pexels.com/photos/12486370/pexels-photo-12486370.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2',
+      imageUrl: 'assets/images/terrain.jpeg',
       title: 'Trouve un terrain\nprès de toi',
       subtitle:
           'Localise les terrains disponibles autour de toi et réserve en quelques secondes.',
     ),
     _OnboardingData(
-      imageUrl:
-          'https://images.pexels.com/photos/1884574/pexels-photo-1884574.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2',
+      imageUrl: 'assets/images/equipe.jpg',
       title: 'Forme\nton équipe',
       subtitle:
           'Invite tes amis, crée ton équipe et prépare-toi à entrer sur le terrain.',
     ),
     _OnboardingData(
-      imageUrl:
-          'https://images.pexels.com/photos/3148452/pexels-photo-3148452.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2',
+      imageUrl: 'assets/images/match.jpg',
       title: 'Affronte\nd\'autres équipes',
       subtitle:
           'Lance des défis, rejoins des matchs et prouve que tu es le roi du terrain.',
@@ -96,22 +93,13 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               opacity: opacity,
               child: Transform.translate(
                 offset: Offset(parallax, 0),
-                child: Image.network(
+                child: Image.asset(
                   _pages[i].imageUrl,
                   fit: BoxFit.cover,
                   width: double.infinity,
                   height: double.infinity,
                   errorBuilder: (_, _, _) =>
                       Container(color: const Color(0xFF0A2E1A)),
-                  loadingBuilder: (_, child, progress) {
-                    if (progress == null) return child;
-                    return Container(
-                      color: const Color(0xFF0A2E1A),
-                      child: const Center(
-                        child: CircularProgressIndicator(color: kGreen),
-                      ),
-                    );
-                  },
                 ),
               ),
             );
@@ -124,9 +112,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
                 colors: [
-                  Colors.black.withValues(alpha: 0.20),
-                  Colors.black.withValues(alpha: 0.65),
-                  Colors.black.withValues(alpha: 0.97),
+                  Colors.black.withOpacity(0.20),
+                  Colors.black.withOpacity(0.65),
+                  Colors.black.withOpacity(0.97),
                 ],
                 stops: const [0.0, 0.45, 1.0],
               ),
@@ -153,7 +141,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   child: TextButton(
                     onPressed: _skip,
                     style: TextButton.styleFrom(
-                      backgroundColor: Colors.white.withValues(alpha: 0.15),
+                      backgroundColor: Colors.white.withOpacity(0.15),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(20),
                       ),
@@ -187,7 +175,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   end: Alignment.bottomCenter,
                   colors: [
                     Colors.transparent,
-                    Colors.black.withValues(alpha: 0.95),
+                    Colors.black.withOpacity(0.95),
                   ],
                 ),
               ),
@@ -237,7 +225,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                       child: Text(
                         _pages[_currentPage].subtitle,
                         style: TextStyle(
-                          color: Colors.white.withValues(alpha: 0.70),
+                          color: Colors.white.withOpacity(0.70),
                           fontSize: 14,
                           height: 1.6,
                         ),
@@ -262,7 +250,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                             decoration: BoxDecoration(
                               color: active
                                   ? kGreen
-                                  : Colors.white.withValues(alpha: 0.35),
+                                  : Colors.white.withOpacity(0.35),
                               borderRadius: BorderRadius.circular(4),
                             ),
                           );

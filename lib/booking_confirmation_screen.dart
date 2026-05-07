@@ -16,6 +16,7 @@ const Color kBeige = Color(0xFFF5F0E8);
 
 class BookingConfirmationScreen extends StatefulWidget {
   final Terrain terrain;
+  final SubTerrain? subTerrain;
   final DateTime date;
   final String startSlot;
   final String endSlot;
@@ -27,6 +28,7 @@ class BookingConfirmationScreen extends StatefulWidget {
   const BookingConfirmationScreen({
     super.key,
     required this.terrain,
+    this.subTerrain,
     required this.date,
     required this.startSlot,
     required this.endSlot,
@@ -52,6 +54,7 @@ class _BookingConfirmationScreenState extends State<BookingConfirmationScreen> {
 
   String get _qrData =>
       'MINIFOOT:ref=${widget.reference}&terrain=${widget.terrain.id}'
+      '${widget.subTerrain != null ? '&sub=${widget.subTerrain!.id}' : ''}'
       '&date=${widget.date.toIso8601String().substring(0, 10)}'
       '&start=${widget.startSlot}&end=${widget.endSlot}&price=${widget.finalPrice}';
 
@@ -118,7 +121,9 @@ class _BookingConfirmationScreenState extends State<BookingConfirmationScreen> {
                 child: pw.Column(
                   crossAxisAlignment: pw.CrossAxisAlignment.start,
                   children: [
-                    pw.Text(widget.terrain.name,
+                    pw.Text(widget.subTerrain != null 
+                        ? '${widget.terrain.name} - ${widget.subTerrain!.name}' 
+                        : widget.terrain.name,
                         style: pw.TextStyle(fontSize: 13, fontWeight: pw.FontWeight.bold)),
                     pw.SizedBox(height: 4),
                     pw.Text(widget.terrain.address,
@@ -192,7 +197,7 @@ class _BookingConfirmationScreenState extends State<BookingConfirmationScreen> {
                     child: Container(
                       width: 34, height: 34,
                       decoration: BoxDecoration(
-                        color: Colors.black.withValues(alpha: 0.08),
+                        color: Colors.black.withOpacity(0.08),
                         shape: BoxShape.circle,
                       ),
                       child: const Icon(Icons.close_rounded, color: kDark, size: 18),
@@ -216,7 +221,7 @@ class _BookingConfirmationScreenState extends State<BookingConfirmationScreen> {
                     ),
                     child: Icon(
                       Icons.star_rounded,
-                      color: kGreen.withValues(alpha: 0.15 + (i * 0.04)),
+                      color: kGreen.withOpacity(0.15 + (i * 0.04)),
                       size: 12.0 + (i * 2),
                     ),
                   );
@@ -227,7 +232,7 @@ class _BookingConfirmationScreenState extends State<BookingConfirmationScreen> {
                     color: kGreen,
                     shape: BoxShape.circle,
                     boxShadow: [
-                      BoxShadow(color: kGreen.withValues(alpha: 0.35), blurRadius: 20, spreadRadius: 2),
+                      BoxShadow(color: kGreen.withOpacity(0.35), blurRadius: 20, spreadRadius: 2),
                     ],
                   ),
                   child: const Icon(Icons.check_rounded, color: Colors.white, size: 40),
@@ -241,7 +246,7 @@ class _BookingConfirmationScreenState extends State<BookingConfirmationScreen> {
                     color: kDark, fontSize: 17, fontWeight: FontWeight.w900)),
             const SizedBox(height: 5),
             Text('Vous êtes prêt à jouer.',
-                style: TextStyle(color: Colors.black.withValues(alpha: 0.45), fontSize: 13)),
+                style: TextStyle(color: Colors.black.withOpacity(0.45), fontSize: 13)),
 
             const SizedBox(height: 20),
 
@@ -252,6 +257,7 @@ class _BookingConfirmationScreenState extends State<BookingConfirmationScreen> {
                 child: _TicketCard(
                   qrRepaintKey: _qrKey,
                   terrain: widget.terrain,
+                  subTerrain: widget.subTerrain,
                   dateLabel: _dateLabel,
                   startSlot: widget.startSlot,
                   endSlot: widget.endSlot,
@@ -315,7 +321,7 @@ class _BookingConfirmationScreenState extends State<BookingConfirmationScreen> {
                       decoration: BoxDecoration(
                         color: _sharing ? kGreen : Colors.white,
                         shape: BoxShape.circle,
-                        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.08), blurRadius: 8)],
+                        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.08), blurRadius: 8)],
                       ),
                       child: _sharing
                           ? const Padding(
@@ -339,6 +345,7 @@ class _BookingConfirmationScreenState extends State<BookingConfirmationScreen> {
 class _TicketCard extends StatelessWidget {
   final GlobalKey qrRepaintKey;
   final Terrain terrain;
+  final SubTerrain? subTerrain;
   final String dateLabel;
   final String startSlot;
   final String endSlot;
@@ -349,6 +356,7 @@ class _TicketCard extends StatelessWidget {
   const _TicketCard({
     required this.qrRepaintKey,
     required this.terrain,
+    this.subTerrain,
     required this.dateLabel,
     required this.startSlot,
     required this.endSlot,
@@ -363,7 +371,7 @@ class _TicketCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(24),
-        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.08), blurRadius: 20, offset: const Offset(0, 6))],
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.08), blurRadius: 20, offset: const Offset(0, 6))],
       ),
       child: Column(
         children: [
@@ -378,7 +386,7 @@ class _TicketCard extends StatelessWidget {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
-                        color: kGreen.withValues(alpha: 0.08),
+                        color: kGreen.withOpacity(0.08),
                         borderRadius: BorderRadius.circular(6),
                       ),
                       child: Text('#$reference',
@@ -395,7 +403,7 @@ class _TicketCard extends StatelessWidget {
                               duration: Duration(seconds: 2)),
                         );
                       },
-                      child: Icon(Icons.copy_rounded, size: 16, color: Colors.black.withValues(alpha: 0.3)),
+                      child: Icon(Icons.copy_rounded, size: 16, color: Colors.black.withOpacity(0.3)),
                     ),
                   ],
                 ),
@@ -410,7 +418,7 @@ class _TicketCard extends StatelessWidget {
                         fit: BoxFit.cover,
                         errorBuilder: (_, _, _) => Container(
                             width: 64, height: 60,
-                            color: kGreen.withValues(alpha: 0.10)),
+                            color: kGreen.withOpacity(0.10)),
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -426,7 +434,9 @@ class _TicketCard extends StatelessWidget {
                             ],
                           ),
                           const SizedBox(height: 6),
-                          Text(terrain.name,
+                          Text(subTerrain != null 
+                              ? '${terrain.name} - ${subTerrain!.name}' 
+                              : terrain.name,
                               style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13, color: kDark)),
                           const SizedBox(height: 4),
                           Row(children: [
@@ -487,7 +497,7 @@ class _TicketCard extends StatelessWidget {
                     Text('Présentez ce QR code à l\'entrée',
                         style: TextStyle(
                             fontSize: 12,
-                            color: Colors.black.withValues(alpha: 0.45),
+                            color: Colors.black.withOpacity(0.45),
                             fontWeight: FontWeight.w500)),
                   ],
                 ),
@@ -540,7 +550,7 @@ class _DashedDivider extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: List.generate(count, (_) => Container(
                 width: 5, height: 1.5,
-                color: Colors.black.withValues(alpha: 0.12),
+                color: Colors.black.withOpacity(0.12),
               )),
             );
           }),

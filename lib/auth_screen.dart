@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
+import 'providers/auth_provider.dart';
 import 'home_screen.dart';
+
 
 const Color kGreen = Color(0xFF006F39);
 const Color kBeige = Color(0xFFF5F0E8);
@@ -27,6 +30,9 @@ class _AuthScreenState extends State<AuthScreen>
   final _phoneController = TextEditingController();
   final _prenomController = TextEditingController();
   final _nomController = TextEditingController();
+  final _passwordController = TextEditingController();
+  final _confirmPasswordController = TextEditingController();
+  bool _obscurePassword = true;
 
   @override
   void initState() {
@@ -45,6 +51,8 @@ class _AuthScreenState extends State<AuthScreen>
     _phoneController.dispose();
     _prenomController.dispose();
     _nomController.dispose();
+    _passwordController.dispose();
+    _confirmPasswordController.dispose();
     super.dispose();
   }
 
@@ -53,27 +61,80 @@ class _AuthScreenState extends State<AuthScreen>
     _phoneController.clear();
     _prenomController.clear();
     _nomController.clear();
+    _passwordController.clear();
+    _confirmPasswordController.clear();
     _animController.reset();
-    setState(() => _isLogin = !_isLogin);
+    setState(() {
+      _isLogin = !_isLogin;
+    });
     _animController.forward();
   }
 
-  void _submit() {
+  void _submit() async {
     if (!(_formKey.currentState?.validate() ?? false)) return;
-    Navigator.of(context).push(
-      PageRouteBuilder(
-        pageBuilder: (_, _, _) => OtpScreen(phone: _phoneController.text.trim()),
-        transitionsBuilder: (_, animation, _, child) => SlideTransition(
-          position: Tween<Offset>(
-            begin: const Offset(1, 0),
-            end: Offset.zero,
-          ).animate(CurvedAnimation(parent: animation, curve: Curves.easeOut)),
-          child: child,
-        ),
-        transitionDuration: const Duration(milliseconds: 450),
-      ),
-    );
+
+    final phone = '+221${_phoneController.text.trim()}';
+    final authProvider = context.read<AuthProvider>();
+
+    try {
+      if (_isLogin) {
+        // --- MODE CONNEXION ---
+        final password = _passwordController.text.trim();
+        if (password.isEmpty) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Veuillez saisir votre mot de passe')),
+          );
+          return;
+        }
+
+        await authProvider.login(phone, password);
+        if (!mounted) return;
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (_) => const HomeScreen()),
+          (route) => false,
+        );
+      } else {
+        // --- MODE INSCRIPTION ---
+        await authProvider.signup(phone);
+        if (!mounted) return;
+
+        // Go OTP avec toutes les infos pour finaliser après
+        Navigator.of(context).push(
+          PageRouteBuilder(
+            pageBuilder: (_, _, _) => OtpScreen(
+              phone: phone,
+              firstName: _prenomController.text.trim(),
+              lastName: _nomController.text.trim(),
+              password: _passwordController.text.trim(),
+              isNewUser: true,
+            ),
+            transitionsBuilder: (_, animation, _, child) => SlideTransition(
+              position: Tween<Offset>(
+                begin: const Offset(1, 0),
+                end: Offset.zero,
+              ).animate(CurvedAnimation(parent: animation, curve: Curves.easeOut)),
+              child: child,
+            ),
+            transitionDuration: const Duration(milliseconds: 450),
+          ),
+        );
+      }
+    } catch (e) {
+      String message = 'Une erreur est survenue';
+      if (e.toString().contains('COMPTE_NON_TROUVE')) {
+        message = 'Compte non trouvé. Veuillez vous inscrire.';
+      } else if (e.toString().contains('déjà utilisé')) {
+        message = 'Ce numéro est déjà utilisé par un autre compte.';
+      } else {
+        message = e.toString().replaceAll('Exception: ', '');
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(message)),
+      );
+    }
   }
+
+
 
   @override
   Widget build(BuildContext context) {
@@ -123,10 +184,10 @@ class _AuthScreenState extends State<AuthScreen>
                       alignment: Alignment.centerLeft,
                       child: Text(
                         _isLogin
-                            ? 'Entre ton numéro pour recevoir un code OTP'
+                            ? 'Entre tes identifiants pour te connecter'
                             : 'Remplis les informations pour créer ton compte',
                         style: TextStyle(
-                          color: Colors.black.withValues(alpha: 0.50),
+                          color: Colors.black.withOpacity(0.50),
                           fontSize: 13,
                           height: 1.5,
                         ),
@@ -183,39 +244,85 @@ class _AuthScreenState extends State<AuthScreen>
                       },
                     ),
 
+                    const SizedBox(height: 14),
+
+                    // Champ Mot de Passe
+                    _InputField(
+                      controller: _passwordController,
+                      label: 'Mot de passe',
+                      icon: Icons.lock_outline_rounded,
+                      isPassword: true,
+                      obscureText: _obscurePassword,
+                      onToggleVisibility: () => setState(() => _obscurePassword = !_obscurePassword),
+                      validator: (v) {
+                        if (v == null || v.trim().isEmpty) {
+                          return 'Le mot de passe est requis';
+                        }
+                        if (v.trim().length < 6) {
+                          return 'Minimum 6 caractères';
+                        }
+                        return null;
+                      },
+                    ),
+
+                    if (!_isLogin) ...[
+                      const SizedBox(height: 14),
+                      _InputField(
+                        controller: _confirmPasswordController,
+                        label: 'Confirmer le mot de passe',
+                        icon: Icons.lock_reset_rounded,
+                        isPassword: true,
+                        obscureText: _obscurePassword,
+                        onToggleVisibility: () => setState(() => _obscurePassword = !_obscurePassword),
+                        validator: (v) {
+                          if (v != _passwordController.text) {
+                            return 'Les mots de passe ne correspondent pas';
+                          }
+                          return null;
+                        },
+                      ),
+                    ],
+
                     const SizedBox(height: 28),
 
                     // Bouton principal
-                    SizedBox(
-                      width: double.infinity,
-                      height: 56,
-                      child: ElevatedButton(
-                        onPressed: _submit,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: kGreen,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(14),
-                          ),
-                          elevation: 0,
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Text(
-                              _isLogin ? 'Recevoir le code' : 'S\'inscrire',
-                              style: GoogleFonts.orbitron(
-                                color: Colors.white,
-                                fontSize: 14,
-                                fontWeight: FontWeight.w700,
+                    Consumer<AuthProvider>(
+                      builder: (context, auth, _) {
+                        return SizedBox(
+                          width: double.infinity,
+                          height: 56,
+                          child: ElevatedButton(
+                            onPressed: auth.isLoading ? null : _submit,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: kGreen,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(14),
                               ),
+                              elevation: 0,
                             ),
-                            const SizedBox(width: 10),
-                            const Icon(Icons.arrow_forward_rounded,
-                                color: Colors.white, size: 20),
-                          ],
-                        ),
-                      ),
+                            child: auth.isLoading
+                                ? const CircularProgressIndicator(color: Colors.white)
+                                : Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Text(
+                                        _isLogin ? 'Se connecter' : 'S\'inscrire',
+                                        style: GoogleFonts.orbitron(
+                                          color: Colors.white,
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w700,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 10),
+                                      const Icon(Icons.arrow_forward_rounded,
+                                          color: Colors.white, size: 20),
+                                    ],
+                                  ),
+                          ),
+                        );
+                      },
                     ),
+
 
                     const SizedBox(height: 22),
 
@@ -231,7 +338,7 @@ class _AuthScreenState extends State<AuthScreen>
                                   ? 'Pas encore de compte ? '
                                   : 'Déjà un compte ? ',
                               style: TextStyle(
-                                  color: Colors.black.withValues(alpha: 0.5)),
+                                  color: Colors.black.withOpacity(0.5)),
                             ),
                             TextSpan(
                               text: _isLogin ? 'S\'inscrire' : 'Se connecter',
@@ -263,12 +370,18 @@ class _InputField extends StatelessWidget {
   final TextEditingController controller;
   final String label;
   final IconData icon;
+  final bool isPassword;
+  final bool obscureText;
+  final VoidCallback? onToggleVisibility;
   final String? Function(String?)? validator;
 
   const _InputField({
     required this.controller,
     required this.label,
     required this.icon,
+    this.isPassword = false,
+    this.obscureText = false,
+    this.onToggleVisibility,
     this.validator,
   });
 
@@ -277,11 +390,21 @@ class _InputField extends StatelessWidget {
     return TextFormField(
       controller: controller,
       validator: validator,
+      obscureText: isPassword ? obscureText : false,
       autovalidateMode: AutovalidateMode.onUserInteraction,
       decoration: InputDecoration(
         labelText: label,
-        labelStyle: TextStyle(color: Colors.black.withValues(alpha: 0.45)),
+        labelStyle: TextStyle(color: Colors.black.withOpacity(0.45)),
         prefixIcon: Icon(icon, color: kGreen),
+        suffixIcon: isPassword
+            ? IconButton(
+                icon: Icon(
+                  obscureText ? Icons.visibility_off_rounded : Icons.visibility_rounded,
+                  color: kGreen.withOpacity(0.6),
+                ),
+                onPressed: onToggleVisibility,
+              )
+            : null,
         filled: true,
         fillColor: const Color(0xFFF4F4F4),
         border: OutlineInputBorder(
@@ -332,7 +455,7 @@ class _PhoneField extends StatelessWidget {
       autovalidateMode: AutovalidateMode.onUserInteraction,
       decoration: InputDecoration(
         labelText: 'Numéro de téléphone',
-        labelStyle: TextStyle(color: Colors.black.withValues(alpha: 0.45)),
+        labelStyle: TextStyle(color: Colors.black.withOpacity(0.45)),
         prefixIcon: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 12),
           child: Row(
@@ -389,7 +512,21 @@ class _PhoneField extends StatelessWidget {
 
 class OtpScreen extends StatefulWidget {
   final String phone;
-  const OtpScreen({super.key, required this.phone});
+  final String firstName;
+  final String lastName;
+  final String password;
+  final bool isNewUser;
+
+  const OtpScreen({
+    super.key,
+    required this.phone,
+    this.firstName = '',
+    this.lastName = '',
+    this.password = '',
+    this.isNewUser = false,
+  });
+
+
 
   @override
   State<OtpScreen> createState() => _OtpScreenState();
@@ -430,6 +567,22 @@ class _OtpScreenState extends State<OtpScreen> {
     });
   }
 
+  void _resend() async {
+    if (!_canResend) return;
+    try {
+      final authProvider = context.read<AuthProvider>();
+      await authProvider.resendOtp(widget.phone);
+      _startCountdown();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Un nouveau code a été envoyé')),
+        );
+      }
+    } catch (e) {
+      setState(() => _errorMessage = e.toString());
+    }
+  }
+
   void _onDigit(String val, int index) {
     if (val.isNotEmpty) {
       if (index < 5) {
@@ -443,22 +596,59 @@ class _OtpScreenState extends State<OtpScreen> {
     setState(() => _errorMessage = null);
   }
 
-  void _validate() {
+  void _validate() async {
     final code = _controllers.map((c) => c.text).join();
     if (code.length < 6) {
       setState(() => _errorMessage = 'Saisis les 6 chiffres du code');
       return;
     }
-    Navigator.of(context).pushAndRemoveUntil(
-      PageRouteBuilder(
-        pageBuilder: (_, _, _) => const HomeScreen(),
-        transitionsBuilder: (_, animation, _, child) =>
-            FadeTransition(opacity: animation, child: child),
-        transitionDuration: const Duration(milliseconds: 500),
-      ),
-      (_) => false,
-    );
+
+    final authProvider = context.read<AuthProvider>();
+
+    try {
+      final verified = await authProvider.verifyOtp(widget.phone, code);
+
+      if (!mounted) return;
+
+      if (verified) {
+        if (widget.isNewUser) {
+          // Si nouveau, on doit appeler register
+          if (widget.firstName.isEmpty || widget.lastName.isEmpty) {
+            // Cas où l'utilisateur a essayé de se connecter sans passer par inscription
+            // On pourrait rediriger vers un écran de complément de profil
+            // Pour l'instant, on affiche une erreur ou on force le retour
+            setState(() => _errorMessage = 'Informations de profil manquantes');
+            return;
+          }
+
+          await authProvider.register(
+            phone: widget.phone,
+            password: widget.password,
+            firstName: widget.firstName,
+            lastName: widget.lastName,
+          );
+
+        }
+
+        if (!mounted) return;
+
+        Navigator.of(context).pushAndRemoveUntil(
+          PageRouteBuilder(
+            pageBuilder: (_, _, _) => const HomeScreen(),
+            transitionsBuilder: (_, animation, _, child) =>
+                FadeTransition(opacity: animation, child: child),
+            transitionDuration: const Duration(milliseconds: 500),
+          ),
+          (_) => false,
+        );
+      } else {
+        setState(() => _errorMessage = 'Code invalide');
+      }
+    } catch (e) {
+      setState(() => _errorMessage = e.toString());
+    }
   }
+
 
   @override
   void dispose() {
@@ -510,10 +700,10 @@ class _OtpScreenState extends State<OtpScreen> {
               const SizedBox(height: 10),
 
               Text(
-                'Code envoyé au\n🇸🇳 +221 ${widget.phone}',
+                'Code envoyé au\n🇸🇳 ${widget.phone}',
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  color: Colors.black.withValues(alpha: 0.50),
+                  color: Colors.black.withOpacity(0.50),
                   fontSize: 14,
                   height: 1.6,
                 ),
@@ -526,7 +716,7 @@ class _OtpScreenState extends State<OtpScreen> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: List.generate(6, (i) {
                   return Container(
-                    width: 48,
+                    width: 44,
                     height: 60,
                     margin: const EdgeInsets.symmetric(horizontal: 4),
                     child: TextFormField(
@@ -541,8 +731,10 @@ class _OtpScreenState extends State<OtpScreen> {
                         fontWeight: FontWeight.w800,
                         color: kGreen,
                       ),
+                      textAlignVertical: TextAlignVertical.center,
                       decoration: InputDecoration(
                         counterText: '',
+                        contentPadding: EdgeInsets.zero,
                         filled: true,
                         fillColor: const Color(0xFFF4F4F4),
                         border: OutlineInputBorder(
@@ -576,38 +768,45 @@ class _OtpScreenState extends State<OtpScreen> {
               const SizedBox(height: 36),
 
               // Bouton valider
-              SizedBox(
-                width: double.infinity,
-                height: 56,
-                child: ElevatedButton(
-                  onPressed: _validate,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: kGreen,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
+              Consumer<AuthProvider>(
+                builder: (context, auth, _) {
+                  return SizedBox(
+                    width: double.infinity,
+                    height: 56,
+                    child: ElevatedButton(
+                      onPressed: auth.isLoading ? null : _validate,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: kGreen,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        elevation: 0,
+                      ),
+                      child: auth.isLoading
+                          ? const CircularProgressIndicator(color: Colors.white)
+                          : Text(
+                              'Valider le code',
+                              style: GoogleFonts.orbitron(
+                                color: Colors.white,
+                                fontSize: 15,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
                     ),
-                    elevation: 0,
-                  ),
-                  child: Text(
-                    'Valider le code',
-                    style: GoogleFonts.orbitron(
-                      color: Colors.white,
-                      fontSize: 15,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ),
+                  );
+                },
               ),
+
 
               const SizedBox(height: 24),
 
               // Renvoyer
               GestureDetector(
-                onTap: _canResend ? _startCountdown : null,
+                onTap: _canResend ? _resend : null,
                 child: AnimatedDefaultTextStyle(
                   duration: const Duration(milliseconds: 300),
                   style: TextStyle(
-                    color: _canResend ? kGreen : Colors.black.withValues(alpha: 0.35),
+                    color: _canResend ? kGreen : Colors.black.withOpacity(0.35),
                     fontWeight: FontWeight.w700,
                     fontSize: 14,
                     decoration: _canResend ? TextDecoration.underline : TextDecoration.none,
