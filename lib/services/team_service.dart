@@ -132,21 +132,20 @@ class TeamService {
   }
 
   Future<List<dynamic>> searchTeams({String? zone, String? query, String? excludeId}) async {
-    var url = '$_baseUrl/teams/search';
-    List<String> params = [];
-    if (zone != null && zone.isNotEmpty && zone != 'Toutes') params.add('zone=$zone');
-    if (query != null && query.isNotEmpty) params.add('query=$query');
-    if (excludeId != null) params.add('excludeId=$excludeId');
-    if (params.isNotEmpty) url += '?' + params.join('&');
+    final params = <String, String>{};
+    if (zone != null && zone.isNotEmpty && zone != 'Toutes') params['zone'] = zone;
+    if (query != null && query.isNotEmpty) params['query'] = query;
+    if (excludeId != null) params['excludeId'] = excludeId;
 
-    final response = await http.get(Uri.parse(url));
+    final uri = Uri.parse('$_baseUrl/teams/search').replace(queryParameters: params.isNotEmpty ? params : null);
+    final response = await http.get(uri).timeout(const Duration(seconds: 12));
     if (response.statusCode == 200) return jsonDecode(response.body);
     throw Exception('Erreur recherche équipes: ${response.body}');
   }
 
   Future<List<dynamic>> getZones() async {
-    final response = await http.get(Uri.parse('$_baseUrl/teams/zones'));
+    final response = await http.get(Uri.parse('$_baseUrl/teams/zones')).timeout(const Duration(seconds: 12));
     if (response.statusCode == 200) return jsonDecode(response.body);
-    return ['DAKAR', 'GUEDIAWAYE', 'PIKINE', 'RUFISQUE']; // Fallback
+    return ['Dakar', 'Guédiawaye', 'Pikine', 'Rufisque', 'Thiès', 'Saint-Louis'];
   }
 }

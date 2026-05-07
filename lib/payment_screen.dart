@@ -38,7 +38,9 @@ class PaymentScreen extends StatefulWidget {
 
 class _PaymentScreenState extends State<PaymentScreen> {
   final _promoController = TextEditingController();
+  bool _showPromo = false;
   bool _promoApplied = false;
+  bool _pollingActive = false;
 
   // 0 = totalité, 1 = acompte 30%. Le paiement partagé terrain est masqué pour le moment.
   int _paymentType = 0;
@@ -76,7 +78,14 @@ class _PaymentScreenState extends State<PaymentScreen> {
   }
 
   @override
+  void initState() {
+    super.initState();
+    _pollingActive = true;
+  }
+
+  @override
   void dispose() {
+    _pollingActive = false;
     _promoController.dispose();
     super.dispose();
   }
@@ -173,51 +182,96 @@ class _PaymentScreenState extends State<PaymentScreen> {
 
             const SizedBox(height: 20),
 
-            // ── CODE PROMO ──
-            Container(
-              height: 52,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(14),
-                boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 8)],
-              ),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: _promoController,
-                      decoration: InputDecoration(
-                        hintText: 'Code promo',
-                        hintStyle: TextStyle(color: Colors.black.withOpacity(0.3), fontSize: 14),
-                        border: InputBorder.none,
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-                      ),
-                      style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: kDark),
+            // ── CODE PROMO (masqué par défaut) ──
+            GestureDetector(
+              onTap: () => setState(() => _showPromo = !_showPromo),
+              child: Padding(
+                padding: const EdgeInsets.only(bottom: 4),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      _showPromo ? Icons.expand_less_rounded : Icons.local_offer_outlined,
+                      size: 15,
+                      color: kGreen,
                     ),
-                  ),
-                  GestureDetector(
-                    onTap: () {
-                      if (_promoController.text.trim().isNotEmpty) {
-                        setState(() => _promoApplied = true);
-                        FocusScope.of(context).unfocus();
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Code promo appliqué ! -10%'), backgroundColor: kGreen),
-                        );
-                      }
-                    },
-                    child: Container(
-                      margin: const EdgeInsets.all(6),
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                      decoration: BoxDecoration(
-                        color: kDark,
-                        borderRadius: BorderRadius.circular(10),
+                    const SizedBox(width: 6),
+                    Text(
+                      _promoApplied
+                          ? 'Code promo appliqué ✓'
+                          : (_showPromo ? 'Masquer le code promo' : 'J\'ai un code promo'),
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: _promoApplied ? kGreen : kDark,
+                        decoration: TextDecoration.underline,
+                        decorationColor: _promoApplied ? kGreen : kDark,
                       ),
-                      child: const Text('Appliquer',
-                          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 12)),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
+            ),
+            AnimatedSize(
+              duration: const Duration(milliseconds: 250),
+              curve: Curves.easeInOut,
+              child: _showPromo && !_promoApplied
+                  ? Padding(
+                      padding: const EdgeInsets.only(bottom: 4),
+                      child: Container(
+                        height: 52,
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(14),
+                          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 8)],
+                        ),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: TextField(
+                                controller: _promoController,
+                                textCapitalization: TextCapitalization.characters,
+                                decoration: InputDecoration(
+                                  hintText: 'Code promo',
+                                  hintStyle: TextStyle(color: Colors.black.withOpacity(0.3), fontSize: 14),
+                                  border: InputBorder.none,
+                                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                                ),
+                                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: kDark),
+                              ),
+                            ),
+                            GestureDetector(
+                              onTap: () {
+                                if (_promoController.text.trim().isNotEmpty) {
+                                  setState(() {
+                                    _promoApplied = true;
+                                    _showPromo = false;
+                                  });
+                                  FocusScope.of(context).unfocus();
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text('Code promo appliqué !'),
+                                      backgroundColor: kGreen,
+                                    ),
+                                  );
+                                }
+                              },
+                              child: Container(
+                                margin: const EdgeInsets.all(6),
+                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                                decoration: BoxDecoration(
+                                  color: kDark,
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: const Text('Appliquer',
+                                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 12)),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    )
+                  : const SizedBox.shrink(),
             ),
 
             const SizedBox(height: 22),
@@ -450,8 +504,10 @@ class _PaymentScreenState extends State<PaymentScreen> {
   Future<Map<String, dynamic>> _waitForPaymentValidation(String token, String reservationId) async {
     final service = ReservationService();
     for (var i = 0; i < 40; i++) {
+      if (!_pollingActive) throw Exception('Paiement annulé.');
       final reservation = await service.getReservation(token, reservationId);
       if (reservation['status'] == 'CONFIRMED') return reservation;
+      if (!_pollingActive) throw Exception('Paiement annulé.');
       await Future.delayed(const Duration(seconds: 3));
     }
     throw Exception('Paiement lancé. Le ticket sera disponible après validation du paiement.');

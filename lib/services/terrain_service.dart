@@ -1,6 +1,5 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import 'package:flutter/foundation.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import '../terrain_data.dart';
 
@@ -28,7 +27,7 @@ class TerrainService {
     final uri = Uri.parse('$_base/terrains')
         .replace(queryParameters: params);
 
-    final response = await http.get(uri);
+    final response = await http.get(uri).timeout(const Duration(seconds: 15));
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);
       final list = data['data'] as List<dynamic>;
@@ -38,7 +37,7 @@ class TerrainService {
   }
 
   Future<Terrain> fetchTerrain(String id) async {
-    final response = await http.get(Uri.parse('$_base/terrains/$id'));
+    final response = await http.get(Uri.parse('$_base/terrains/$id')).timeout(const Duration(seconds: 12));
     if (response.statusCode == 200) {
       return Terrain.fromJson(jsonDecode(response.body) as Map<String, dynamic>);
     }
@@ -52,7 +51,7 @@ class TerrainService {
         if (subTerrainId != null) 'subTerrainId': subTerrainId,
       },
     );
-    final response = await http.get(uri);
+    final response = await http.get(uri).timeout(const Duration(seconds: 12));
     if (response.statusCode == 200) {
       final list = jsonDecode(response.body) as List<dynamic>;
       return list.map((j) => TerrainSlot.fromJson(j as Map<String, dynamic>)).toList();
@@ -64,9 +63,8 @@ class TerrainService {
     final response = await http.get(
       Uri.parse('$_base/users/me/favorites'),
       headers: {'Authorization': 'Bearer $token'},
-    );
+    ).timeout(const Duration(seconds: 12));
     if (response.statusCode == 200) {
-      debugPrint('Favorites raw response: ${response.body}');
       final list = jsonDecode(response.body) as List<dynamic>;
       return list.map((j) => Terrain.fromJson(j as Map<String, dynamic>)).toList();
     }

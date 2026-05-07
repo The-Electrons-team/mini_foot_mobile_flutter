@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
@@ -85,7 +84,6 @@ class MatchService {
       if (subTerrainId != null && subTerrainId.isNotEmpty) 'subTerrainId': subTerrainId,
       if (terrainName != null && terrainName.isNotEmpty) 'terrainName': terrainName,
     };
-    debugPrint('[MatchService] sendChallenge payload: ${jsonEncode(body)}');
     final response = await http.post(
       Uri.parse('$_baseUrl/matches/challenge'),
       headers: {
@@ -93,8 +91,7 @@ class MatchService {
         'Content-Type': 'application/json',
       },
       body: jsonEncode(body),
-    );
-    debugPrint('[MatchService] sendChallenge response ${response.statusCode}: ${response.body}');
+    ).timeout(const Duration(seconds: 12));
     if (response.statusCode != 200 && response.statusCode != 201) {
       throw Exception('Erreur envoi défi (${response.statusCode}): ${response.body}');
     }
@@ -114,15 +111,15 @@ class MatchService {
     }
   }
 
-  Future<Map<String, dynamic>> getChallengePaymentLink(String token, String challengeId, {String method = 'WAVE'}) async {
+  Future<Map<String, dynamic>> getChallengePaymentLink(String token, String challengeId) async {
     final response = await http.post(
       Uri.parse('$_baseUrl/matches/challenge/$challengeId/payment-link'),
       headers: {
         'Authorization': 'Bearer $token',
         'Content-Type': 'application/json',
       },
-      body: jsonEncode({'method': method}),
-    );
+      body: jsonEncode({}),
+    ).timeout(const Duration(seconds: 12));
     if (response.statusCode == 200 || response.statusCode == 201) {
       return jsonDecode(response.body) as Map<String, dynamic>;
     }

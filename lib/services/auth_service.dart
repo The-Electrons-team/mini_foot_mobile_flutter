@@ -47,7 +47,7 @@ class AuthService {
       Uri.parse('$_baseUrl/auth/signup'),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({'phone': phone}),
-    );
+    ).timeout(const Duration(seconds: 12));
 
     if (response.statusCode == 200 || response.statusCode == 201) {
       return jsonDecode(response.body);
@@ -61,7 +61,7 @@ class AuthService {
       Uri.parse('$_baseUrl/auth/resend-otp'),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({'phone': phone}),
-    );
+    ).timeout(const Duration(seconds: 12));
 
     if (response.statusCode == 200 || response.statusCode == 201) {
       return jsonDecode(response.body);
@@ -70,13 +70,12 @@ class AuthService {
     }
   }
 
-
   Future<Map<String, dynamic>> verifyOtp(String phone, String code) async {
     final response = await http.post(
       Uri.parse('$_baseUrl/auth/verify-otp'),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({'phone': phone, 'code': code}),
-    );
+    ).timeout(const Duration(seconds: 12));
 
     if (response.statusCode == 200 || response.statusCode == 201) {
       return jsonDecode(response.body);
@@ -100,8 +99,7 @@ class AuthService {
         'firstName': firstName,
         'lastName': lastName,
       }),
-    );
-
+    ).timeout(const Duration(seconds: 12));
 
     if (response.statusCode == 200 || response.statusCode == 201) {
       return jsonDecode(response.body);
@@ -113,10 +111,8 @@ class AuthService {
   Future<Map<String, dynamic>> getProfile(String token) async {
     final response = await http.get(
       Uri.parse('$_baseUrl/users/me'),
-      headers: {
-        'Authorization': 'Bearer $token',
-      },
-    );
+      headers: {'Authorization': 'Bearer $token'},
+    ).timeout(const Duration(seconds: 12));
 
     if (response.statusCode == 200) {
       return jsonDecode(response.body);
@@ -133,7 +129,7 @@ class AuthService {
         'Authorization': 'Bearer $token',
       },
       body: jsonEncode(data),
-    );
+    ).timeout(const Duration(seconds: 12));
 
     if (response.statusCode == 200 || response.statusCode == 201) {
       return jsonDecode(response.body);

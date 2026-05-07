@@ -57,7 +57,7 @@ class ReservationService {
       Uri.parse('$_baseUrl/reservations'),
       headers: _authHeaders(token),
       body: jsonEncode(body),
-    );
+    ).timeout(const Duration(seconds: 15));
 
     if (response.statusCode == 200 || response.statusCode == 201) {
       return jsonDecode(response.body) as Map<String, dynamic>;
@@ -75,7 +75,7 @@ class ReservationService {
       Uri.parse('$_baseUrl/reservations/$reservationId/payment-link'),
       headers: _authHeaders(token),
       body: jsonEncode({}),
-    );
+    ).timeout(const Duration(seconds: 15));
 
     if (response.statusCode == 200 || response.statusCode == 201) {
       final data = jsonDecode(response.body) as Map<String, dynamic>;
@@ -89,7 +89,7 @@ class ReservationService {
     final response = await http.get(
       Uri.parse('$_baseUrl/reservations'),
       headers: {'Authorization': 'Bearer $token'},
-    );
+    ).timeout(const Duration(seconds: 12));
 
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body) as List<dynamic>;
@@ -103,7 +103,7 @@ class ReservationService {
     final response = await http.get(
       Uri.parse('$_baseUrl/reservations/$id'),
       headers: {'Authorization': 'Bearer $token'},
-    );
+    ).timeout(const Duration(seconds: 12));
 
     if (response.statusCode == 200) {
       return jsonDecode(response.body) as Map<String, dynamic>;

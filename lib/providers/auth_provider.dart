@@ -86,7 +86,7 @@ class AuthProvider with ChangeNotifier {
       notifyListeners();
       return true;
     } catch (e) {
-      prefs.remove('token');
+      await prefs.remove('token');
       return false;
     }
   }
@@ -165,7 +165,7 @@ class AuthProvider with ChangeNotifier {
       _user = User.fromJson(result['user']);
       NotificationService().init(_token);
       final prefs = await SharedPreferences.getInstance();
-      prefs.setString('token', _token!);
+      await prefs.setString('token', _token!);
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -204,7 +204,7 @@ class AuthProvider with ChangeNotifier {
     _token = null;
     _user = null;
     final prefs = await SharedPreferences.getInstance();
-    prefs.remove('token');
+    await prefs.remove('token');
     notifyListeners();
   }
 }

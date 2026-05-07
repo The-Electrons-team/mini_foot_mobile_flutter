@@ -57,11 +57,19 @@ class _TerrainBookingScreenState extends State<TerrainBookingScreen> {
     try {
       final date = '${day.year}-${day.month.toString().padLeft(2, '0')}-${day.day.toString().padLeft(2, '0')}';
       _slots = await _service.fetchSlots(
-        widget.terrain.id, 
-        date, 
+        widget.terrain.id,
+        date,
         subTerrainId: _selectedSubTerrain?.id
       );
-    } catch (_) {
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Impossible de charger les créneaux : ${e.toString().replaceFirst('Exception: ', '')}'),
+            backgroundColor: Colors.red.shade700,
+          ),
+        );
+      }
     } finally {
       if (mounted) setState(() => _slotsLoading = false);
     }
