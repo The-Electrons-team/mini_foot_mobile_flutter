@@ -1,19 +1,16 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:share_plus/share_plus.dart';
+import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'terrain_data.dart';
 import 'booking_confirmation_screen.dart';
+import 'providers/auth_provider.dart';
+import 'providers/reservation_provider.dart';
+import 'services/reservation_service.dart';
 
 const Color kGreen = Color(0xFF006F39);
 const Color kBeige = Color(0xFFF5F0E8);
 const Color kDark = Color(0xFF1A1A1A);
-
-const List<Map<String, dynamic>> _methods = [
-  {'label': 'Wave', 'asset': 'assets/images/wave.png'},
-  {'label': 'Orange\nMoney', 'asset': 'assets/images/om.png'},
-  {'label': 'Free\nMoney', 'asset': 'assets/images/free.png'},
-];
 
 class PaymentScreen extends StatefulWidget {
   final Terrain terrain;
@@ -42,12 +39,10 @@ class PaymentScreen extends StatefulWidget {
 class _PaymentScreenState extends State<PaymentScreen> {
   final _promoController = TextEditingController();
   bool _promoApplied = false;
-  int _selectedMethod = 0;
 
-  // 0 = totalité, 1 = acompte 30%, 2 = partagé
+  // 0 = totalité, 1 = acompte 30%. Le paiement partagé terrain est masqué pour le moment.
   int _paymentType = 0;
-  int _nbPersonnes = 2;
-  String? _shareLink;
+  bool _isPaying = false;
 
   int get _discount => _promoApplied ? (widget.totalPrice * 0.10).round() : 0;
   int get _finalPrice => widget.totalPrice - _discount;
@@ -55,13 +50,13 @@ class _PaymentScreenState extends State<PaymentScreen> {
   int get _amountToPay {
     if (_paymentType == 0) return _finalPrice;
     if (_paymentType == 1) return (_finalPrice * 0.30).round();
-    return (_finalPrice / _nbPersonnes).round();
+    return _finalPrice;
   }
 
   String get _amountLabel {
     if (_paymentType == 0) return '$_finalPrice F';
     if (_paymentType == 1) return '$_amountToPay F  (30%)';
-    return '$_amountToPay F  (ma part)';
+    return '$_amountToPay F';
   }
 
   String get _durationLabel {
@@ -78,13 +73,6 @@ class _PaymentScreenState extends State<PaymentScreen> {
     const months = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Août', 'Sep', 'Oct', 'Nov', 'Déc'];
     final d = widget.date;
     return '${days[d.weekday - 1]} ${d.day} ${months[d.month - 1]}';
-  }
-
-  void _generateLink() {
-    final ref = 'MF-${widget.terrain.id}${DateTime.now().millisecondsSinceEpoch.toString().substring(6)}';
-    setState(() {
-      _shareLink = 'minifoot.app/pay/$ref?n=$_nbPersonnes&t=${(_finalPrice / _nbPersonnes).round()}';
-    });
   }
 
   @override
@@ -284,7 +272,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
                   title: 'Totalité',
                   subtitle: '$_finalPrice F',
                   selected: _paymentType == 0,
-                  onTap: () => setState(() { _paymentType = 0; _shareLink = null; }),
+                  onTap: () => setState(() => _paymentType = 0),
                 ),
                 const SizedBox(width: 10),
                 _PayTypeCard(
@@ -292,279 +280,9 @@ class _PaymentScreenState extends State<PaymentScreen> {
                   title: 'Acompte',
                   subtitle: '30% · ${(_finalPrice * 0.30).round()} F',
                   selected: _paymentType == 1,
-                  onTap: () => setState(() { _paymentType = 1; _shareLink = null; }),
-                ),
-                const SizedBox(width: 10),
-                _PayTypeCard(
-                  icon: Icons.group_rounded,
-                  title: 'Partagé',
-                  subtitle: 'Par personne',
-                  selected: _paymentType == 2,
-                  onTap: () => setState(() { _paymentType = 2; _shareLink = null; }),
+                  onTap: () => setState(() => _paymentType = 1),
                 ),
               ],
-            ),
-
-            // ── PAIEMENT PARTAGÉ (options) ──
-            if (_paymentType == 2) ...[
-              const SizedBox(height: 16),
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(18),
-                  boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10)],
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text('Nombre de participants',
-                        style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13, color: kDark)),
-                    const SizedBox(height: 14),
-                    Row(
-                      children: [
-                        // Stepper
-                        _StepperButton(
-                          icon: Icons.remove_rounded,
-                          onTap: _nbPersonnes > 2
-                              ? () => setState(() { _nbPersonnes--; _shareLink = null; })
-                              : null,
-                        ),
-                        Expanded(
-                          child: Column(
-                            children: [
-                              Text('$_nbPersonnes',
-                                  style: const TextStyle(
-                                      fontSize: 28, fontWeight: FontWeight.w900, color: kDark)),
-                              Text('personnes',
-                                  style: TextStyle(
-                                      fontSize: 11, color: Colors.black.withOpacity(0.4))),
-                            ],
-                          ),
-                        ),
-                        _StepperButton(
-                          icon: Icons.add_rounded,
-                          onTap: _nbPersonnes < 20
-                              ? () => setState(() { _nbPersonnes++; _shareLink = null; })
-                              : null,
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 14),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                      decoration: BoxDecoration(
-                        color: kGreen.withOpacity(0.07),
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: kGreen.withOpacity(0.2)),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text('Part par personne',
-                              style: TextStyle(fontSize: 13, color: Colors.black.withOpacity(0.55))),
-                          Text('${(_finalPrice / _nbPersonnes).round()} F',
-                              style: const TextStyle(
-                                  fontSize: 15, fontWeight: FontWeight.w900, color: kGreen)),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 14),
-
-                    // Bouton générer lien
-                    GestureDetector(
-                      onTap: _generateLink,
-                      child: Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.symmetric(vertical: 13),
-                        decoration: BoxDecoration(
-                          color: kDark,
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: const [
-                            Icon(Icons.link_rounded, color: Colors.white, size: 18),
-                            SizedBox(width: 8),
-                            Text('Générer le lien de paiement',
-                                style: TextStyle(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.w700,
-                                    fontSize: 13)),
-                          ],
-                        ),
-                      ),
-                    ),
-
-                    // Lien généré
-                    if (_shareLink != null) ...[
-                      const SizedBox(height: 12),
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFF8F8F8),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: const Color(0xFFE0E0E0)),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                const Icon(Icons.check_circle_rounded,
-                                    color: kGreen, size: 16),
-                                const SizedBox(width: 6),
-                                const Text('Lien généré !',
-                                    style: TextStyle(
-                                        fontWeight: FontWeight.w700,
-                                        fontSize: 12,
-                                        color: kGreen)),
-                                const Spacer(),
-                                GestureDetector(
-                                  onTap: () {
-                                    Clipboard.setData(ClipboardData(text: _shareLink!));
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                          content: Text('Lien copié !'),
-                                          backgroundColor: kGreen,
-                                          duration: Duration(seconds: 2)),
-                                    );
-                                  },
-                                  child: Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                                    decoration: BoxDecoration(
-                                      color: kGreen,
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                    child: Row(
-                                      children: const [
-                                        Icon(Icons.copy_rounded, color: Colors.white, size: 12),
-                                        SizedBox(width: 4),
-                                        Text('Copier',
-                                            style: TextStyle(
-                                                color: Colors.white,
-                                                fontSize: 11,
-                                                fontWeight: FontWeight.w700)),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              _shareLink!,
-                              style: TextStyle(
-                                  fontSize: 11,
-                                  color: Colors.black.withOpacity(0.55),
-                                  fontFamily: 'monospace'),
-                            ),
-                            const SizedBox(height: 10),
-                            Row(
-                              children: [
-                                Icon(Icons.info_outline_rounded,
-                                    size: 12, color: Colors.black.withOpacity(0.35)),
-                                const SizedBox(width: 4),
-                                Expanded(
-                                  child: Text(
-                                    'Chaque participant paiera ${(_finalPrice / _nbPersonnes).round()} F via ce lien.',
-                                    style: TextStyle(
-                                        fontSize: 10,
-                                        color: Colors.black.withOpacity(0.4)),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 10),
-                            // Bouton partager
-                            GestureDetector(
-                              onTap: () async {
-                                await Share.share(
-                                  'Tu es invité à rejoindre une réservation MiniFoot 🏟️\n\n'
-                                  '📍 ${widget.terrain.name}\n'
-                                  '📅 ${widget.startSlot} → ${widget.endSlot}\n'
-                                  '💰 Ta part : ${(_finalPrice / _nbPersonnes).round()} F\n\n'
-                                  '👉 $_shareLink',
-                                  subject: 'Paiement partagé – MiniFoot',
-                                );
-                              },
-                              child: Container(
-                                width: double.infinity,
-                                padding: const EdgeInsets.symmetric(vertical: 10),
-                                decoration: BoxDecoration(
-                                  color: kGreen.withOpacity(0.1),
-                                  borderRadius: BorderRadius.circular(10),
-                                  border: Border.all(color: kGreen.withOpacity(0.3)),
-                                ),
-                                child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: const [
-                                    Icon(Icons.share_rounded, color: kGreen, size: 16),
-                                    SizedBox(width: 6),
-                                    Text('Partager le lien',
-                                        style: TextStyle(
-                                            color: kGreen,
-                                            fontWeight: FontWeight.w700,
-                                            fontSize: 12)),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-            ],
-
-            const SizedBox(height: 22),
-
-            // ── MODE DE PAIEMENT ──
-            const Text('Mode de paiement',
-                style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15, color: kDark)),
-            const SizedBox(height: 14),
-
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: List.generate(_methods.length, (i) {
-                final m = _methods[i];
-                final selected = _selectedMethod == i;
-                return GestureDetector(
-                  onTap: () => setState(() => _selectedMethod = i),
-                  child: Column(
-                    children: [
-                      AnimatedContainer(
-                        duration: const Duration(milliseconds: 200),
-                        width: 72, height: 72,
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: selected ? kGreen : Colors.black.withOpacity(0.08),
-                            width: selected ? 2.5 : 1,
-                          ),
-                          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.07), blurRadius: 8)],
-                        ),
-                        child: ClipOval(
-                          child: Image.asset(m['asset'] as String, fit: BoxFit.cover),
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        m['label'] as String,
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.w600,
-                          color: selected ? kGreen : Colors.black.withOpacity(0.5),
-                        ),
-                      ),
-                    ],
-                  ),
-                );
-              }),
             ),
           ],
         ),
@@ -580,7 +298,6 @@ class _PaymentScreenState extends State<PaymentScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Résumé montant à payer
             Padding(
               padding: const EdgeInsets.only(bottom: 10),
               child: Row(
@@ -589,9 +306,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
                   Text(
                     _paymentType == 0
                         ? 'Paiement total'
-                        : _paymentType == 1
-                            ? 'Acompte 30%'
-                            : 'Ma part (1/$_nbPersonnes)',
+                        : 'Acompte 30%',
                     style: TextStyle(fontSize: 12, color: Colors.black.withOpacity(0.5), fontWeight: FontWeight.w500),
                   ),
                   Text(
@@ -602,33 +317,30 @@ class _PaymentScreenState extends State<PaymentScreen> {
               ),
             ),
             GestureDetector(
-              onTap: () {
-                final ref = 'MF-${widget.terrain.id}${DateTime.now().millisecondsSinceEpoch.toString().substring(7)}';
-                Navigator.push(context, MaterialPageRoute(
-                  builder: (_) => BookingConfirmationScreen(
-                    terrain: widget.terrain,
-                    subTerrain: widget.subTerrain,
-                    date: widget.date,
-                    startSlot: widget.startSlot,
-                    endSlot: widget.endSlot,
-                    finalPrice: _finalPrice,
-                    paymentMethod: _methods[_selectedMethod]['label'] as String,
-                    reference: ref,
-                  ),
-                ));
-              },
-              child: Container(
+              onTap: _isPaying ? null : _handlePay,
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
                 height: 56,
                 decoration: BoxDecoration(
-                  color: kDark,
+                  color: _isPaying ? kDark.withOpacity(0.6) : kDark,
                   borderRadius: BorderRadius.circular(30),
                 ),
                 child: Row(
                   children: [
                     Expanded(
                       child: Center(
-                        child: Text('Payer · $_amountToPay F',
-                            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 15)),
+                        child: _isPaying
+                            ? const SizedBox(
+                                width: 22,
+                                height: 22,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2.5,
+                                  valueColor: AlwaysStoppedAnimation(Colors.white),
+                                ),
+                              )
+                            : Text('Payer · $_amountToPay F',
+                                style: const TextStyle(
+                                    color: Colors.white, fontWeight: FontWeight.w700, fontSize: 15)),
                       ),
                     ),
                     Container(
@@ -645,6 +357,104 @@ class _PaymentScreenState extends State<PaymentScreen> {
         ),
       ),
     );
+  }
+
+  Future<void> _handlePay() async {
+    if (_isPaying) return;
+    final auth = context.read<AuthProvider>();
+    final reservationProvider = context.read<ReservationProvider>();
+    final token = auth.token;
+
+    if (token == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Session expirée. Veuillez vous reconnecter.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    setState(() => _isPaying = true);
+
+    try {
+      // 1 — Créer la réservation en base
+      final dateStr =
+          '${widget.date.year}-${widget.date.month.toString().padLeft(2, '0')}-${widget.date.day.toString().padLeft(2, '0')}';
+
+      final reservation = await reservationProvider.createReservation(
+        token: token,
+        terrainId: widget.terrain.id,
+        subTerrainId: widget.subTerrain?.id,
+        date: dateStr,
+        startSlot: widget.startSlot,
+        endSlot: widget.endSlot,
+        intervals: widget.intervals,
+        paymentTypeIndex: _paymentType,
+        promoCode: _promoApplied ? _promoController.text.trim() : null,
+      );
+
+      final reservationId = reservation['id'] as String;
+      final reference = reservation['reference'] as String;
+      final qrData = reservation['qrData'] as String?;
+
+      // 2 — Obtenir le lien de paiement DexPay
+      final paymentLink = await reservationProvider.getPaymentLink(
+        token: token,
+        reservationId: reservationId,
+      );
+
+      // 3 — Ouvrir le lien de paiement dans le navigateur externe
+      final uri = Uri.parse(paymentLink);
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+      } else {
+        throw Exception('Impossible d’ouvrir le paiement');
+      }
+
+      // 4 — Attendre la validation backend avant d'afficher le ticket.
+      final confirmed = await _waitForPaymentValidation(token, reservationId);
+      if (!mounted) return;
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (_) => BookingConfirmationScreen(
+            terrain: widget.terrain,
+            subTerrain: widget.subTerrain,
+            date: widget.date,
+            startSlot: widget.startSlot,
+            endSlot: widget.endSlot,
+            finalPrice: (confirmed['finalPrice'] as num?)?.toInt() ?? _finalPrice,
+            reference: reference,
+            qrData: confirmed['qrData'] as String? ?? qrData,
+          ),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            e.toString().replaceFirst('Exception: ', ''),
+            style: const TextStyle(fontSize: 13),
+          ),
+          backgroundColor: Colors.red.shade700,
+          duration: const Duration(seconds: 4),
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _isPaying = false);
+    }
+  }
+
+  Future<Map<String, dynamic>> _waitForPaymentValidation(String token, String reservationId) async {
+    final service = ReservationService();
+    for (var i = 0; i < 40; i++) {
+      final reservation = await service.getReservation(token, reservationId);
+      if (reservation['status'] == 'CONFIRMED') return reservation;
+      await Future.delayed(const Duration(seconds: 3));
+    }
+    throw Exception('Paiement lancé. Le ticket sera disponible après validation du paiement.');
   }
 }
 
@@ -701,27 +511,6 @@ class _PayTypeCard extends StatelessWidget {
           ],
         ),
       ),
-    ),
-  );
-}
-
-// ── BOUTON STEPPER ──
-class _StepperButton extends StatelessWidget {
-  final IconData icon;
-  final VoidCallback? onTap;
-  const _StepperButton({required this.icon, this.onTap});
-
-  @override
-  Widget build(BuildContext context) => GestureDetector(
-    onTap: onTap,
-    child: AnimatedContainer(
-      duration: const Duration(milliseconds: 150),
-      width: 44, height: 44,
-      decoration: BoxDecoration(
-        color: onTap != null ? kDark : const Color(0xFFEEEEEE),
-        shape: BoxShape.circle,
-      ),
-      child: Icon(icon, color: onTap != null ? Colors.white : Colors.black26, size: 20),
     ),
   );
 }
