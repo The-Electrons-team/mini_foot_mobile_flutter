@@ -3,7 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'providers/chat_provider.dart';
 import 'providers/auth_provider.dart';
-
+import 'providers/team_provider.dart';
 const Color _kBeige  = Color(0xFFF5F0E8);
 const Color _kGreen  = Color(0xFF006F39);
 const Color _kDark   = Color(0xFF1A1A1A);
@@ -138,84 +138,15 @@ class ChatMessage {
   }
 }
 
-// ── DONNÉES ──
-
-final List<ChatPreview> _chats = [
-  const ChatPreview(
-    id: '1', name: 'Les Lions FC',
-    lastMessage: 'Rdv demain 10h au terrain !',
-    time: 'Maintenant', unread: 5, type: ChatType.team,
-    initials: 'LF', avatarColor: Color(0xFF006F39), isOnline: true,
-  ),
-  const ChatPreview(
-    id: '2', name: 'Gérant Dakar Arena',
-    lastMessage: 'Oui le terrain est disponible ce soir',
-    time: 'Il y a 2min', unread: 1, type: ChatType.manager,
-    initials: 'DA', avatarColor: Color(0xFF1565C0), isOnline: true,
-  ),
-  const ChatPreview(
-    id: '3', name: 'Équipe Plateau Stars',
-    lastMessage: 'On vous challenge ce samedi !',
-    time: '08:32', unread: 3, type: ChatType.team,
-    initials: 'PS', avatarColor: Color(0xFFE65100),
-  ),
-  const ChatPreview(
-    id: '4', name: 'Gérant Stade Léopold',
-    lastMessage: 'Votre réservation est confirmée',
-    time: '16:15', unread: 0, type: ChatType.manager,
-    initials: 'SL', avatarColor: Color(0xFF6A1B9A), isSentByMe: true,
-  ),
-  const ChatPreview(
-    id: '5', name: 'Ibrahima Diallo',
-    lastMessage: 'T\'es dispo ce soir pour jouer ?',
-    time: 'Hier', unread: 0, type: ChatType.direct,
-    initials: 'ID', avatarColor: Color(0xFF00695C),
-  ),
-  const ChatPreview(
-    id: '6', name: 'Ousmane Seck',
-    lastMessage: 'On cherche 2 joueurs pour compléter',
-    time: 'Hier', unread: 0, type: ChatType.direct,
-    initials: 'OS', avatarColor: Color(0xFFAD1457), isSentByMe: true,
-  ),
-  const ChatPreview(
-    id: '7', name: 'Gérant Terrain Point E',
-    lastMessage: 'Le tarif de nuit est 6 500 F/h',
-    time: '02/12', unread: 0, type: ChatType.manager,
-    initials: 'PE', avatarColor: Color(0xFF37474F),
-  ),
-  const ChatPreview(
-    id: '8', name: 'Moussa Ndiaye',
-    lastMessage: 'Super match hier',
-    time: '02/10', unread: 0, type: ChatType.direct,
-    initials: 'MN', avatarColor: Color(0xFF1A237E), isSentByMe: true,
-  ),
-];
-
-final Map<String, List<ChatMessage>> _messages = {
-  '1': [
-    const ChatMessage(text: 'Salut l\'équipe ! Rdv demain 10h au Terrain Dakar Arena', isMe: false, time: '09:00'),
-    const ChatMessage(text: 'Je serai là', isMe: true, time: '09:02'),
-    const ChatMessage(text: 'Moi aussi, on ramène le ballon ?', isMe: false, time: '09:05'),
-    const ChatMessage(text: 'Oui le terrain en fournit un mais amenez quand même', isMe: false, time: '09:06'),
-    const ChatMessage(text: 'OK top ! On se retrouve là-bas', isMe: true, time: '09:10'),
-    const ChatMessage(text: 'Rdv demain 10h au terrain !', isMe: false, time: 'Maintenant'),
-  ],
-  '2': [
-    const ChatMessage(text: 'Bonjour, est-ce que le terrain est disponible ce soir entre 18h et 20h ?', isMe: true, time: '14:30'),
-    const ChatMessage(text: 'Bonjour ! Oui le terrain est disponible ce soir', isMe: false, time: '14:35'),
-    const ChatMessage(text: 'Parfait ! Je fais la réservation sur l\'app', isMe: true, time: '14:36'),
-    const ChatMessage(text: 'Très bien, à ce soir !', isMe: false, time: '14:37'),
-  ],
-  '3': [
-    const ChatMessage(text: 'Salut ! On vous challenge ce samedi au terrain HLM', isMe: false, time: '08:30'),
-    const ChatMessage(text: 'Quel format ? 5v5 ou 7v7 ?', isMe: true, time: '08:31'),
-    const ChatMessage(text: 'On vous challenge ce samedi !', isMe: false, time: '08:32'),
-  ],
-};
-
 // ─────────────────────────────────────────────────────────────────────────────
 // CHAT LIST SCREEN
 // ─────────────────────────────────────────────────────────────────────────────
+
+Color _colorFromHex(String hex) {
+  hex = hex.replaceAll('#', '');
+  if (hex.length == 6) hex = 'FF$hex';
+  return Color(int.parse(hex, radix: 16));
+}
 
 class ChatListScreen extends StatefulWidget {
   const ChatListScreen({super.key});
@@ -223,222 +154,152 @@ class ChatListScreen extends StatefulWidget {
   State<ChatListScreen> createState() => _ChatListScreenState();
 }
 
-class _ChatListScreenState extends State<ChatListScreen>
-    with SingleTickerProviderStateMixin {
-  late TabController _tabController;
+class _ChatListScreenState extends State<ChatListScreen> {
   final _searchController = TextEditingController();
   String _query = '';
 
-  final _invitations = [
-    _InvitationData(name: 'Tigres FC',   message: 'Veut jouer contre votre équipe',     time: 'Maintenant', color: const Color(0xFFE65100)),
-    _InvitationData(name: 'Diallo Ibra', message: 'Vous invite à rejoindre son équipe',  time: 'Il y a 1h',  color: const Color(0xFF1565C0)),
-  ];
-
-  @override
-  void initState() {
-    super.initState();
-    _tabController = TabController(length: 2, vsync: this);
-    _tabController.animation!.addListener(() => setState(() {}));
-  }
-
   @override
   void dispose() {
-    _tabController.dispose();
     _searchController.dispose();
     super.dispose();
   }
 
-  List<ChatPreview> get _filtered => _chats
-      .where((c) =>
-          c.name.toLowerCase().contains(_query.toLowerCase()) ||
-          c.lastMessage.toLowerCase().contains(_query.toLowerCase()))
-      .toList();
-
-  int get _totalUnread => _chats.fold(0, (s, c) => s + c.unread);
-  int get _tabIndex => _tabController.index.clamp(0, 1);
-
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: _bg(context),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => _showNewChatSheet(context),
-        backgroundColor: _kGreen,
-        child: const Icon(Icons.edit_rounded, color: Colors.white),
-      ),
-      body: SafeArea(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
+    return Consumer2<ChatProvider, TeamProvider>(
+      builder: (context, chatProvider, teamProvider, child) {
+        final currentUserId = context.read<AuthProvider>().user?.id ?? '';
+        
+        final apiChats = chatProvider.conversations
+            .map((c) => ChatPreview.fromJson(c, currentUserId));
+            
+        final teamChats = teamProvider.myTeams.map((t) => ChatPreview(
+          id: t['id'] ?? '',
+          name: t['name'] ?? 'Équipe',
+          lastMessage: 'Chat de l\'équipe',
+          time: '',
+          unread: 0,
+          type: ChatType.team,
+          initials: t['name'] != null ? t['name'][0] : 'E',
+          avatarColor: _colorFromHex(t['color'] ?? '#006F39'),
+        ));
 
-            // ── HEADER ──
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  // Tab Chats
-                  GestureDetector(
-                    onTap: () => _tabController.animateTo(0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Chats${_totalUnread > 0 ? "($_totalUnread)" : ""}',
-                          style: GoogleFonts.orbitron(
-                            fontSize: _tabIndex == 0 ? 22 : 15,
-                            fontWeight: FontWeight.w900,
-                            color: _tabIndex == 0 ? _txt(context) : _sub(context),
-                          ),
-                        ),
-                        if (_tabIndex == 0)
-                          Container(
-                            margin: const EdgeInsets.only(top: 4),
-                            height: 3,
-                            width: 32,
-                            decoration: BoxDecoration(
-                              color: _kGreen,
-                              borderRadius: BorderRadius.circular(2),
-                            ),
-                          ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 20),
-                  // Tab Invitations
-                  GestureDetector(
-                    onTap: () => _tabController.animateTo(1),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Text(
-                              'Invites',
-                              style: GoogleFonts.orbitron(
-                                fontSize: _tabIndex == 1 ? 22 : 15,
-                                fontWeight: FontWeight.w900,
-                                color: _tabIndex == 1 ? _txt(context) : _sub(context),
-                              ),
-                            ),
-                            const SizedBox(width: 5),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                              decoration: BoxDecoration(
-                                color: Colors.red.shade600,
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              child: Text(
-                                '${_invitations.length}',
-                                style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.w800),
-                              ),
-                            ),
-                          ],
-                        ),
-                        if (_tabIndex == 1)
-                          Container(
-                            margin: const EdgeInsets.only(top: 4),
-                            height: 3,
-                            width: 32,
-                            decoration: BoxDecoration(
-                              color: _kGreen,
-                              borderRadius: BorderRadius.circular(2),
-                            ),
-                          ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 20),
-                  // Tab Terrain+ — supprimé
-                  const Spacer(),
-                ],
-              ),
-            ),
+        // Fusionner, en privilégiant l'API (qui a les vrais derniers messages) si l'ID correspond
+        final Map<String, ChatPreview> chatMap = {};
+        for (final tc in teamChats) chatMap[tc.id] = tc;
+        for (final c in apiChats) chatMap[c.id] = c;
 
-            const SizedBox(height: 16),
+        final chats = chatMap.values
+            .where((c) =>
+                c.name.toLowerCase().contains(_query.toLowerCase()) ||
+                c.lastMessage.toLowerCase().contains(_query.toLowerCase()))
+            .toList();
+            
+        final int totalUnread = chats.fold(0, (s, c) => s + c.unread);
 
-            // ── SEARCH ──
-            Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: Container(
-                  height: 46,
-                  decoration: BoxDecoration(
-                    color: _card(context),
-                    borderRadius: BorderRadius.circular(16),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.06),
-                        blurRadius: 10,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  child: Row(
+        return Scaffold(
+          backgroundColor: _bg(context),
+          body: SafeArea(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // ── HEADER ──
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 14),
-                        child: Icon(Icons.search_rounded, color: _sub(context), size: 20),
+                      Text(
+                        'Chats${totalUnread > 0 ? "($totalUnread)" : ""}',
+                        style: GoogleFonts.orbitron(
+                          fontSize: 22,
+                          fontWeight: FontWeight.w900,
+                          color: _txt(context),
+                        ),
                       ),
-                      Expanded(
-                        child: TextField(
-                          controller: _searchController,
-                          onChanged: (v) => setState(() => _query = v),
-                          style: TextStyle(fontSize: 14, color: _txt(context)),
-                          decoration: InputDecoration(
-                            hintText: 'Search Message',
-                            hintStyle: TextStyle(color: _sub(context), fontSize: 14),
-                            border: InputBorder.none,
-                          ),
+                      Container(
+                        margin: const EdgeInsets.only(top: 4),
+                        height: 3,
+                        width: 32,
+                        decoration: BoxDecoration(
+                          color: _kGreen,
+                          borderRadius: BorderRadius.circular(2),
                         ),
                       ),
                     ],
                   ),
                 ),
-              ),
-              const SizedBox(height: 8),
+                const SizedBox(height: 16),
 
-            // ── LISTE ──
-            Expanded(
-              child: TabBarView(
-                controller: _tabController,
-                children: [
-                  // Discussions
-                  _filtered.isEmpty
-                      ? Center(
-                          child: Text('Aucun résultat',
-                              style: TextStyle(color: _sub(context))),
-                        )
-                      : ListView.builder(
-                          padding: const EdgeInsets.only(top: 8, bottom: 24),
-                          itemCount: _filtered.length,
-                          itemBuilder: (_, i) => _ChatTile(
-                            chat: _filtered[i],
-                            onTap: () => Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => ChatConversationScreen(chat: _filtered[i]),
-                              ),
+                // ── SEARCH ──
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: Container(
+                    height: 46,
+                    decoration: BoxDecoration(
+                      color: _card(context),
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.06),
+                          blurRadius: 10,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 14),
+                          child: Icon(Icons.search_rounded, color: _sub(context), size: 20),
+                        ),
+                        Expanded(
+                          child: TextField(
+                            controller: _searchController,
+                            onChanged: (v) => setState(() => _query = v),
+                            style: TextStyle(fontSize: 14, color: _txt(context)),
+                            decoration: InputDecoration(
+                              hintText: 'Search Message',
+                              hintStyle: TextStyle(color: _sub(context), fontSize: 14),
+                              border: InputBorder.none,
                             ),
                           ),
                         ),
-                  // Invitations
-                  ListView.builder(
-                    padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
-                    itemCount: _invitations.length,
-                    itemBuilder: (_, i) => _InvitationTile(data: _invitations[i]),
+                      ],
+                    ),
                   ),
-                ],
-              ),
+                ),
+                const SizedBox(height: 8),
+
+                // ── LISTE ──
+                Expanded(
+                  child: chatProvider.isLoading && chats.isEmpty
+                      ? const Center(child: CircularProgressIndicator(color: _kGreen))
+                      : chats.isEmpty
+                          ? Center(
+                              child: Text('Aucun message', style: TextStyle(color: _sub(context))),
+                            )
+                          : ListView.builder(
+                              padding: const EdgeInsets.only(top: 8, bottom: 24),
+                              itemCount: chats.length,
+                              itemBuilder: (_, i) => _ChatTile(
+                                chat: chats[i],
+                                onTap: () => Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => ChatConversationScreen(chat: chats[i]),
+                                  ),
+                                ),
+                              ),
+                            ),
+                ),
+              ],
             ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
-
   void _showNewChatSheet(BuildContext context) {
     showModalBottomSheet(
       context: context,
@@ -984,96 +845,6 @@ class _MessageBubble extends StatelessWidget {
   }
 }
 
-// ── INVITATION TILE ──
-
-class _InvitationTile extends StatefulWidget {
-  final _InvitationData data;
-  const _InvitationTile({required this.data});
-  @override
-  State<_InvitationTile> createState() => _InvitationTileState();
-}
-
-class _InvitationTileState extends State<_InvitationTile> {
-  bool _handled = false;
-  @override
-  Widget build(BuildContext context) {
-    if (_handled) return const SizedBox();
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: Theme.of(context).cardColor,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 8)],
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 44, height: 44,
-            decoration: BoxDecoration(color: widget.data.color, shape: BoxShape.circle),
-            child: Center(
-              child: Text(widget.data.name.substring(0, 1),
-                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 16)),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(widget.data.name,
-                    style: TextStyle(fontWeight: FontWeight.w800, fontSize: 14, color: Theme.of(context).colorScheme.onSurface)),
-                const SizedBox(height: 3),
-                Text(widget.data.message,
-                    style: TextStyle(fontSize: 12, color: _sub(context))),
-              ],
-            ),
-          ),
-          const SizedBox(width: 8),
-          Column(
-            children: [
-              GestureDetector(
-                onTap: () {
-                  setState(() => _handled = true);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Invitation acceptée !'), backgroundColor: _kGreen),
-                  );
-                },
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(color: _kGreen, borderRadius: BorderRadius.circular(8)),
-                  child: const Text('Accepter',
-                      style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w700)),
-                ),
-              ),
-              const SizedBox(height: 6),
-              GestureDetector(
-                onTap: () => setState(() => _handled = true),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: _sub(context).withOpacity(0.08),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text('Refuser',
-                      style: TextStyle(color: _sub(context), fontSize: 11, fontWeight: FontWeight.w700)),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _InvitationData {
-  final String name;
-  final String message;
-  final String time;
-  final Color color;
-  const _InvitationData({required this.name, required this.message, required this.time, required this.color});
-}
 
 // ── NEW CHAT OPTION ──
 
