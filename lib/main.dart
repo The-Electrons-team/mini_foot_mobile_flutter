@@ -20,7 +20,8 @@ final themeNotifier = ValueNotifier<ThemeMode>(ThemeMode.light);
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await dotenv.load(fileName: '.env');
+  const envFileName = String.fromEnvironment('ENV_FILE', defaultValue: '.env');
+  await dotenv.load(fileName: envFileName);
   
   // Configuration Web lue depuis le .env
   final firebaseOptions = FirebaseOptions(

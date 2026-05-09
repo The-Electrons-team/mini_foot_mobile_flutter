@@ -1,6 +1,4 @@
-import 'dart:convert';
-import 'package:http/http.dart' as http;
-import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'api_service.dart';
 
 /// Mapping des types de paiement Flutter → enum backend
 const _paymentTypeMap = {0: 'TOTAL', 1: 'DEPOSIT', 2: 'SHARED'};
@@ -9,23 +7,7 @@ const _paymentTypeMap = {0: 'TOTAL', 1: 'DEPOSIT', 2: 'SHARED'};
 const _paymentMethod = 'DEXPAY';
 
 class ReservationService {
-  final String _baseUrl;
-
-  ReservationService([String? baseUrl])
-      : _baseUrl = baseUrl ?? _resolveBaseUrl();
-
-  static String _resolveBaseUrl() {
-    try {
-      return dotenv.env['API_URL'] ?? 'http://localhost:3000/api/v1';
-    } catch (_) {
-      return 'http://localhost:3000/api/v1';
-    }
-  }
-
-  Map<String, String> _authHeaders(String token) => {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer $token',
-      };
+  final ApiService _api = ApiService();
 
   /// Crée une réservation en base via POST /reservations
   Future<Map<String, dynamic>> createReservation({
@@ -53,17 +35,12 @@ class ReservationService {
     if (promoCode != null && promoCode.isNotEmpty) body['promoCode'] = promoCode;
     if (nbPersonnes != null) body['nbPersonnes'] = nbPersonnes;
 
-    final response = await http.post(
-      Uri.parse('$_baseUrl/reservations'),
-      headers: _authHeaders(token),
-      body: jsonEncode(body),
-    ).timeout(const Duration(seconds: 15));
-
-    if (response.statusCode == 200 || response.statusCode == 201) {
-      return jsonDecode(response.body) as Map<String, dynamic>;
-    }
-    final error = _parseError(response.body);
-    throw Exception(error);
+    return await _api.post(
+      '/reservations',
+      body: body,
+      token: token,
+      defaultErrorMsg: 'Erreur création réservation',
+    );
   }
 
   /// Récupère le lien de paiement pour une réservation via POST /reservations/:id/payment-link
@@ -71,67 +48,40 @@ class ReservationService {
     required String token,
     required String reservationId,
   }) async {
-    final response = await http.post(
-      Uri.parse('$_baseUrl/reservations/$reservationId/payment-link'),
-      headers: _authHeaders(token),
-      body: jsonEncode({}),
-    ).timeout(const Duration(seconds: 15));
-
-    if (response.statusCode == 200 || response.statusCode == 201) {
-      final data = jsonDecode(response.body) as Map<String, dynamic>;
-      return data['link'] as String;
-    }
-    throw Exception(_parseError(response.body));
+    final response = await _api.post(
+      '/reservations/$reservationId/payment-link',
+      body: {},
+      token: token,
+      defaultErrorMsg: 'Erreur lien paiement',
+    );
+    return response['link'] as String;
   }
 
   /// Récupère les réservations de l'utilisateur connecté
   Future<List<Map<String, dynamic>>> getMyReservations(String token) async {
-    final response = await http.get(
-      Uri.parse('$_baseUrl/reservations'),
-      headers: {'Authorization': 'Bearer $token'},
-    ).timeout(const Duration(seconds: 12));
-
-    if (response.statusCode == 200) {
-      final data = jsonDecode(response.body) as List<dynamic>;
-      return data.cast<Map<String, dynamic>>();
-    }
-    throw Exception(_parseError(response.body));
+    final response = await _api.get(
+      '/reservations',
+      token: token,
+      defaultErrorMsg: 'Erreur chargement réservations',
+    );
+    return (response as List).cast<Map<String, dynamic>>();
   }
 
   /// Récupère le détail d'une réservation
   Future<Map<String, dynamic>> getReservation(String token, String id) async {
-    final response = await http.get(
-      Uri.parse('$_baseUrl/reservations/$id'),
-      headers: {'Authorization': 'Bearer $token'},
-    ).timeout(const Duration(seconds: 12));
-
-    if (response.statusCode == 200) {
-      return jsonDecode(response.body) as Map<String, dynamic>;
-    }
-    throw Exception(_parseError(response.body));
+    return await _api.get(
+      '/reservations/$id',
+      token: token,
+      defaultErrorMsg: 'Erreur détail réservation',
+    );
   }
 
   /// Annule une réservation
   Future<Map<String, dynamic>> cancelReservation(String token, String id) async {
-    final response = await http.delete(
-      Uri.parse('$_baseUrl/reservations/$id'),
-      headers: {'Authorization': 'Bearer $token'},
+    return await _api.delete(
+      '/reservations/$id',
+      token: token,
+      defaultErrorMsg: 'Erreur annulation réservation',
     );
-
-    if (response.statusCode == 200 || response.statusCode == 201) {
-      return jsonDecode(response.body) as Map<String, dynamic>;
-    }
-    throw Exception(_parseError(response.body));
-  }
-
-  String _parseError(String body) {
-    try {
-      final data = jsonDecode(body) as Map<String, dynamic>;
-      final msg = data['message'];
-      if (msg is List) return msg.join(', ');
-      return msg?.toString() ?? 'Erreur serveur';
-    } catch (_) {
-      return 'Erreur serveur';
-    }
   }
 }

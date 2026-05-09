@@ -1,29 +1,20 @@
-import 'dart:convert';
-import 'package:http/http.dart' as http;
-import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'api_service.dart';
 
 class MatchService {
-  static String _resolveBaseUrl() {
-    try {
-      return dotenv.env['API_URL'] ?? 'http://localhost:3000/api/v1';
-    } catch (_) {
-      return 'http://localhost:3000/api/v1';
-    }
-  }
-
-  final String _baseUrl = _resolveBaseUrl();
+  final ApiService _api = ApiService();
 
   Future<List<dynamic>> getMatches({String? zone}) async {
-    var url = '$_baseUrl/matches';
+    var url = '/matches';
     if (zone != null) url += '?zone=$zone';
     
-    final response = await http.get(Uri.parse(url));
-    if (response.statusCode == 200) return jsonDecode(response.body);
-    throw Exception('Erreur chargement matchs: ${response.body}');
+    return await _api.get(
+      url,
+      defaultErrorMsg: 'Erreur chargement matchs',
+    );
   }
 
   Future<List<dynamic>> getMyTeamMatches(String token, String teamId, {String? status, String? opponentId, String? date, int? page, int? limit}) async {
-    var url = '$_baseUrl/matches/team/$teamId';
+    var url = '/matches/team/$teamId';
     List<String> queries = [];
     if (status != null) queries.add('status=$status');
     if (opponentId != null) queries.add('opponentId=$opponentId');
@@ -35,30 +26,27 @@ class MatchService {
       url += '?${queries.join('&')}';
     }
 
-    final response = await http.get(
-      Uri.parse(url),
-      headers: {'Authorization': 'Bearer $token'},
+    return await _api.get(
+      url,
+      token: token,
+      defaultErrorMsg: 'Erreur chargement matchs équipe',
     );
-    if (response.statusCode == 200) return jsonDecode(response.body);
-    throw Exception('Erreur chargement matchs équipe: ${response.body}');
   }
 
   Future<List<dynamic>> getPendingChallenges(String token, String teamId) async {
-    final response = await http.get(
-      Uri.parse('$_baseUrl/matches/challenges/pending/$teamId'),
-      headers: {'Authorization': 'Bearer $token'},
+    return await _api.get(
+      '/matches/challenges/pending/$teamId',
+      token: token,
+      defaultErrorMsg: 'Erreur chargement défis',
     );
-    if (response.statusCode == 200) return jsonDecode(response.body);
-    throw Exception('Erreur chargement défis: ${response.body}');
   }
 
   Future<List<dynamic>> getTeamChallenges(String token, String teamId) async {
-    final response = await http.get(
-      Uri.parse('$_baseUrl/matches/challenges/team/$teamId'),
-      headers: {'Authorization': 'Bearer $token'},
+    return await _api.get(
+      '/matches/challenges/team/$teamId',
+      token: token,
+      defaultErrorMsg: 'Erreur chargement défis',
     );
-    if (response.statusCode == 200) return jsonDecode(response.body);
-    throw Exception('Erreur chargement défis: ${response.body}');
   }
 
   Future<void> sendChallenge({
@@ -84,59 +72,39 @@ class MatchService {
       if (subTerrainId != null && subTerrainId.isNotEmpty) 'subTerrainId': subTerrainId,
       if (terrainName != null && terrainName.isNotEmpty) 'terrainName': terrainName,
     };
-    final response = await http.post(
-      Uri.parse('$_baseUrl/matches/challenge'),
-      headers: {
-        'Authorization': 'Bearer $token',
-        'Content-Type': 'application/json',
-      },
-      body: jsonEncode(body),
-    ).timeout(const Duration(seconds: 12));
-    if (response.statusCode != 200 && response.statusCode != 201) {
-      throw Exception('Erreur envoi défi (${response.statusCode}): ${response.body}');
-    }
+    
+    await _api.post(
+      '/matches/challenge',
+      body: body,
+      token: token,
+      defaultErrorMsg: 'Erreur envoi défi',
+    );
   }
 
   Future<void> respondChallenge(String token, String challengeId, bool accept) async {
-    final response = await http.patch(
-      Uri.parse('$_baseUrl/matches/challenge/$challengeId/respond'),
-      headers: {
-        'Authorization': 'Bearer $token',
-        'Content-Type': 'application/json',
-      },
-      body: jsonEncode({'accept': accept}),
+    await _api.patch(
+      '/matches/challenge/$challengeId/respond',
+      body: {'accept': accept},
+      token: token,
+      defaultErrorMsg: 'Erreur réponse défi',
     );
-    if (response.statusCode != 200) {
-      throw Exception('Erreur réponse défi: ${response.body}');
-    }
   }
 
   Future<Map<String, dynamic>> getChallengePaymentLink(String token, String challengeId) async {
-    final response = await http.post(
-      Uri.parse('$_baseUrl/matches/challenge/$challengeId/payment-link'),
-      headers: {
-        'Authorization': 'Bearer $token',
-        'Content-Type': 'application/json',
-      },
-      body: jsonEncode({}),
-    ).timeout(const Duration(seconds: 12));
-    if (response.statusCode == 200 || response.statusCode == 201) {
-      return jsonDecode(response.body) as Map<String, dynamic>;
-    }
-    throw Exception('Erreur paiement défi: ${response.body}');
+    return await _api.post(
+      '/matches/challenge/$challengeId/payment-link',
+      body: {},
+      token: token,
+      defaultErrorMsg: 'Erreur paiement défi',
+    );
   }
 
   Future<void> updateScore(String token, String matchId, int homeScore, int awayScore) async {
-    final response = await http.patch(
-      Uri.parse('$_baseUrl/matches/$matchId/score'),
-      headers: {
-        'Authorization': 'Bearer $token',
-        'Content-Type': 'application/json',
-      },
-      body: jsonEncode({'homeScore': homeScore, 'awayScore': awayScore}),
+    await _api.patch(
+      '/matches/$matchId/score',
+      body: {'homeScore': homeScore, 'awayScore': awayScore},
+      token: token,
+      defaultErrorMsg: 'Erreur mise à jour score',
     );
-    if (response.statusCode != 200) {
-      throw Exception('Erreur mise à jour score: ${response.body}');
-    }
   }
 }

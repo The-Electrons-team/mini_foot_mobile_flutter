@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'providers/auth_provider.dart';
 import 'home_screen.dart';
 
@@ -42,6 +43,28 @@ class _AuthScreenState extends State<AuthScreen>
     );
     _fadeAnim = CurvedAnimation(parent: _animController, curve: Curves.easeIn);
     _animController.forward();
+    _loadSavedForm();
+  }
+
+  Future<void> _loadSavedForm() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (mounted) {
+      setState(() {
+        _phoneController.text = prefs.getString('signup_phone') ?? '';
+        _prenomController.text = prefs.getString('signup_prenom') ?? '';
+        _nomController.text = prefs.getString('signup_nom') ?? '';
+        _passwordController.text = prefs.getString('signup_password') ?? '';
+        _confirmPasswordController.text = prefs.getString('signup_password') ?? '';
+      });
+    }
+  }
+
+  void _saveFormValues() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('signup_phone', _phoneController.text.trim());
+    await prefs.setString('signup_prenom', _prenomController.text.trim());
+    await prefs.setString('signup_nom', _nomController.text.trim());
+    await prefs.setString('signup_password', _passwordController.text.trim());
   }
 
   @override
@@ -95,8 +118,31 @@ class _AuthScreenState extends State<AuthScreen>
         );
       } else {
         // --- MODE INSCRIPTION ---
-        await authProvider.signup(phone);
+        _saveFormValues();
+        final result = await authProvider.signup(phone);
         if (!mounted) return;
+
+        if (result['skipOtp'] == true) {
+          // Le compte est déjà vérifié (passe-droit actif), on inscrit directement
+          await authProvider.register(
+            phone: phone,
+            password: _passwordController.text.trim(),
+            firstName: _prenomController.text.trim(),
+            lastName: _nomController.text.trim(),
+          );
+          if (!mounted) return;
+          Navigator.of(context).pushAndRemoveUntil(
+            MaterialPageRoute(builder: (_) => const HomeScreen()),
+            (route) => false,
+          );
+          return;
+        }
+
+        if (result['otpActive'] == true) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Un code a déjà été envoyé précédemment.')),
+          );
+        }
 
         // Go OTP avec toutes les infos pour finaliser après
         Navigator.of(context).push(

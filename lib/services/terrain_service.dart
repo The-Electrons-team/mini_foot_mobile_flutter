@@ -1,18 +1,8 @@
-import 'dart:convert';
-import 'package:http/http.dart' as http;
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import '../terrain_data.dart';
+import 'api_service.dart';
 
 class TerrainService {
-  static String _resolveBaseUrl() {
-    try {
-      return dotenv.env['API_URL'] ?? 'http://localhost:3000/api/v1';
-    } catch (_) {
-      return 'http://localhost:3000/api/v1';
-    }
-  }
-
-  final String _base = _resolveBaseUrl();
+  final ApiService _api = ApiService();
 
   Future<List<Terrain>> fetchTerrains({String? search, String? zone, int page = 1, int limit = 20, double? lat, double? lng}) async {
     final params = <String, String>{
@@ -24,106 +14,70 @@ class TerrainService {
     if (lat != null) params['lat'] = lat.toString();
     if (lng != null) params['lng'] = lng.toString();
 
-    final uri = Uri.parse('$_base/terrains')
-        .replace(queryParameters: params);
+    final queryString = params.entries.map((e) => '${e.key}=${e.value}').join('&');
+    final url = '/terrains?$queryString';
 
-    final response = await http.get(uri).timeout(const Duration(seconds: 15));
-    if (response.statusCode == 200) {
-      final data = jsonDecode(response.body);
-      final list = data['data'] as List<dynamic>;
-      return list.map((j) => Terrain.fromJson(j as Map<String, dynamic>)).toList();
-    }
-    throw Exception('Erreur chargement terrains: ${response.statusCode}');
+    final data = await _api.get(url, defaultErrorMsg: 'Erreur chargement terrains');
+    final list = data['data'] as List<dynamic>;
+    return list.map((j) => Terrain.fromJson(j as Map<String, dynamic>)).toList();
   }
 
   Future<Terrain> fetchTerrain(String id) async {
-    final response = await http.get(Uri.parse('$_base/terrains/$id')).timeout(const Duration(seconds: 12));
-    if (response.statusCode == 200) {
-      return Terrain.fromJson(jsonDecode(response.body) as Map<String, dynamic>);
-    }
-    throw Exception('Terrain introuvable');
+    final data = await _api.get('/terrains/$id', defaultErrorMsg: 'Terrain introuvable');
+    return Terrain.fromJson(data as Map<String, dynamic>);
   }
 
   Future<List<TerrainSlot>> fetchSlots(String terrainId, String date, {String? subTerrainId}) async {
-    final uri = Uri.parse('$_base/terrains/$terrainId/slots').replace(
-      queryParameters: {
-        'date': date,
-        if (subTerrainId != null) 'subTerrainId': subTerrainId,
-      },
-    );
-    final response = await http.get(uri).timeout(const Duration(seconds: 12));
-    if (response.statusCode == 200) {
-      final list = jsonDecode(response.body) as List<dynamic>;
-      return list.map((j) => TerrainSlot.fromJson(j as Map<String, dynamic>)).toList();
-    }
-    throw Exception('Erreur chargement créneaux');
+    final params = <String, String>{'date': date};
+    if (subTerrainId != null) params['subTerrainId'] = subTerrainId;
+    
+    final queryString = params.entries.map((e) => '${e.key}=${e.value}').join('&');
+    final list = await _api.get('/terrains/$terrainId/slots?$queryString', defaultErrorMsg: 'Erreur chargement créneaux');
+    
+    return (list as List).map((j) => TerrainSlot.fromJson(j as Map<String, dynamic>)).toList();
   }
 
   Future<List<Terrain>> fetchFavoriteTerrains(String token) async {
-    final response = await http.get(
-      Uri.parse('$_base/users/me/favorites'),
-      headers: {'Authorization': 'Bearer $token'},
-    ).timeout(const Duration(seconds: 12));
-    if (response.statusCode == 200) {
-      final list = jsonDecode(response.body) as List<dynamic>;
-      return list.map((j) => Terrain.fromJson(j as Map<String, dynamic>)).toList();
-    }
-    throw Exception('Erreur chargement favoris');
+    final list = await _api.get('/users/me/favorites', token: token, defaultErrorMsg: 'Erreur chargement favoris');
+    return (list as List).map((j) => Terrain.fromJson(j as Map<String, dynamic>)).toList();
   }
 
   Future<bool> toggleFavorite(String token, String terrainId) async {
-    final response = await http.post(
-      Uri.parse('$_base/users/me/favorites/$terrainId'),
-      headers: {'Authorization': 'Bearer $token'},
-    );
-    if (response.statusCode == 200 || response.statusCode == 201) {
-      final data = jsonDecode(response.body);
-      return data['favorited'] as bool;
-    }
-    throw Exception('Erreur toggle favori');
+    final data = await _api.post('/users/me/favorites/$terrainId', body: {}, token: token, defaultErrorMsg: 'Erreur toggle favori');
+    return data['favorited'] as bool;
   }
 
   Future<List<TerrainReview>> fetchReviews(String terrainId) async {
-    final response = await http.get(Uri.parse('$_base/terrains/$terrainId/reviews'));
-    if (response.statusCode == 200) {
-      final list = jsonDecode(response.body) as List<dynamic>;
-      return list.map((j) => TerrainReview.fromJson(j as Map<String, dynamic>)).toList();
+    try {
+      final list = await _api.get('/terrains/$terrainId/reviews');
+      return (list as List).map((j) => TerrainReview.fromJson(j as Map<String, dynamic>)).toList();
+    } catch (_) {
+      return [];
     }
-    return [];
   }
 
   Future<TerrainReview?> addReview(String token, String terrainId, int rating, String? comment) async {
-    final response = await http.post(
-      Uri.parse('$_base/terrains/$terrainId/reviews'),
-      headers: {
-        'Authorization': 'Bearer $token',
-        'Content-Type': 'application/json',
-      },
-      body: jsonEncode({
-        'rating': rating,
-        'comment': comment,
-      }),
-    );
-
-    if (response.statusCode == 201) {
-      return TerrainReview.fromJson(jsonDecode(response.body) as Map<String, dynamic>);
+    try {
+      final data = await _api.post(
+        '/terrains/$terrainId/reviews',
+        body: {'rating': rating, 'comment': comment},
+        token: token,
+      );
+      return TerrainReview.fromJson(data as Map<String, dynamic>);
+    } catch (_) {
+      return null;
     }
-    return null;
   }
 
   Future<List<Terrain>> fetchAvailableTerrains(String date, String startTime, int durationMin) async {
-    final uri = Uri.parse('$_base/terrains/available').replace(
-      queryParameters: {
-        'date': date,
-        'startTime': startTime,
-        'durationMin': durationMin.toString(),
-      },
-    );
-    final response = await http.get(uri);
-    if (response.statusCode == 200) {
-      final list = jsonDecode(response.body) as List<dynamic>;
-      return list.map((j) => Terrain.fromJson(j as Map<String, dynamic>)).toList();
-    }
-    throw Exception('Erreur chargement terrains disponibles');
+    final params = {
+      'date': date,
+      'startTime': startTime,
+      'durationMin': durationMin.toString(),
+    };
+    final queryString = params.entries.map((e) => '${e.key}=${e.value}').join('&');
+    
+    final list = await _api.get('/terrains/available?$queryString', defaultErrorMsg: 'Erreur chargement terrains disponibles');
+    return (list as List).map((j) => Terrain.fromJson(j as Map<String, dynamic>)).toList();
   }
 }

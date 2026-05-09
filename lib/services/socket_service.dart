@@ -1,7 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:socket_io_client/socket_io_client.dart' as IO;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-
+import 'api_service.dart';
 class SocketService with ChangeNotifier {
   IO.Socket? _socket;
   bool _isConnected = false;
@@ -11,7 +11,7 @@ class SocketService with ChangeNotifier {
   void connect(String userId) {
     if (_socket != null && _socket!.connected) return;
 
-    final String baseUrl = dotenv.get('API_URL');
+    final String baseUrl = ApiService().baseUrl;
     
     _socket = IO.io('$baseUrl/ws', IO.OptionBuilder()
       .setTransports(['websocket'])

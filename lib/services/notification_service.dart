@@ -2,12 +2,11 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import '../app_navigator.dart';
 import '../matches_screen.dart';
 import 'browser_notification_stub.dart'
     if (dart.library.html) 'browser_notification_web.dart';
+import 'api_service.dart';
 
 class NotificationService {
   static final NotificationService _instance = NotificationService._internal();
@@ -15,19 +14,10 @@ class NotificationService {
   NotificationService._internal();
 
   FirebaseMessaging get _fcm => FirebaseMessaging.instance;
-
-  static String _resolveBaseUrl() {
-    try {
-      return dotenv.env['API_URL'] ?? 'http://localhost:3000/api/v1';
-    } catch (_) {
-      return 'http://localhost:3000/api/v1';
-    }
-  }
+  final ApiService _api = ApiService();
 
   /// Token d'authentification JWT courant, mis à jour à chaque connexion.
   String? _authToken;
-
-  String get _base => _resolveBaseUrl();
 
   /// Initialise les notifications push pour l'utilisateur connecté.
   /// Doit être appelé dès la connexion (login / auto-login / register).
@@ -128,19 +118,13 @@ class NotificationService {
 
   Future<void> _registerToken(String fcmToken) async {
     try {
-      final response = await http.patch(
-        Uri.parse('$_base/users/me/fcm-token'),
-        headers: {
-          'Authorization': 'Bearer $_authToken',
-          'Content-Type': 'application/json',
-        },
-        body: jsonEncode({'token': fcmToken}),
+      await _api.patch(
+        '/users/me/fcm-token',
+        body: {'token': fcmToken},
+        token: _authToken,
+        defaultErrorMsg: 'Échec enregistrement token',
       );
-      if (response.statusCode == 200 || response.statusCode == 204) {
-        debugPrint('[NotifService] Token FCM enregistré sur le serveur');
-      } else {
-        debugPrint('[NotifService] Échec enregistrement token: ${response.statusCode}');
-      }
+      debugPrint('[NotifService] Token FCM enregistré sur le serveur');
     } catch (e) {
       debugPrint('[NotifService] Erreur enregistrement token FCM: $e');
     }
