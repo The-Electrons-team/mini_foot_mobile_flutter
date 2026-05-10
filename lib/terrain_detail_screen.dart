@@ -530,7 +530,10 @@ class _ReviewTabState extends State<_ReviewTab> {
   }
 
   Future<void> _loadReviews() async {
-    final list = await _service.fetchReviews(widget.terrain.id);
+    final list = await _service.fetchReviews(
+      widget.terrain.id,
+      token: context.read<AuthProvider>().token,
+    );
     if (mounted) {
       setState(() {
         _reviews = list;

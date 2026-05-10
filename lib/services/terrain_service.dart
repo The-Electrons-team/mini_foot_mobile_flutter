@@ -4,7 +4,7 @@ import 'api_service.dart';
 class TerrainService {
   final ApiService _api = ApiService();
 
-  Future<List<Terrain>> fetchTerrains({String? search, String? zone, int page = 1, int limit = 20, double? lat, double? lng}) async {
+  Future<List<Terrain>> fetchTerrains({String? token, String? search, String? zone, int page = 1, int limit = 20, double? lat, double? lng}) async {
     final params = <String, String>{
       'page': page.toString(),
       'limit': limit.toString(),
@@ -14,25 +14,25 @@ class TerrainService {
     if (lat != null) params['lat'] = lat.toString();
     if (lng != null) params['lng'] = lng.toString();
 
-    final queryString = params.entries.map((e) => '${e.key}=${e.value}').join('&');
+    final queryString = Uri(queryParameters: params).query;
     final url = '/terrains?$queryString';
 
-    final data = await _api.get(url, defaultErrorMsg: 'Erreur chargement terrains');
+    final data = await _api.get(url, token: token, defaultErrorMsg: 'Erreur chargement terrains');
     final list = data['data'] as List<dynamic>;
     return list.map((j) => Terrain.fromJson(j as Map<String, dynamic>)).toList();
   }
 
-  Future<Terrain> fetchTerrain(String id) async {
-    final data = await _api.get('/terrains/$id', defaultErrorMsg: 'Terrain introuvable');
+  Future<Terrain> fetchTerrain(String id, {String? token}) async {
+    final data = await _api.get('/terrains/$id', token: token, defaultErrorMsg: 'Terrain introuvable');
     return Terrain.fromJson(data as Map<String, dynamic>);
   }
 
-  Future<List<TerrainSlot>> fetchSlots(String terrainId, String date, {String? subTerrainId}) async {
+  Future<List<TerrainSlot>> fetchSlots(String terrainId, String date, {String? token, String? subTerrainId}) async {
     final params = <String, String>{'date': date};
     if (subTerrainId != null) params['subTerrainId'] = subTerrainId;
     
-    final queryString = params.entries.map((e) => '${e.key}=${e.value}').join('&');
-    final list = await _api.get('/terrains/$terrainId/slots?$queryString', defaultErrorMsg: 'Erreur chargement créneaux');
+    final queryString = Uri(queryParameters: params).query;
+    final list = await _api.get('/terrains/$terrainId/slots?$queryString', token: token, defaultErrorMsg: 'Erreur chargement créneaux');
     
     return (list as List).map((j) => TerrainSlot.fromJson(j as Map<String, dynamic>)).toList();
   }
@@ -47,9 +47,9 @@ class TerrainService {
     return data['favorited'] as bool;
   }
 
-  Future<List<TerrainReview>> fetchReviews(String terrainId) async {
+  Future<List<TerrainReview>> fetchReviews(String terrainId, {String? token}) async {
     try {
-      final list = await _api.get('/terrains/$terrainId/reviews');
+      final list = await _api.get('/terrains/$terrainId/reviews', token: token);
       return (list as List).map((j) => TerrainReview.fromJson(j as Map<String, dynamic>)).toList();
     } catch (_) {
       return [];
@@ -69,15 +69,15 @@ class TerrainService {
     }
   }
 
-  Future<List<Terrain>> fetchAvailableTerrains(String date, String startTime, int durationMin) async {
+  Future<List<Terrain>> fetchAvailableTerrains(String date, String startTime, int durationMin, {String? token}) async {
     final params = {
       'date': date,
       'startTime': startTime,
       'durationMin': durationMin.toString(),
     };
-    final queryString = params.entries.map((e) => '${e.key}=${e.value}').join('&');
+    final queryString = Uri(queryParameters: params).query;
     
-    final list = await _api.get('/terrains/available?$queryString', defaultErrorMsg: 'Erreur chargement terrains disponibles');
+    final list = await _api.get('/terrains/available?$queryString', token: token, defaultErrorMsg: 'Erreur chargement terrains disponibles');
     return (list as List).map((j) => Terrain.fromJson(j as Map<String, dynamic>)).toList();
   }
 }

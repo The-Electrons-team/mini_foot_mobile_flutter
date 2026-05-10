@@ -1,6 +1,5 @@
 import 'package:flutter/foundation.dart';
 import 'package:socket_io_client/socket_io_client.dart' as IO;
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'api_service.dart';
 class SocketService with ChangeNotifier {
   IO.Socket? _socket;
@@ -8,14 +7,15 @@ class SocketService with ChangeNotifier {
 
   bool get isConnected => _isConnected;
 
-  void connect(String userId) {
+  void connect(String token) {
     if (_socket != null && _socket!.connected) return;
 
     final String baseUrl = ApiService().baseUrl;
     
     _socket = IO.io('$baseUrl/ws', IO.OptionBuilder()
       .setTransports(['websocket'])
-      .setAuth({'userId': userId})
+      .setAuth({'token': token})
+      .setExtraHeaders({'Authorization': 'Bearer $token'})
       .enableAutoConnect()
       .build());
 

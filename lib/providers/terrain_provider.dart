@@ -5,6 +5,7 @@ import '../services/terrain_service.dart';
 
 class TerrainProvider with ChangeNotifier {
   final TerrainService _service = TerrainService();
+  String? _token;
 
   List<Terrain> _terrains = [];
   bool _isLoading = false;
@@ -26,6 +27,11 @@ class TerrainProvider with ChangeNotifier {
   String? get error => _error;
   Position? get userPosition => _userPosition;
   bool get hasMore => _hasMore;
+
+  void setAuthToken(String? token) {
+    if (_token == token) return;
+    _token = token;
+  }
 
   Future<void> updateLocation() async {
     try {
@@ -74,6 +80,7 @@ class TerrainProvider with ChangeNotifier {
     notifyListeners();
     try {
       final fetched = await _service.fetchTerrains(
+        token: _token,
         search: search,
         zone: zone,
         page: _page,
@@ -138,7 +145,7 @@ class TerrainProvider with ChangeNotifier {
     _error = null;
     notifyListeners();
     try {
-      final available = await _service.fetchAvailableTerrains(date, startTime, durationMin);
+      final available = await _service.fetchAvailableTerrains(date, startTime, durationMin, token: _token);
       return available;
     } catch (e) {
       _error = e.toString();

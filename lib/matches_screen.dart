@@ -1814,7 +1814,7 @@ class _ChallengeSheetState extends State<_ChallengeSheet> {
   String   _format  = '5v5';
   int      _startH  = 16;
   int      _startM  = 0;
-  int      _slots   = 4; // 4 × 15 min = 1h
+  int      _slots   = 2; // 2 × 30 min = 1h
 
   Terrain? _selectedTerrain;
   List<Terrain> _availableTerrains = [];
@@ -1857,9 +1857,9 @@ class _ChallengeSheetState extends State<_ChallengeSheet> {
 
   List<String> get _allSlots {
     final slots = <String>[];
-    for (int h = 8; h <= 22; h++) {
-      for (int m = 0; m < 60; m += 15) {
-        if (h == 22 && m > 0) break;
+    for (int h = 8; h < 24; h++) {
+      for (int m = 0; m < 60; m += 30) {
+        if (h * 60 + m + _durationMin > 24 * 60) continue;
         slots.add('${h.toString().padLeft(2,'0')}:${m.toString().padLeft(2,'0')}');
       }
     }
@@ -1867,11 +1867,19 @@ class _ChallengeSheetState extends State<_ChallengeSheet> {
   }
 
   int get _startMinutes => _startH * 60 + _startM;
-  int get _durationMin  => _slots * 15;
+  int get _durationMin  => _slots * 30;
 
   String get _endTime {
     final end = _startMinutes + _durationMin;
     return '${(end ~/ 60).toString().padLeft(2,'0')}:${(end % 60).toString().padLeft(2,'0')}';
+  }
+
+  String _formatSlotCountDuration(int slotCount) {
+    final minutes = slotCount * 30;
+    final h = minutes ~/ 60;
+    final min = minutes % 60;
+    if (min == 0) return '${h}h';
+    return '${h}h${min.toString().padLeft(2, '0')}';
   }
 
   List<Terrain> _getAvailableTerrains(List<Terrain> allTerrains) {
@@ -1929,6 +1937,7 @@ class _ChallengeSheetState extends State<_ChallengeSheet> {
         opponentTeamId: opponentTeamId,
         date: dt.toIso8601String(),
         time: '${_startH.toString().padLeft(2, '0')}:${_startM.toString().padLeft(2, '0')}',
+        durationMinutes: _durationMin,
         zone: zone,
         format: _format,
         terrainId: terrainId,
@@ -2090,11 +2099,19 @@ class _ChallengeSheetState extends State<_ChallengeSheet> {
               height: 36,
               child: ListView(
                 scrollDirection: Axis.horizontal,
-                children: [1, 2, 3, 4, 6, 8].map((s) {
+                children: [2, 3, 4, 5, 6, 7].map((s) {
                   final selected = _slots == s;
-                  final label = s == 1 ? '15 min' : s % 4 == 0 ? '${s ~/ 4}h' : '${(s * 15 / 60).toStringAsFixed(2).replaceAll('.', 'h')}';
+                  final label = _formatSlotCountDuration(s);
                   return GestureDetector(
-                    onTap: () => setState(() { _slots = s; _selectedTerrain = null; _fetchAvailable(); }),
+                    onTap: () => setState(() {
+                      _slots = s;
+                      if (_startMinutes + _durationMin > 24 * 60) {
+                        _startH = 16;
+                        _startM = 0;
+                      }
+                      _selectedTerrain = null;
+                      _fetchAvailable();
+                    }),
                     child: AnimatedContainer(
                       duration: const Duration(milliseconds: 150),
                       margin: const EdgeInsets.only(right: 6),

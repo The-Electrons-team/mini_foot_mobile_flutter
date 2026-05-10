@@ -105,7 +105,13 @@ class _RankingScreenState extends State<RankingScreen>
     var url = '$baseUrl/teams/ranking';
     if (zone != 'Toutes') url += '?zone=$zone';
 
-    final response = await http.get(Uri.parse(url));
+    final token = context.read<AuthProvider>().token;
+    final response = await http.get(
+      Uri.parse(url),
+      headers: {
+        if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
+      },
+    );
     if (response.statusCode == 200) {
       final List<dynamic> data = jsonDecode(response.body);
       return data.map((t) => _Team(

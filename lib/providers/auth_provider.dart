@@ -17,6 +17,7 @@ class User {
   final int assistsCount;
   final List<dynamic> upcomingMatches;
   final String? avatarUrl;
+  final String role;
 
   User({
     required this.id,
@@ -32,6 +33,7 @@ class User {
     this.assistsCount = 0,
     this.upcomingMatches = const [],
     this.avatarUrl,
+    this.role = 'PLAYER',
   });
 
   factory User.fromJson(Map<String, dynamic> json) {
@@ -67,8 +69,11 @@ class User {
       assistsCount: json['stats']?['assists'] ?? 0,
       upcomingMatches: json['upcomingMatches'] ?? [],
       avatarUrl: json['avatarUrl'],
+      role: json['role']?.toString() ?? 'PLAYER',
     );
   }
+
+  bool get isPlayer => role == 'PLAYER';
 }
 
 class AuthProvider with ChangeNotifier {
@@ -91,6 +96,12 @@ class AuthProvider with ChangeNotifier {
       final userData = await _authService.getProfile(token);
       _token = token;
       _user = User.fromJson(userData);
+      if (!_user!.isPlayer) {
+        await prefs.remove('token');
+        _token = null;
+        _user = null;
+        return false;
+      }
       NotificationService().init(token);
       notifyListeners();
       return true;
@@ -111,6 +122,11 @@ class AuthProvider with ChangeNotifier {
       }
 
       _user = User.fromJson(result['user']);
+      if (!_user!.isPlayer) {
+        _token = null;
+        _user = null;
+        throw Exception('Ce compte est réservé à l’espace propriétaire.');
+      }
       NotificationService().init(_token);
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString('token', _token!);
@@ -204,6 +220,11 @@ class AuthProvider with ChangeNotifier {
       );
       _token = result['token'];
       _user = User.fromJson(result['user']);
+      if (!_user!.isPlayer) {
+        _token = null;
+        _user = null;
+        throw Exception('Ce compte est réservé à l’espace propriétaire.');
+      }
       NotificationService().init(_token);
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString('token', _token!);

@@ -24,7 +24,9 @@ class ChatProvider with ChangeNotifier {
   List<dynamic> getMessages(String conversationId) => _messages[conversationId] ?? [];
 
   void _init() {
-    _socketService.connect(_authProvider.user!.id);
+    final token = _authProvider.token;
+    if (token == null || token.isEmpty) return;
+    _socketService.connect(token);
     _socketService.onMessageReceived((data) {
       final String convId = data['conversationId'];
       if (_messages.containsKey(convId)) {

@@ -57,7 +57,14 @@ class MinifootApp extends StatelessWidget {
     return MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => AuthProvider()),
-        ChangeNotifierProvider(create: (_) => TerrainProvider()),
+        ChangeNotifierProxyProvider<AuthProvider, TerrainProvider>(
+          create: (_) => TerrainProvider(),
+          update: (_, auth, terrain) {
+            final provider = terrain ?? TerrainProvider();
+            provider.setAuthToken(auth.token);
+            return provider;
+          },
+        ),
         ChangeNotifierProvider(create: (_) => NotificationProvider()),
         ChangeNotifierProvider(create: (_) => TeamProvider()),
         ChangeNotifierProvider(create: (_) => ReservationProvider()),

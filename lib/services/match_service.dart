@@ -3,12 +3,13 @@ import 'api_service.dart';
 class MatchService {
   final ApiService _api = ApiService();
 
-  Future<List<dynamic>> getMatches({String? zone}) async {
+  Future<List<dynamic>> getMatches({String? token, String? zone}) async {
     var url = '/matches';
     if (zone != null) url += '?zone=$zone';
     
     return await _api.get(
       url,
+      token: token,
       defaultErrorMsg: 'Erreur chargement matchs',
     );
   }
@@ -55,6 +56,7 @@ class MatchService {
     required String opponentTeamId,
     required String date,
     required String time,
+    required int durationMinutes,
     required String zone,
     required String format,
     required String terrainId,
@@ -66,6 +68,7 @@ class MatchService {
       'toTeamId': opponentTeamId,
       'date': date,
       'time': time,
+      'durationMinutes': durationMinutes,
       'zone': zone,
       'format': format,
       'terrainId': terrainId,

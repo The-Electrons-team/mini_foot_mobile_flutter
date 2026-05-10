@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
 import 'terrain_data.dart';
 import 'services/terrain_service.dart';
+import 'providers/auth_provider.dart';
 import 'payment_screen.dart';
 
 const Color kGreen = Color(0xFF006F39);
@@ -47,6 +49,7 @@ class _TerrainBookingScreenState extends State<TerrainBookingScreen> {
 
   // Affichage heure
   String _fmt(int totalMin) {
+    if (totalMin == 1440) return '24h00';
     final h = (totalMin ~/ 60) % 24;
     final m = totalMin % 60;
     return '${h.toString().padLeft(2,'0')}h${m.toString().padLeft(2,'0')}';
@@ -59,6 +62,7 @@ class _TerrainBookingScreenState extends State<TerrainBookingScreen> {
       _slots = await _service.fetchSlots(
         widget.terrain.id,
         date,
+        token: context.read<AuthProvider>().token,
         subTerrainId: _selectedSubTerrain?.id
       );
     } catch (e) {
@@ -89,7 +93,7 @@ class _TerrainBookingScreenState extends State<TerrainBookingScreen> {
   // Prix par 30 min
   int get _pricePerSlot {
     final price = _selectedSubTerrain?.pricePerHour ?? widget.terrain.pricePerHour;
-    return price ~/ 2;
+    return (price / 2).ceil();
   }
 
   int get _intervals => _selectedDuration ~/ 30;
@@ -555,7 +559,7 @@ class _TerrainBookingScreenState extends State<TerrainBookingScreen> {
   }
 
   Widget _buildDurationSelector() {
-    final durations = [60, 90, 120];
+    final durations = [60, 90, 120, 150, 180, 210];
     return Container(
       padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
@@ -581,7 +585,7 @@ class _TerrainBookingScreenState extends State<TerrainBookingScreen> {
                 ),
                 child: Center(
                   child: Text(
-                    '${d} min',
+                    _formatDuration(d),
                     style: TextStyle(
                       fontSize: 13,
                       fontWeight: isSel ? FontWeight.w800 : FontWeight.w600,
@@ -595,6 +599,13 @@ class _TerrainBookingScreenState extends State<TerrainBookingScreen> {
         }).toList(),
       ),
     );
+  }
+
+  String _formatDuration(int minutes) {
+    final h = minutes ~/ 60;
+    final min = minutes % 60;
+    if (min == 0) return '${h}h';
+    return '${h}h${min.toString().padLeft(2, '0')}';
   }
 
   Widget _buildStartTimeGrid() {

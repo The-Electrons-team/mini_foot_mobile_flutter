@@ -62,7 +62,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
   }
 
   String get _durationLabel {
-    final m = widget.intervals * 15;
+    final m = widget.intervals * 30;
     final h = m ~/ 60;
     final min = m % 60;
     if (h == 0) return '${m}min';
@@ -290,7 +290,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
               ),
               child: Column(
                 children: [
-                  _SummaryRow(label: 'Prix / 15 min', value: '${widget.totalPrice ~/ widget.intervals} F'),
+                  _SummaryRow(label: 'Prix / 30 min', value: '${widget.totalPrice ~/ widget.intervals} F'),
                   _SummaryRow(label: 'Durée totale', value: _durationLabel),
                   _SummaryRow(label: 'Sous-total', value: '${widget.totalPrice} F'),
                   if (_promoApplied) ...[
