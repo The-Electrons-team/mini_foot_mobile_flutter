@@ -1,9 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'terrain_data.dart';
 import 'terrain_detail_screen.dart';
 import 'package:geolocator/geolocator.dart';
+import 'player_experience_helpers.dart';
 import 'providers/terrain_provider.dart';
 import 'providers/auth_provider.dart';
 
@@ -27,6 +30,8 @@ class TerrainListScreen extends StatefulWidget {
 class _TerrainListScreenState extends State<TerrainListScreen> {
   String _query = '';
   final ScrollController _scrollController = ScrollController();
+  Timer? _searchDebounce;
+  TerrainDiscoveryFilter _selectedFilter = TerrainDiscoveryFilter.nearby;
 
   @override
   void initState() {
@@ -45,6 +50,7 @@ class _TerrainListScreenState extends State<TerrainListScreen> {
 
   @override
   void dispose() {
+    _searchDebounce?.cancel();
     _scrollController.dispose();
     super.dispose();
   }
@@ -65,16 +71,13 @@ class _TerrainListScreenState extends State<TerrainListScreen> {
   }
 
   List<Terrain> _getNearby(List<Terrain> all, Position? pos) {
-    var list = all.where((t) =>
-          t.name.toLowerCase().contains(_query.toLowerCase()) ||
-          t.address.toLowerCase().contains(_query.toLowerCase()))
-      .toList();
-    
-    if (pos != null) {
-      final tp = context.read<TerrainProvider>();
-      list.sort((a, b) => tp.distanceTo(a).compareTo(tp.distanceTo(b)));
-    }
-    return list;
+    final tp = context.read<TerrainProvider>();
+    return filterAndSortTerrains(
+      terrains: all,
+      query: _query,
+      filter: _selectedFilter,
+      distanceFor: pos == null ? null : (terrain) => tp.distanceTo(terrain),
+    );
   }
 
   @override
@@ -83,6 +86,12 @@ class _TerrainListScreenState extends State<TerrainListScreen> {
     final all = provider.terrains;
     final popular = _getPopular(all);
     final nearby = _getNearby(all, provider.userPosition);
+    final locationLabel = provider.userPosition != null
+        ? 'Autour de vous'
+        : 'Dakar, Sénégal';
+    final helperLabel = provider.userPosition != null
+        ? 'Résultats triés selon votre position'
+        : 'Activez la localisation pour voir le plus proche';
 
     return Scaffold(
       backgroundColor: _bg(context),
@@ -101,9 +110,21 @@ class _TerrainListScreenState extends State<TerrainListScreen> {
                   Row(children: [
                     const Icon(Icons.location_on_rounded, color: kGreen, size: 16),
                     const SizedBox(width: 4),
-                    Text('Dakar, Sénégal', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14, color: _txt(context))),
-                    Icon(Icons.keyboard_arrow_down_rounded, size: 18, color: _sub(context)),
+                    Expanded(
+                      child: Text(
+                        locationLabel,
+                        style: TextStyle(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 14,
+                          color: _txt(context),
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    Icon(Icons.tune_rounded, size: 18, color: _sub(context)),
                   ]),
+                  const SizedBox(height: 6),
+                  Text(helperLabel, style: TextStyle(fontSize: 12, color: _sub(context))),
                   const SizedBox(height: 16),
                   Container(
                     height: 48,
@@ -115,7 +136,11 @@ class _TerrainListScreenState extends State<TerrainListScreen> {
                           child: TextField(
                             onChanged: (v) {
                               setState(() => _query = v);
-                              provider.loadTerrains(search: v, refresh: true);
+                              _searchDebounce?.cancel();
+                              _searchDebounce = Timer(const Duration(milliseconds: 300), () {
+                                if (!mounted) return;
+                                provider.loadTerrains(search: v, refresh: true);
+                              });
                             },
                             style: TextStyle(color: _txt(context)),
                             decoration: InputDecoration(hintText: 'Rechercher un terrain...', hintStyle: TextStyle(color: _sub(context), fontSize: 14), border: InputBorder.none),
@@ -135,6 +160,68 @@ class _TerrainListScreenState extends State<TerrainListScreen> {
               child: CustomScrollView(
                 controller: _scrollController,
                 slivers: [
+                  SliverToBoxAdapter(
+                    child: SizedBox(
+                      height: 38,
+                      child: ListView(
+                        scrollDirection: Axis.horizontal,
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
+                        children: [
+                          _DiscoveryFilterChip(
+                            label: 'Plus proches',
+                            selected: _selectedFilter == TerrainDiscoveryFilter.nearby,
+                            onTap: () => setState(() => _selectedFilter = TerrainDiscoveryFilter.nearby),
+                          ),
+                          _DiscoveryFilterChip(
+                            label: 'Mieux notés',
+                            selected: _selectedFilter == TerrainDiscoveryFilter.topRated,
+                            onTap: () => setState(() => _selectedFilter = TerrainDiscoveryFilter.topRated),
+                          ),
+                          _DiscoveryFilterChip(
+                            label: 'Moins chers',
+                            selected: _selectedFilter == TerrainDiscoveryFilter.affordable,
+                            onTap: () => setState(() => _selectedFilter = TerrainDiscoveryFilter.affordable),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(20, 14, 20, 8),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              _query.isEmpty
+                                  ? '${nearby.length} terrain${nearby.length > 1 ? 's' : ''} à explorer'
+                                  : '${nearby.length} résultat${nearby.length > 1 ? 's' : ''}',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: _sub(context),
+                              ),
+                            ),
+                          ),
+                          if (_query.isNotEmpty)
+                            GestureDetector(
+                              onTap: () {
+                                setState(() => _query = '');
+                                provider.loadTerrains(refresh: true);
+                              },
+                              child: const Text(
+                                'Effacer',
+                                style: TextStyle(
+                                  color: kGreen,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                  ),
                   // 1. TERRAINS POPULAIRES (Horizontal)
                   if (_query.isEmpty && popular.isNotEmpty) ...[
                     SliverToBoxAdapter(
@@ -170,12 +257,16 @@ class _TerrainListScreenState extends State<TerrainListScreen> {
 
                   SliverPadding(
                     padding: const EdgeInsets.symmetric(horizontal: 20),
-                    sliver: SliverList(
-                      delegate: SliverChildBuilderDelegate(
-                        (_, i) => _PopularItem(terrain: nearby[i]),
-                        childCount: nearby.length,
-                      ),
-                    ),
+                    sliver: nearby.isEmpty
+                        ? SliverToBoxAdapter(
+                            child: _TerrainEmptyState(hasQuery: _query.isNotEmpty),
+                          )
+                        : SliverList(
+                            delegate: SliverChildBuilderDelegate(
+                              (_, i) => _PopularItem(terrain: nearby[i]),
+                              childCount: nearby.length,
+                            ),
+                          ),
                   ),
 
                   // Indicateur de chargement pagination
@@ -193,125 +284,6 @@ class _TerrainListScreenState extends State<TerrainListScreen> {
             ),
           ],
         ),
-      ),
-    );
-  }
-}
-
-// ── ITEM NEARBY (image arrondie + texte dessous) ──
-class _NearbyItem extends StatelessWidget {
-  final Terrain terrain;
-  const _NearbyItem({required this.terrain});
-
-  @override
-  Widget build(BuildContext context) {
-    final provider = context.watch<TerrainProvider>();
-    final auth = context.watch<AuthProvider>();
-    final isFav = provider.favorites.any((t) => t.id == terrain.id);
-
-    return GestureDetector(
-      onTap: () => Navigator.push(
-          context,
-          MaterialPageRoute(
-              builder: (_) =>
-                  TerrainDetailScreen(terrain: terrain))),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(
-            child: Stack(
-              children: [
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(16),
-                  child: Image.network(
-                    terrain.imageUrl,
-                    width: double.infinity,
-                    height: double.infinity,
-                    fit: BoxFit.cover,
-                    errorBuilder: (_, _, _) => Container(
-                        decoration: BoxDecoration(
-                          color: kGreen.withOpacity(0.10),
-                          borderRadius: BorderRadius.circular(16),
-                        )),
-                  ),
-                ),
-                Positioned(
-                  top: 8,
-                  right: 8,
-                  child: GestureDetector(
-                    onTap: () {
-                      if (auth.token != null) {
-                        provider.toggleFavorite(auth.token!, terrain.id);
-                      }
-                    },
-                    child: Container(
-                      width: 30,
-                      height: 30,
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.9),
-                        shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.1),
-                            blurRadius: 4,
-                          )
-                        ],
-                      ),
-                      child: Icon(
-                        isFav ? Icons.favorite_rounded : Icons.favorite_border_rounded,
-                        size: 16,
-                        color: isFav ? Colors.red : Colors.black54,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 7),
-          Row(
-            children: [
-              Expanded(
-                child: Text(terrain.name,
-                    style: TextStyle(
-                        fontWeight: FontWeight.w700,
-                        fontSize: 12,
-                        color: _txt(context)),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis),
-              ),
-              const Icon(Icons.star_rounded,
-                  color: Color(0xFFFFB300), size: 12),
-              const SizedBox(width: 2),
-              Text('${terrain.rating}',
-                  style: const TextStyle(
-                      fontSize: 11, fontWeight: FontWeight.w700)),
-            ],
-          ),
-          const SizedBox(height: 3),
-          Row(children: [
-            const Icon(Icons.location_on_rounded,
-                color: Colors.black38, size: 12),
-            const SizedBox(width: 2),
-            Expanded(
-              child: Text(terrain.address,
-                  style: TextStyle(
-                      fontSize: 10, color: _sub(context)),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis),
-            ),
-            const SizedBox(width: 4),
-            if (provider.userPosition != null)
-              Text(
-                '${(provider.distanceTo(terrain) / 1000).toStringAsFixed(1)} km',
-                style: const TextStyle(
-                  fontSize: 10,
-                  color: kGreen,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-          ]),
-        ],
       ),
     );
   }
@@ -471,6 +443,84 @@ class _PopularItem extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _DiscoveryFilterChip extends StatelessWidget {
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  const _DiscoveryFilterChip({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(right: 8),
+      child: GestureDetector(
+        onTap: onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          decoration: BoxDecoration(
+            color: selected ? kGreen : _card(context),
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Text(
+            label,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              color: selected ? Colors.white : _txt(context),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _TerrainEmptyState extends StatelessWidget {
+  final bool hasQuery;
+
+  const _TerrainEmptyState({required this.hasQuery});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 28),
+      decoration: BoxDecoration(
+        color: _card(context),
+        borderRadius: BorderRadius.circular(18),
+      ),
+      child: Column(
+        children: [
+          Icon(Icons.search_off_rounded, size: 36, color: _sub(context)),
+          const SizedBox(height: 10),
+          Text(
+            hasQuery ? 'Aucun terrain trouvé' : 'Aucun terrain à afficher',
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w800,
+              color: _txt(context),
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            hasQuery
+                ? 'Essaie un autre quartier ou retire quelques mots.'
+                : 'Recharge la liste ou active la localisation pour affiner.',
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 12, color: _sub(context), height: 1.4),
+          ),
+        ],
       ),
     );
   }

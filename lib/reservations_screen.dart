@@ -5,6 +5,7 @@ import 'terrain_data.dart';
 import 'booking_confirmation_screen.dart';
 import 'providers/auth_provider.dart';
 import 'providers/reservation_provider.dart';
+import 'player_experience_helpers.dart';
 
 const Color kGreen = Color(0xFF006F39);
 const Color kDark = Color(0xFF1A1A1A);
@@ -111,17 +112,9 @@ class ReservationsScreen extends StatefulWidget {
 }
 
 class _ReservationsScreenState extends State<ReservationsScreen> {
-  DateTime _selectedDay = DateTime.now();
-  late DateTime _weekStart;
   int _filterIndex = 0; // 0 = En cours, 1 = Terminées
   List<Reservation> _reservations = [];
   bool _loaded = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _weekStart = _mondayOf(_selectedDay);
-  }
 
   @override
   void didChangeDependencies() {
@@ -142,51 +135,8 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
       _reservations = provider.reservations
           .map((r) => Reservation.fromApiJson(r))
           .toList();
-    });
+      });
   }
-
-  DateTime _mondayOf(DateTime d) =>
-      d.subtract(Duration(days: d.weekday - 1));
-
-  List<DateTime> get _weekDays =>
-      List.generate(7, (i) => _weekStart.add(Duration(days: i)));
-
-  bool _sameDay(DateTime a, DateTime b) =>
-      a.year == b.year && a.month == b.month && a.day == b.day;
-
-  String _monthLabel(DateTime d) {
-    const months = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
-        'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
-    return '${months[d.month - 1]} ${d.year}';
-  }
-
-  String _dayName(int weekday) {
-    const names = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
-    return names[weekday - 1];
-  }
-
-  // Réservations filtrées selon l'onglet
-  List<Reservation> get _filtered => _filterIndex == 0
-      ? (_reservations.where((r) => r.isActive).toList()
-          ..sort((a, b) => a.date.compareTo(b.date)))
-      : (_reservations.where((r) => r.isPast).toList()
-          ..sort((a, b) => b.date.compareTo(a.date)));
-
-  // Réservation du jour sélectionné dans la liste filtrée
-  Reservation? get _selectedReservation {
-    try {
-      return _filtered.firstWhere((r) => _sameDay(r.date, _selectedDay));
-    } catch (_) {
-      return null;
-    }
-  }
-
-  // Réservations restantes (hors jour sélectionné)
-  List<Reservation> get _otherFiltered =>
-      _filtered.where((r) => !_sameDay(r.date, _selectedDay)).toList();
-
-  bool _hasReservation(DateTime day) =>
-      _filtered.any((r) => _sameDay(r.date, day));
 
   Future<void> _cancelReservation(Reservation r) async {
     final policy = _cancellationPreview(r);
@@ -286,9 +236,11 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
     );
 
     if (confirm == true) {
+      if (!mounted) return;
       final token = context.read<AuthProvider>().token;
       if (token == null) return;
       try {
+        if (!mounted) return;
         final result = await context.read<ReservationProvider>().cancelReservation(token, r.id);
         await _loadReservations();
         if (mounted) {
@@ -354,8 +306,10 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final selected = _selectedReservation;
-    final others = _otherFiltered;
+    final provider = context.watch<ReservationProvider>();
+    final sections = buildReservationSections(reservations: _reservations);
+    final activeCount = sections.today.length + sections.upcoming.length;
+    final nextReservation = sections.nextReservation;
 
     return Scaffold(
       backgroundColor: _bg(context),
@@ -423,92 +377,22 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
 
             const SizedBox(height: 16),
 
-            // ── CALENDRIER SEMAINE ──
-            Container(
-              margin: const EdgeInsets.symmetric(horizontal: 20),
-              padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
-              decoration: BoxDecoration(
-                color: _card(context),
-                borderRadius: BorderRadius.circular(20),
-                boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10)],
-              ),
-              child: Column(
-                children: [
-                  Row(
-                    children: [
-                      Text(_monthLabel(_weekStart),
-                          style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15, color: _txt(context))),
-                      const Spacer(),
-                      _ArrowBtn(
-                        icon: Icons.chevron_left_rounded,
-                        onTap: () => setState(() => _weekStart = _weekStart.subtract(const Duration(days: 7))),
-                      ),
-                      const SizedBox(width: 8),
-                      _ArrowBtn(
-                        icon: Icons.chevron_right_rounded,
-                        onTap: () => setState(() => _weekStart = _weekStart.add(const Duration(days: 7))),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 14),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: _weekDays.map((day) {
-                      final isSelected = _sameDay(day, _selectedDay);
-                      final isToday = _sameDay(day, DateTime.now());
-                      final hasDot = _hasReservation(day);
-                      return GestureDetector(
-                        onTap: () => setState(() => _selectedDay = day),
-                        child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 200),
-                          width: 40,
-                          padding: const EdgeInsets.symmetric(vertical: 8),
-                          decoration: BoxDecoration(
-                            color: isSelected ? kGreen : Colors.transparent,
-                            borderRadius: BorderRadius.circular(14),
-                          ),
-                          child: Column(
-                            children: [
-                              Text('${day.day}',
-                                  style: TextStyle(
-                                      fontSize: 15,
-                                      fontWeight: FontWeight.w800,
-                                      color: isSelected ? Colors.white : isToday ? kGreen : _txt(context))),
-                              const SizedBox(height: 3),
-                              Text(_dayName(day.weekday),
-                                  style: TextStyle(
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.w500,
-                                      color: isSelected
-                                          ? Colors.white.withOpacity(0.7)
-                                          : _sub(context))),
-                              const SizedBox(height: 5),
-                              Container(
-                                width: 5, height: 5,
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  color: hasDot
-                                      ? (isSelected ? Colors.white : kGreen)
-                                      : Colors.transparent,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      );
-                    }).toList(),
-                  ),
-                ],
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: _ReservationsOverviewCard(
+                upcomingCount: activeCount,
+                pastCount: sections.past.length,
+                nextReservation: nextReservation,
               ),
             ),
 
-            const SizedBox(height: 16),
+            const SizedBox(height: 14),
 
             // ── LISTE ──
             Expanded(
-              child: context.watch<ReservationProvider>().isLoading
+              child: provider.isLoading
                   ? const Center(child: CircularProgressIndicator())
-                  : _filtered.isEmpty
+                  : _reservations.isEmpty
                   ? Center(
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
@@ -525,87 +409,119 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
                         ],
                       ),
                     )
-                  : ListView(
+                  : RefreshIndicator(
+                      onRefresh: _loadReservations,
+                      child: ListView(
                       padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
                       children: [
-                        // Carte du jour sélectionné
-                        if (selected != null) ...[
-                          _ReservationCard(
-                            reservation: selected,
-                            highlight: true,
-                            canCancel: selected.isActive,
-                            onCancel: () => _cancelReservation(selected),
-                            onTap: () => Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => BookingConfirmationScreen(
-                                  terrain: selected.terrain,
-                                  date: selected.date,
-                                  startSlot: selected.startSlot,
-                                  endSlot: selected.endSlot,
-                                  finalPrice: selected.price,
-                                  reference: selected.reference,
-                                  qrData: selected.qrData,
-                                  fromReservations: true,
-                                ),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-                        ],
-
-                        // Les autres
-                        if (others.isNotEmpty) ...[
-                          Row(
-                            children: [
-                              Text(
-                                selected != null ? 'Autres' : (_filterIndex == 0 ? 'En cours' : 'Terminées'),
-                                style: GoogleFonts.orbitron(
-                                    fontSize: 13, fontWeight: FontWeight.w800, color: _txt(context)),
-                              ),
-                              const SizedBox(width: 8),
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                                decoration: BoxDecoration(
-                                  color: kGreen,
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                                child: Text('${others.length}',
-                                    style: const TextStyle(
-                                        color: Colors.white, fontSize: 11, fontWeight: FontWeight.w800)),
-                              ),
-                            ],
+                        if (_filterIndex == 0 && nextReservation != null) ...[
+                          const _ReservationSectionHeader(
+                            title: 'Prochaine réservation',
+                            accent: kGreen,
                           ),
                           const SizedBox(height: 12),
-                          ...others.map((r) => Padding(
+                          _ReservationCard(
+                            reservation: nextReservation,
+                            highlight: true,
+                            canCancel: nextReservation.isActive,
+                            onCancel: () => _cancelReservation(nextReservation),
+                            onTap: () => _openReservation(nextReservation),
+                          ),
+                          const SizedBox(height: 18),
+                        ],
+                        if (_filterIndex == 0 && sections.today.isNotEmpty) ...[
+                          _ReservationSectionHeader(
+                            title: 'Aujourd\'hui',
+                            count: sections.today.length,
+                            accent: const Color(0xFFE65100),
+                          ),
+                          const SizedBox(height: 12),
+                          ...sections.today
+                              .where((reservation) => reservation.id != nextReservation?.id)
+                              .map((reservation) => Padding(
+                                    padding: const EdgeInsets.only(bottom: 12),
+                                    child: _ReservationCard(
+                                      reservation: reservation,
+                                      highlight: false,
+                                      canCancel: reservation.isActive,
+                                      onCancel: () => _cancelReservation(reservation),
+                                      onTap: () => _openReservation(reservation),
+                                    ),
+                                  )),
+                          if (sections.today.where((reservation) => reservation.id != nextReservation?.id).isNotEmpty)
+                            const SizedBox(height: 6),
+                        ],
+                        if (_filterIndex == 0 && sections.upcoming.isNotEmpty) ...[
+                          _ReservationSectionHeader(
+                            title: 'À venir',
+                            count: sections.upcoming.length,
+                            accent: kGreen,
+                          ),
+                          const SizedBox(height: 12),
+                          ...sections.upcoming.map((reservation) => Padding(
                                 padding: const EdgeInsets.only(bottom: 12),
                                 child: _ReservationCard(
-                                  reservation: r,
+                                  reservation: reservation,
                                   highlight: false,
-                                  canCancel: r.isActive,
-                                  onCancel: () => _cancelReservation(r),
-                                  onTap: () => Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (_) => BookingConfirmationScreen(
-                                        terrain: r.terrain,
-                                        date: r.date,
-                                        startSlot: r.startSlot,
-                                        endSlot: r.endSlot,
-                                        finalPrice: r.price,
-                                        reference: r.reference,
-                                        qrData: r.qrData,
-                                        fromReservations: true,
-                                      ),
-                                    ),
-                                  ),
+                                  canCancel: reservation.isActive,
+                                  onCancel: () => _cancelReservation(reservation),
+                                  onTap: () => _openReservation(reservation),
                                 ),
                               )),
                         ],
+                        if (_filterIndex == 1 && sections.past.isNotEmpty) ...[
+                          _ReservationSectionHeader(
+                            title: 'Historique',
+                            count: sections.past.length,
+                            accent: Colors.grey,
+                          ),
+                          const SizedBox(height: 12),
+                          ...sections.past.map((reservation) => Padding(
+                                padding: const EdgeInsets.only(bottom: 12),
+                                child: _ReservationCard(
+                                  reservation: reservation,
+                                  highlight: false,
+                                  canCancel: false,
+                                  onCancel: () {},
+                                  onTap: () => _openReservation(reservation),
+                                ),
+                              )),
+                        ],
+                        if (_filterIndex == 0 && activeCount == 0)
+                          _InlineEmptyState(
+                            icon: Icons.event_available_rounded,
+                            title: 'Aucune réservation active',
+                            subtitle: 'Explore les terrains pour réserver ton prochain créneau.',
+                          ),
+                        if (_filterIndex == 1 && sections.past.isEmpty)
+                          _InlineEmptyState(
+                            icon: Icons.history_rounded,
+                            title: 'Pas encore d’historique',
+                            subtitle: 'Tes réservations terminées apparaîtront ici.',
+                          ),
                       ],
                     ),
+                  ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  void _openReservation(Reservation reservation) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => BookingConfirmationScreen(
+          terrain: reservation.terrain,
+          date: reservation.date,
+          startSlot: reservation.startSlot,
+          endSlot: reservation.endSlot,
+          finalPrice: reservation.price,
+          reference: reservation.reference,
+          qrData: reservation.qrData,
+          fromReservations: true,
         ),
       ),
     );
@@ -656,7 +572,7 @@ class _ReservationCard extends StatelessWidget {
     return isToday ? kGreen : const Color(0xFFE65100);
   }
 
-  bool get _canViewQr => reservation.isActive;
+  bool get _canViewQr => true;
 
   @override
   Widget build(BuildContext context) {
@@ -816,6 +732,194 @@ class _ReservationCard extends StatelessWidget {
   }
 }
 
+class _ReservationsOverviewCard extends StatelessWidget {
+  final int upcomingCount;
+  final int pastCount;
+  final Reservation? nextReservation;
+
+  const _ReservationsOverviewCard({
+    required this.upcomingCount,
+    required this.pastCount,
+    required this.nextReservation,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: _card(context),
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10)],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            nextReservation == null ? 'Aucun créneau actif' : 'Ta prochaine sortie est prête',
+            style: TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w800,
+              color: _txt(context),
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            nextReservation == null
+                ? 'Dès que tu réserves un terrain, on le met ici pour y revenir vite.'
+                : '${nextReservation!.terrain.name} · ${nextReservation!.startSlot} à ${nextReservation!.endSlot}',
+            style: TextStyle(fontSize: 12, color: _sub(context), height: 1.4),
+          ),
+          const SizedBox(height: 14),
+          Row(
+            children: [
+              Expanded(
+                child: _OverviewMetric(
+                  label: 'Actives',
+                  value: '$upcomingCount',
+                  accent: kGreen,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _OverviewMetric(
+                  label: 'Historique',
+                  value: '$pastCount',
+                  accent: const Color(0xFFE65100),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _OverviewMetric extends StatelessWidget {
+  final String label;
+  final String value;
+  final Color accent;
+
+  const _OverviewMetric({
+    required this.label,
+    required this.value,
+    required this.accent,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: accent.withOpacity(0.08),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: accent),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            value,
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: _txt(context)),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ReservationSectionHeader extends StatelessWidget {
+  final String title;
+  final int? count;
+  final Color accent;
+
+  const _ReservationSectionHeader({
+    required this.title,
+    this.count,
+    required this.accent,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Text(
+          title,
+          style: GoogleFonts.orbitron(
+            fontSize: 13,
+            fontWeight: FontWeight.w800,
+            color: _txt(context),
+          ),
+        ),
+        if (count != null) ...[
+          const SizedBox(width: 8),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+            decoration: BoxDecoration(
+              color: accent,
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Text(
+              '$count',
+              style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w800),
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+class _InlineEmptyState extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String subtitle;
+
+  const _InlineEmptyState({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 28),
+      decoration: BoxDecoration(
+        color: _card(context),
+        borderRadius: BorderRadius.circular(18),
+      ),
+      child: Column(
+        children: [
+          Icon(icon, size: 34, color: _sub(context)),
+          const SizedBox(height: 10),
+          Text(
+            title,
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w800,
+              color: _txt(context),
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            subtitle,
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 12, color: _sub(context), height: 1.4),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 // ── FILTRE TAB ──
 class _FilterTab extends StatelessWidget {
   final String label;
@@ -880,25 +984,5 @@ class _SmallChip extends StatelessWidget {
     child: Text(label,
         style: TextStyle(fontSize: 9, fontWeight: FontWeight.w700,
             color: dark ? _card(context) : _txt(context))),
-  );
-}
-
-// ── BOUTON FLÈCHE ──
-class _ArrowBtn extends StatelessWidget {
-  final IconData icon;
-  final VoidCallback onTap;
-  const _ArrowBtn({required this.icon, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) => GestureDetector(
-    onTap: onTap,
-    child: Container(
-      width: 34, height: 34,
-      decoration: BoxDecoration(
-        color: _card(context),
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: Icon(icon, size: 20, color: _txt(context)),
-    ),
   );
 }

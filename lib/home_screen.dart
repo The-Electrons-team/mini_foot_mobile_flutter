@@ -4,7 +4,6 @@ import 'package:provider/provider.dart';
 import 'terrain_map_screen.dart';
 import 'terrain_list_screen.dart';
 import 'terrain_detail_screen.dart';
-import 'terrain_data.dart';
 import 'providers/terrain_provider.dart';
 import 'reservations_screen.dart';
 import 'chat_screen.dart';
@@ -12,10 +11,11 @@ import 'profile_screen.dart';
 import 'notifications_screen.dart';
 import 'providers/auth_provider.dart';
 import 'providers/notification_provider.dart';
+import 'providers/reservation_provider.dart';
+import 'player_experience_helpers.dart';
 import 'team_screen.dart';
 import 'social_feed_screen.dart';
 import 'shop_screen.dart';
-import 'ranking_screen.dart';
 import 'main.dart';
 
 const Color kGreen = Color(0xFF006F39);
@@ -231,12 +231,26 @@ class _HomePageState extends State<_HomePage> {
       final tp = context.read<TerrainProvider>();
       tp.loadTerrains();
       tp.updateLocation();
+      final auth = context.read<AuthProvider>();
+      if (auth.token != null) {
+        context.read<ReservationProvider>().loadReservations(auth.token!);
+      }
     });
   }
 
   @override
   Widget build(BuildContext context) {
     final terrains = context.watch<TerrainProvider>().terrains;
+    final auth = context.watch<AuthProvider>();
+    final reservationProvider = context.watch<ReservationProvider>();
+    final reservationModels = reservationProvider.reservations
+        .map((reservation) => Reservation.fromApiJson(reservation))
+        .toList();
+    final reservationSections = buildReservationSections(
+      reservations: reservationModels,
+    );
+    final firstName = auth.user?.firstName?.trim();
+    final greetingName = (firstName == null || firstName.isEmpty) ? 'capitaine' : firstName;
     final topPadding = MediaQuery.of(context).padding.top;
     return Column(
         children: [
@@ -287,7 +301,7 @@ class _HomePageState extends State<_HomePage> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  'Bonjour 👋',
+                                  'Bonjour, $greetingName',
                                   style: TextStyle(
                                     color: Colors.white.withOpacity(0.75),
                                     fontSize: 13,
@@ -386,7 +400,7 @@ class _HomePageState extends State<_HomePage> {
                         const SizedBox(height: 24),
                         // Texte hero
                         Text(
-                          'Deviens le roi\ndu terrain.',
+                          'Prêt pour ton\nprochain match ?',
                           style: GoogleFonts.orbitron(
                             color: Colors.white,
                             fontSize: 20,
@@ -395,20 +409,53 @@ class _HomePageState extends State<_HomePage> {
                           ),
                         ),
                         const SizedBox(height: 16),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 9),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: const Text(
-                            'Réserver',
-                            style: TextStyle(
-                              color: kGreen,
-                              fontWeight: FontWeight.w800,
-                              fontSize: 13,
+                        Row(
+                          children: [
+                            GestureDetector(
+                              onTap: () => Navigator.push(
+                                context,
+                                MaterialPageRoute(builder: (_) => const TerrainListScreen()),
+                              ),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                child: const Text(
+                                  'Réserver maintenant',
+                                  style: TextStyle(
+                                    color: kGreen,
+                                    fontWeight: FontWeight.w800,
+                                    fontSize: 13,
+                                  ),
+                                ),
+                              ),
                             ),
-                          ),
+                            const SizedBox(width: 10),
+                            GestureDetector(
+                              onTap: () => Navigator.push(
+                                context,
+                                MaterialPageRoute(builder: (_) => const ReservationsScreen()),
+                              ),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withOpacity(0.18),
+                                  borderRadius: BorderRadius.circular(20),
+                                  border: Border.all(color: Colors.white.withOpacity(0.3)),
+                                ),
+                                child: const Text(
+                                  'Mes réservations',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ),
@@ -426,8 +473,81 @@ class _HomePageState extends State<_HomePage> {
                 SliverToBoxAdapter(
                   child: Padding(
                     padding: const EdgeInsets.fromLTRB(20, 24, 20, 10),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Ton tableau de bord',
+                          style: GoogleFonts.orbitron(
+                            color: _txt(context),
+                            fontSize: 15,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          'Retrouve vite ton prochain terrain, ton équipe et tes réservations.',
+                          style: TextStyle(
+                            color: _sub(context),
+                            fontSize: 12,
+                            height: 1.4,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: _DashboardMetric(
+                            label: 'Terrains',
+                            value: '${terrains.length}',
+                            hint: 'disponibles',
+                            accent: const Color(0xFF2E7D32),
+                            background: _isDark(context)
+                                ? const Color(0xFF1A2E1A)
+                                : const Color(0xFFE8F5E9),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: _DashboardMetric(
+                            label: 'À venir',
+                            value: '${reservationSections.today.length + reservationSections.upcoming.length}',
+                            hint: 'réservations',
+                            accent: const Color(0xFF00695C),
+                            background: _isDark(context)
+                                ? const Color(0xFF12272A)
+                                : const Color(0xFFE0F2F1),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: _DashboardMetric(
+                            label: 'Équipe',
+                            value: auth.user?.teamName?.isNotEmpty == true ? 'Oui' : 'Non',
+                            hint: auth.user?.teamName ?? 'à rejoindre',
+                            accent: const Color(0xFF283593),
+                            background: _isDark(context)
+                                ? const Color(0xFF1A1D2E)
+                                : const Color(0xFFE8EAF6),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 22, 20, 10),
                     child: Text(
-                      'Actions rapides',
+                      'Accès rapides',
                       style: GoogleFonts.orbitron(
                         color: _txt(context),
                         fontSize: 15,
@@ -461,7 +581,7 @@ class _HomePageState extends State<_HomePage> {
                         ),
                         _QuickAction(
                           icon: Icons.dynamic_feed_rounded,
-                          label: 'Terrain+',
+                          label: 'Actualités',
                           bgColor: _isDark(context) ? const Color(0xFF2A2310) : const Color(0xFFFFF8E1),
                           iconColor: const Color(0xFFF57F17),
                           onTap: () => Navigator.push(context,
@@ -477,6 +597,39 @@ class _HomePageState extends State<_HomePage> {
                         ),
                       ],
                     ),
+                  ),
+                ),
+
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 24, 20, 10),
+                    child: Text(
+                      'Continuer',
+                      style: GoogleFonts.orbitron(
+                        color: _txt(context),
+                        fontSize: 15,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ),
+                ),
+
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: reservationSections.nextReservation == null
+                        ? _HomeEmptyCard(
+                            title: 'Aucune réservation en cours',
+                            subtitle: 'Trouve un terrain et réserve en quelques secondes.',
+                            ctaLabel: 'Explorer les terrains',
+                            onTap: () => Navigator.push(
+                              context,
+                              MaterialPageRoute(builder: (_) => const TerrainListScreen()),
+                            ),
+                          )
+                        : _NextReservationCard(
+                            reservation: reservationSections.nextReservation!,
+                          ),
                   ),
                 ),
 
@@ -716,6 +869,212 @@ class _TerrainHorizontalListState extends State<_TerrainHorizontalList> {
   }
 }
 
+class _DashboardMetric extends StatelessWidget {
+  final String label;
+  final String value;
+  final String hint;
+  final Color accent;
+  final Color background;
+
+  const _DashboardMetric({
+    required this.label,
+    required this.value,
+    required this.hint,
+    required this.accent,
+    required this.background,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: background,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+              color: accent,
+            ),
+          ),
+          const SizedBox(height: 10),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w900,
+              color: _txt(context),
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+          const SizedBox(height: 4),
+          Text(
+            hint,
+            style: TextStyle(
+              fontSize: 11,
+              color: _sub(context),
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _HomeEmptyCard extends StatelessWidget {
+  final String title;
+  final String subtitle;
+  final String ctaLabel;
+  final VoidCallback onTap;
+
+  const _HomeEmptyCard({
+    required this.title,
+    required this.subtitle,
+    required this.ctaLabel,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: _card(context),
+        borderRadius: BorderRadius.circular(18),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w800,
+              color: _txt(context),
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            subtitle,
+            style: TextStyle(fontSize: 12, color: _sub(context), height: 1.4),
+          ),
+          const SizedBox(height: 14),
+          GestureDetector(
+            onTap: onTap,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              decoration: BoxDecoration(
+                color: kGreen,
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: Text(
+                ctaLabel,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _NextReservationCard extends StatelessWidget {
+  final Reservation reservation;
+
+  const _NextReservationCard({required this.reservation});
+
+  String _formatDate(DateTime date) {
+    const days = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
+    const months = ['Jan', 'Fev', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Aout', 'Sep', 'Oct', 'Nov', 'Dec'];
+    return '${days[date.weekday - 1]} ${date.day} ${months[date.month - 1]}';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () => Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const ReservationsScreen()),
+      ),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: _card(context),
+          borderRadius: BorderRadius.circular(18),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(_isDark(context) ? 0.25 : 0.06),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 54,
+              height: 54,
+              decoration: BoxDecoration(
+                color: kGreen.withOpacity(0.12),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: const Icon(Icons.event_available_rounded, color: kGreen),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Prochaine réservation',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: kGreen,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    reservation.terrain.name,
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w800,
+                      color: _txt(context),
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    '${_formatDate(reservation.date)} · ${reservation.startSlot} - ${reservation.endSlot}',
+                    style: TextStyle(fontSize: 12, color: _sub(context)),
+                  ),
+                ],
+              ),
+            ),
+            Icon(Icons.arrow_forward_ios_rounded, size: 16, color: _sub(context)),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _QuickAction extends StatelessWidget {
   final IconData icon;
   final String label;
@@ -763,182 +1122,6 @@ class _QuickAction extends StatelessWidget {
   }
 }
 
-
-// ---------------------------------------------------------------------------
-// FEED PREVIEW (kept for reference, not used in home)
-// ---------------------------------------------------------------------------
-
-class _FeedPreview extends StatelessWidget {
-  const _FeedPreview();
-
-  static const _items = [
-    _FeedItem(
-      initials: 'LF', color: Color(0xFF006F39), author: 'Les Lions FC',
-      caption: 'Victoire 5-2 contre les Tigres FC hier soir ! Merci à tous les supporters ⚽🏆',
-      imageUrl: 'https://images.pexels.com/photos/13890306/pexels-photo-13890306.jpeg?auto=compress&cs=tinysrgb&w=600',
-      likes: 124, comments: 3, time: 'Il y a 1h',
-    ),
-    _FeedItem(
-      initials: 'TF', color: Color(0xFFE65100), author: 'Tigres FC',
-      caption: 'Tournoi inter-quartiers ce samedi à HLM Grand Yoff ! Inscriptions ouvertes 🏆',
-      imageUrl: 'https://images.pexels.com/photos/13783930/pexels-photo-13783930.jpeg?auto=compress&cs=tinysrgb&w=600',
-      likes: 89, comments: 0, time: 'Il y a 3h',
-    ),
-    _FeedItem(
-      initials: 'BP', color: Color(0xFF212121), author: 'Black Panthers',
-      caption: 'Séance d\'entraînement au Terrain Dakar Arena 🔥 On prépare le prochain tournoi !',
-      imageUrl: 'https://images.pexels.com/photos/12486370/pexels-photo-12486370.jpeg?auto=compress&cs=tinysrgb&w=600',
-      likes: 56, comments: 1, time: 'Il y a 5h',
-    ),
-  ];
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      height: 260,
-      child: ListView.builder(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        itemCount: _items.length,
-        itemBuilder: (_, i) => _FeedPreviewCard(item: _items[i]),
-      ),
-    );
-  }
-}
-
-class _FeedItem {
-  final String initials, author, caption, imageUrl, time;
-  final Color color;
-  final int likes, comments;
-  const _FeedItem({
-    required this.initials, required this.color, required this.author,
-    required this.caption, required this.imageUrl, required this.time,
-    required this.likes, required this.comments,
-  });
-}
-
-class _FeedPreviewCard extends StatelessWidget {
-  final _FeedItem item;
-  const _FeedPreviewCard({required this.item});
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () => Navigator.push(context,
-          MaterialPageRoute(builder: (_) => const SocialFeedScreen())),
-      child: Container(
-        width: 200,
-        margin: const EdgeInsets.only(right: 12),
-        decoration: BoxDecoration(
-          color: _card(context),
-          borderRadius: BorderRadius.circular(18),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(_isDark(context) ? 0.3 : 0.08),
-              blurRadius: 12,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Stack(
-              children: [
-                ClipRRect(
-                  borderRadius: const BorderRadius.vertical(top: Radius.circular(18)),
-                  child: Image.network(
-                    item.imageUrl,
-                    width: 200, height: 140,
-                    fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => Container(
-                      width: 200, height: 140,
-                      color: item.color.withOpacity(0.2),
-                    ),
-                  ),
-                ),
-                // Badge likes en haut à droite
-                Positioned(
-                  top: 8, right: 8,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: Colors.black.withOpacity(0.55),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(Icons.favorite_rounded, color: Colors.red, size: 12),
-                        const SizedBox(width: 4),
-                        Text('${item.likes}',
-                            style: const TextStyle(
-                                color: Colors.white, fontSize: 11, fontWeight: FontWeight.w700)),
-                      ],
-                    ),
-                  ),
-                ),
-                // Avatar équipe en bas à gauche chevauchant l'image
-                Positioned(
-                  bottom: -16, left: 12,
-                  child: Container(
-                    width: 36, height: 36,
-                    decoration: BoxDecoration(
-                      color: item.color,
-                      shape: BoxShape.circle,
-                      border: Border.all(color: _card(context), width: 2.5),
-                    ),
-                    child: Center(
-                      child: Text(item.initials,
-                          style: const TextStyle(
-                              color: Colors.white, fontWeight: FontWeight.w800, fontSize: 11)),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 22),
-            // Contenu texte
-            Padding(
-              padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(item.author,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                                fontWeight: FontWeight.w800, fontSize: 12.5, color: _txt(context))),
-                      ),
-                      Text(item.time,
-                          style: TextStyle(fontSize: 10, color: _sub(context))),
-                    ],
-                  ),
-                  const SizedBox(height: 4),
-                  Text(item.caption,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(fontSize: 11.5, color: _sub(context), height: 1.35)),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      Icon(Icons.chat_bubble_outline_rounded, size: 13, color: _sub(context)),
-                      const SizedBox(width: 4),
-                      Text('${item.comments} commentaire${item.comments > 1 ? "s" : ""}',
-                          style: TextStyle(fontSize: 10.5, color: _sub(context))),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
 // ---------------------------------------------------------------------------
 // SHOP SECTION — Boutique foot
 // ---------------------------------------------------------------------------
