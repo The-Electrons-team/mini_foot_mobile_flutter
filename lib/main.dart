@@ -5,6 +5,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:intl/date_symbol_data_local.dart';
+import 'startup_config.dart';
 import 'providers/auth_provider.dart';
 import 'providers/terrain_provider.dart';
 import 'providers/notification_provider.dart';
@@ -21,22 +22,29 @@ final themeNotifier = ValueNotifier<ThemeMode>(ThemeMode.light);
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   const envFileName = String.fromEnvironment('ENV_FILE', defaultValue: '.env');
-  await dotenv.load(fileName: envFileName);
-  
-  // Configuration Web lue depuis le .env
-  final firebaseOptions = FirebaseOptions(
-    apiKey: dotenv.get('FIREBASE_API_KEY'),
-    authDomain: dotenv.get('FIREBASE_AUTH_DOMAIN'),
-    projectId: dotenv.get('FIREBASE_PROJECT_ID'),
-    storageBucket: dotenv.get('FIREBASE_STORAGE_BUCKET'),
-    messagingSenderId: dotenv.get('FIREBASE_MESSAGING_SENDER_ID'),
-    appId: dotenv.get('FIREBASE_APP_ID'),
-    measurementId: dotenv.get('FIREBASE_MEASUREMENT_ID'),
-  );
+  try {
+    await dotenv.load(fileName: envFileName);
+  } catch (e) {
+    debugPrint('Impossible de charger $envFileName : $e');
+  }
 
   try {
     if (kIsWeb) {
-      await Firebase.initializeApp(options: firebaseOptions);
+      final firebaseOptions = buildWebFirebaseOptions(
+        apiKey: dotenv.maybeGet('FIREBASE_API_KEY'),
+        authDomain: dotenv.maybeGet('FIREBASE_AUTH_DOMAIN'),
+        projectId: dotenv.maybeGet('FIREBASE_PROJECT_ID'),
+        storageBucket: dotenv.maybeGet('FIREBASE_STORAGE_BUCKET'),
+        messagingSenderId: dotenv.maybeGet('FIREBASE_MESSAGING_SENDER_ID'),
+        appId: dotenv.maybeGet('FIREBASE_APP_ID'),
+        measurementId: dotenv.maybeGet('FIREBASE_MEASUREMENT_ID'),
+      );
+
+      if (firebaseOptions == null) {
+        debugPrint('Firebase web non initialisé: variables d\'environnement manquantes.');
+      } else {
+        await Firebase.initializeApp(options: firebaseOptions);
+      }
     } else {
       await Firebase.initializeApp();
     }
