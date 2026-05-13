@@ -119,7 +119,12 @@ class _AuthScreenState extends State<AuthScreen>
       } else {
         // --- MODE INSCRIPTION ---
         _saveFormValues();
-        final result = await authProvider.signup(phone);
+        final result = await authProvider.signup(
+          phone: phone,
+          firstName: _prenomController.text.trim(),
+          lastName: _nomController.text.trim(),
+          password: _passwordController.text.trim(),
+        );
         if (!mounted) return;
 
         if (result['skipOtp'] == true) {
@@ -734,24 +739,6 @@ class _OtpScreenState extends State<OtpScreen> {
       if (!mounted) return;
 
       if (verified) {
-        if (widget.isNewUser) {
-          // Si nouveau, on doit appeler register
-          if (widget.firstName.isEmpty || widget.lastName.isEmpty) {
-            // Cas où l'utilisateur a essayé de se connecter sans passer par inscription
-            // On pourrait rediriger vers un écran de complément de profil
-            // Pour l'instant, on affiche une erreur ou on force le retour
-            setState(() => _errorMessage = 'Informations de profil manquantes');
-            return;
-          }
-
-          await authProvider.register(
-            phone: widget.phone,
-            password: widget.password,
-            firstName: widget.firstName,
-            lastName: widget.lastName,
-          );
-        }
-
         if (!mounted) return;
 
         Navigator.of(context).pushAndRemoveUntil(

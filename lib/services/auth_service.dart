@@ -31,10 +31,20 @@ class AuthService {
     );
   }
 
-  Future<Map<String, dynamic>> startSignup(String phone) async {
+  Future<Map<String, dynamic>> startSignup({
+    required String phone,
+    required String firstName,
+    required String lastName,
+    required String password,
+  }) async {
     return await _api.post(
       '/auth/signup',
-      body: {'phone': phone},
+      body: {
+        'phone': phone,
+        'firstName': firstName,
+        'lastName': lastName,
+        'password': password,
+      },
       defaultErrorMsg: 'Erreur lors de l\'inscription',
     );
   }

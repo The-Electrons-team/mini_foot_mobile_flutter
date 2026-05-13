@@ -168,11 +168,21 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
-  Future<Map<String, dynamic>> signup(String phone) async {
+  Future<Map<String, dynamic>> signup({
+    required String phone,
+    required String firstName,
+    required String lastName,
+    required String password,
+  }) async {
     _isLoading = true;
     notifyListeners();
     try {
-      final result = await _authService.startSignup(phone);
+      final result = await _authService.startSignup(
+        phone: phone,
+        firstName: firstName,
+        lastName: lastName,
+        password: password,
+      );
       return result;
     } finally {
       _isLoading = false;
@@ -196,6 +206,15 @@ class AuthProvider with ChangeNotifier {
     notifyListeners();
     try {
       final result = await _authService.verifyOtp(phone, code);
+      // Le backend retourne directement token + user si compte pending activé
+      if (result['token'] != null && result['user'] != null) {
+        _token = result['token'] as String;
+        _user = User.fromJson(result['user'] as Map<String, dynamic>);
+        NotificationService().init(_token);
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('token', _token!);
+        notifyListeners();
+      }
       return result['verified'] == true;
     } finally {
       _isLoading = false;

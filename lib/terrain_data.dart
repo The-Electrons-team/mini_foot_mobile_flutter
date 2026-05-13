@@ -13,14 +13,18 @@ class TerrainSlot {
   TerrainSlot({required this.slot, required this.available});
 
   factory TerrainSlot.fromJson(Map<String, dynamic> json) => TerrainSlot(
-        slot: json['slot'] ?? '',
-        available: json['available'] ?? true,
-      );
+    slot: json['slot'] ?? '',
+    available: json['available'] ?? true,
+  );
 }
 
 class SubTerrain {
   final String id;
   final String name;
+  final String? physicalName;
+  final String? divisionGroup;
+  final String divisionType;
+  final int divisionIndex;
   final int capacity;
   final String type;
   final String? surface;
@@ -29,6 +33,10 @@ class SubTerrain {
   SubTerrain({
     required this.id,
     required this.name,
+    this.physicalName,
+    this.divisionGroup,
+    this.divisionType = 'FULL',
+    this.divisionIndex = 0,
     required this.capacity,
     required this.type,
     this.surface,
@@ -39,12 +47,35 @@ class SubTerrain {
     return SubTerrain(
       id: json['id']?.toString() ?? '',
       name: json['name']?.toString() ?? '',
+      physicalName: json['physicalName']?.toString(),
+      divisionGroup: json['divisionGroup']?.toString(),
+      divisionType: json['divisionType']?.toString() ?? 'FULL',
+      divisionIndex: _asInt(json['divisionIndex'], fallback: 0),
       capacity: _asInt(json['capacity'], fallback: 10),
       type: json['type']?.toString() ?? '5v5',
       surface: json['surface']?.toString(),
-      pricePerHour: _asNullableInt(json['pricePerHour'] ?? json['price_per_hour']),
+      pricePerHour: _asNullableInt(
+        json['pricePerHour'] ?? json['price_per_hour'],
+      ),
     );
   }
+
+  String get reservationLabel {
+    final base = physicalName ?? name;
+    final suffix = switch (divisionType) {
+      'HALF' => 'Demi $divisionIndex',
+      'THIRD' => 'Tiers $divisionIndex',
+      _ => 'Entier',
+    };
+    if (name.contains(suffix)) return name;
+    return '$base - $suffix';
+  }
+
+  String get divisionLabel => switch (divisionType) {
+    'HALF' => 'Demi-terrain',
+    'THIRD' => 'Tiers de terrain',
+    _ => 'Terrain entier',
+  };
 }
 
 class Terrain {
@@ -102,7 +133,9 @@ class Terrain {
 
     return Terrain(
       id: json['id']?.toString() ?? '',
-      subTerrainId: json['subTerrainId']?.toString() ?? json['sub_terrain_id']?.toString(),
+      subTerrainId:
+          json['subTerrainId']?.toString() ??
+          json['sub_terrain_id']?.toString(),
       name: json['name']?.toString() ?? '',
       address: json['address']?.toString() ?? '',
       zone: json['zone']?.toString() ?? '',
@@ -110,12 +143,17 @@ class Terrain {
       rating: _asDouble(json['rating']),
       lat: _asDouble(json['lat']),
       lng: _asDouble(json['lng']),
-      imageUrl: json['imageUrl']?.toString() ?? json['image_url']?.toString() ?? '',
+      imageUrl:
+          json['imageUrl']?.toString() ?? json['image_url']?.toString() ?? '',
       managerId: json['managerId']?.toString(),
       imageUrls: parseList(json['imageUrls'] ?? json['image_urls']),
       features: parseList(json['features']),
       description: json['description']?.toString() ?? '',
-      isActive: json['isActive'] is bool ? json['isActive'] as bool : json['is_active'] is bool ? json['is_active'] as bool : true,
+      isActive: json['isActive'] is bool
+          ? json['isActive'] as bool
+          : json['is_active'] is bool
+          ? json['is_active'] as bool
+          : true,
       subTerrains: (json['subTerrains'] as List? ?? [])
           .whereType<Map<String, dynamic>>()
           .map((s) => SubTerrain.fromJson(s))
@@ -185,9 +223,13 @@ class TerrainReview {
       userId: json['userId']?.toString() ?? '',
       rating: (json['rating'] ?? 0).toDouble(),
       comment: json['comment'],
-      userName: user != null ? '${user['first_name']} ${user['last_name']}' : 'Anonyme',
+      userName: user != null
+          ? '${user['first_name']} ${user['last_name']}'
+          : 'Anonyme',
       userAvatar: user?['avatar_url'],
-      createdAt: DateTime.parse(json['createdAt'] ?? DateTime.now().toIso8601String()),
+      createdAt: DateTime.parse(
+        json['createdAt'] ?? DateTime.now().toIso8601String(),
+      ),
     );
   }
 }
