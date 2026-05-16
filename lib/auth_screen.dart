@@ -232,10 +232,12 @@ class _AuthScreenState extends State<AuthScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      resizeToAvoidBottomInset: true,
       backgroundColor: kBeige,
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
+            keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
             padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 24),
             child: FadeTransition(
               opacity: _fadeAnim,
@@ -584,25 +586,33 @@ class _PhoneField extends StatelessWidget {
       decoration: InputDecoration(
         labelText: 'Numéro de téléphone',
         labelStyle: TextStyle(color: Colors.black.withOpacity(0.45)),
-        prefixIcon: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 18),
+        prefixIconConstraints: const BoxConstraints(
+          minWidth: 98,
+          maxWidth: 98,
+          minHeight: 56,
+        ),
+        prefixIcon: Container(
+          height: 30,
+          margin: const EdgeInsets.only(left: 14, right: 12),
+          padding: const EdgeInsets.only(right: 12),
+          decoration: const BoxDecoration(
+            border: Border(
+              right: BorderSide(color: Color(0x33000000), width: 1),
+            ),
+          ),
           child: Row(
-            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
             children: const [
-              Text('🇸🇳', style: TextStyle(fontSize: 20)),
-              SizedBox(width: 6),
+              Text('🇸🇳', style: TextStyle(fontSize: 18)),
+              SizedBox(width: 7),
               Text(
                 '+221',
                 style: TextStyle(
                   color: Colors.black87,
-                  fontWeight: FontWeight.w700,
+                  fontWeight: FontWeight.w800,
                   fontSize: 15,
                 ),
-              ),
-              SizedBox(width: 8),
-              SizedBox(
-                height: 22,
-                child: VerticalDivider(color: Colors.black26, width: 1),
               ),
             ],
           ),
@@ -772,6 +782,7 @@ class _OtpScreenState extends State<OtpScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      resizeToAvoidBottomInset: true,
       backgroundColor: kBeige,
       appBar: AppBar(
         backgroundColor: kBeige,
@@ -783,6 +794,7 @@ class _OtpScreenState extends State<OtpScreen> {
       ),
       body: Center(
         child: SingleChildScrollView(
+          keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
           padding: const EdgeInsets.symmetric(horizontal: 28),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -1059,6 +1071,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      resizeToAvoidBottomInset: true,
       backgroundColor: kBeige,
       appBar: AppBar(
         backgroundColor: kBeige,
@@ -1069,55 +1082,68 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
         ),
       ),
       body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 24),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Center(
-                  child: Text(
-                    'MINIFOOT',
-                    style: GoogleFonts.orbitron(
-                      color: kGreen,
-                      fontSize: 24,
-                      fontWeight: FontWeight.w900,
-                      fontStyle: FontStyle.italic,
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            return SingleChildScrollView(
+              keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+              padding: const EdgeInsets.fromLTRB(24, 16, 24, 16),
+              child: ConstrainedBox(
+                constraints: BoxConstraints(minHeight: constraints.maxHeight - 40),
+                child: Align(
+                  alignment: Alignment.topCenter,
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 460),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Center(
+                          child: Text(
+                            'MINIFOOT',
+                            style: GoogleFonts.orbitron(
+                              color: kGreen,
+                              fontSize: 24,
+                              fontWeight: FontWeight.w900,
+                              fontStyle: FontStyle.italic,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 36),
+                        Text(
+                          _codeSent ? 'Nouveau mot de passe' : 'Mot de passe oublié',
+                          style: GoogleFonts.orbitron(
+                            color: const Color(0xFF111111),
+                            fontSize: 22,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          _codeSent
+                              ? 'Entre le code reçu et choisis un nouveau mot de passe.'
+                              : 'Entre ton numéro pour recevoir un code de réinitialisation.',
+                          style: TextStyle(
+                            color: Colors.black.withOpacity(0.55),
+                            fontSize: 14,
+                            height: 1.5,
+                          ),
+                        ),
+                        const SizedBox(height: 28),
+                        if (_codeSent) _buildResetForm() else _buildPhoneForm(),
+                        if (_errorMessage != null) ...[
+                          const SizedBox(height: 14),
+                          Text(
+                            _errorMessage!,
+                            style: const TextStyle(color: Colors.red, fontSize: 13),
+                          ),
+                        ],
+                      ],
+                    ),
                     ),
                   ),
                 ),
-                const SizedBox(height: 36),
-                Text(
-                  _codeSent ? 'Nouveau mot de passe' : 'Mot de passe oublié',
-                  style: GoogleFonts.orbitron(
-                    color: const Color(0xFF111111),
-                    fontSize: 22,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  _codeSent
-                      ? 'Entre le code reçu et choisis un nouveau mot de passe.'
-                      : 'Entre ton numéro pour recevoir un code de réinitialisation.',
-                  style: TextStyle(
-                    color: Colors.black.withOpacity(0.55),
-                    fontSize: 14,
-                    height: 1.5,
-                  ),
-                ),
-                const SizedBox(height: 28),
-                if (_codeSent) _buildResetForm() else _buildPhoneForm(),
-                if (_errorMessage != null) ...[
-                  const SizedBox(height: 14),
-                  Text(
-                    _errorMessage!,
-                    style: const TextStyle(color: Colors.red, fontSize: 13),
-                  ),
-                ],
-              ],
-            ),
-          ),
+              ),
+            );
+          },
         ),
       ),
     );
