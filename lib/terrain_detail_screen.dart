@@ -4,6 +4,7 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'terrain_data.dart';
 import 'terrain_booking_screen.dart';
 import 'terrain_map_screen.dart';
@@ -597,6 +598,68 @@ class _AboutTab extends StatelessWidget {
               ),
             );
           }).toList(),
+          const SizedBox(height: 20),
+        ],
+
+        if (terrain.contactPhones.isNotEmpty) ...[
+          Text(
+            'Contacts',
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w800,
+              color: _txt(context),
+            ),
+          ),
+          const SizedBox(height: 12),
+          ...terrain.contactPhones.map((phone) => GestureDetector(
+            onTap: () async {
+              final Uri url = Uri(scheme: 'tel', path: phone);
+              if (await canLaunchUrl(url)) {
+                await launchUrl(url);
+              } else {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Impossible de lancer l\'appel')),
+                  );
+                }
+              }
+            },
+            child: Container(
+              margin: const EdgeInsets.only(bottom: 10),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              decoration: BoxDecoration(
+                color: _card(context),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.black.withOpacity(0.04)),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(
+                      color: kGreen.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(Icons.phone_rounded, color: kGreen, size: 18),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Text(
+                      phone,
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                        color: _txt(context),
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                  ),
+                  Icon(Icons.arrow_forward_ios_rounded, size: 14, color: _sub(context)),
+                ],
+              ),
+            ),
+          )),
           const SizedBox(height: 20),
         ],
 

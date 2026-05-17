@@ -91,6 +91,7 @@ class Terrain {
   final String imageUrl;
   final List<String> imageUrls;
   final List<String> features;
+  final List<String> contactPhones;
   final String description;
   final String? managerId;
   final bool isActive;
@@ -110,6 +111,7 @@ class Terrain {
     this.managerId,
     this.imageUrls = const [],
     this.features = const [],
+    this.contactPhones = const [],
     this.description = '',
     this.isActive = true,
     this.subTerrains = const [],
@@ -148,6 +150,7 @@ class Terrain {
       managerId: json['managerId']?.toString(),
       imageUrls: parseList(json['imageUrls'] ?? json['image_urls']),
       features: parseList(json['features']),
+      contactPhones: parseList(json['contactPhones'] ?? json['contact_phones']),
       description: json['description']?.toString() ?? '',
       isActive: json['isActive'] is bool
           ? json['isActive'] as bool
