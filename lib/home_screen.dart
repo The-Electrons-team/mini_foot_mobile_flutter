@@ -634,8 +634,14 @@ class _TerrainHorizontalListState extends State<_TerrainHorizontalList> {
                 child: Stack(
                   fit: StackFit.expand,
                   children: [
-                    Image.network(t.imageUrl, fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => Container(color: kGreen.withOpacity(0.2))),
+                    t.imageUrl.isEmpty
+                        ? Container(color: kGreen.withOpacity(0.2))
+                        : Image.network(
+                            t.imageUrl,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) =>
+                                Container(color: kGreen.withOpacity(0.2)),
+                          ),
                     Container(
                       decoration: BoxDecoration(
                         gradient: LinearGradient(

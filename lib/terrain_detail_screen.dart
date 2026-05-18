@@ -122,12 +122,26 @@ class _TerrainDetailScreenState extends State<TerrainDetailScreen> {
               fit: StackFit.expand,
               children: [
                 // Image principale
-                Image.network(
-                  currentImage,
-                  fit: BoxFit.cover,
-                  errorBuilder: (_, _, _) =>
-                      Container(color: kGreen.withOpacity(0.12)),
-                ),
+                currentImage.isEmpty
+                    ? Container(color: kGreen.withOpacity(0.12))
+                    : Image.network(
+                        currentImage,
+                        fit: BoxFit.cover,
+                        loadingBuilder: (_, child, progress) {
+                          if (progress == null) return child;
+                          return Container(
+                            color: kGreen.withOpacity(0.06),
+                            child: const Center(
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: kGreen,
+                              ),
+                            ),
+                          );
+                        },
+                        errorBuilder: (_, __, ___) =>
+                            Container(color: kGreen.withOpacity(0.12)),
+                      ),
                 // Dégradé bas pour les miniatures
                 Positioned.fill(
                   child: Container(
@@ -172,12 +186,14 @@ class _TerrainDetailScreenState extends State<TerrainDetailScreen> {
                             ),
                             child: ClipRRect(
                               borderRadius: BorderRadius.circular(6),
-                              child: Image.network(
-                                images[i],
-                                fit: BoxFit.cover,
-                                errorBuilder: (_, _, _) =>
-                                    Container(color: Colors.grey.shade400),
-                              ),
+                              child: images[i].isEmpty
+                                  ? Container(color: Colors.white24)
+                                  : Image.network(
+                                      images[i],
+                                      fit: BoxFit.cover,
+                                      errorBuilder: (_, __, ___) =>
+                                          Container(color: Colors.white24),
+                                    ),
                             ),
                           ),
                         );

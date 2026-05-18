@@ -38,6 +38,9 @@ class _MatchesScreenState extends State<MatchesScreen> {
   final TextEditingController _searchCtrl = TextEditingController();
   late int _selectedTab;
 
+  // Future stable pour l'onglet Demandes
+  Future<List<dynamic>>? _demandsFuture;
+
   // Pagination & Filtres pour Résultats
   final ScrollController _scrollCtrl = ScrollController();
   List<dynamic> _results = [];
@@ -63,6 +66,7 @@ class _MatchesScreenState extends State<MatchesScreen> {
     _loadInitialData();
     _loadZones();
     _searchForTeams();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _refreshDemands());
   }
 
   Future<void> _loadZones() async {
@@ -458,7 +462,7 @@ class _MatchesScreenState extends State<MatchesScreen> {
 
   Widget _buildDemandesView(AuthProvider auth) {
     return FutureBuilder<List<dynamic>>(
-      future: _loadTeamChallenges(auth),
+      future: _demandsFuture,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator(color: _kGreen));
         if (snapshot.hasError) return Center(child: Text('Impossible de charger les demandes.', style: TextStyle(color: _sub(context))));
@@ -471,6 +475,13 @@ class _MatchesScreenState extends State<MatchesScreen> {
         );
       },
     );
+  }
+
+  void _refreshDemands() {
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+    setState(() {
+      _demandsFuture = _loadTeamChallenges(auth);
+    });
   }
 
   Future<List<dynamic>> _loadTeamChallenges(AuthProvider auth) async {
@@ -492,7 +503,9 @@ class _MatchesScreenState extends State<MatchesScreen> {
   Widget _buildChallengeCard(dynamic challenge, AuthProvider auth) {
     final terrain = challenge['terrain'];
     final pricePerHour = (terrain?['pricePerHour'] as num?)?.toInt();
-    final halfPrice = pricePerHour != null ? pricePerHour ~/ 2 : null;
+    final durationMinutes = (challenge['durationMinutes'] as num?)?.toInt() ?? 60;
+    final totalPrice = pricePerHour != null ? ((pricePerHour * durationMinutes) / 60).ceil() : null;
+    final halfPrice = totalPrice != null ? (totalPrice / 2).ceil() : null;
     final myTeamId = auth.user?.teamId;
     final outgoing = challenge['direction'] == 'OUTGOING' ||
         (myTeamId != null && challenge['fromTeamId']?.toString() == myTeamId);
@@ -642,7 +655,7 @@ class _MatchesScreenState extends State<MatchesScreen> {
   Future<void> _respondChallenge(dynamic challenge, AuthProvider auth, bool accept) async {
     try {
       await _matchService.respondChallenge(auth.token!, challenge['id'], accept);
-      setState(() {});
+      _refreshDemands();
 
       if (!accept) {
         ScaffoldMessenger.of(context)
@@ -1930,12 +1943,12 @@ class _ChallengeSheetState extends State<_ChallengeSheet> {
     setState(() => _isLoading = true);
     try {
       final matchService = MatchService();
-      final dt = DateTime(_date.year, _date.month, _date.day, _startH, _startM);
+      final dateOnly = '${_date.year}-${_date.month.toString().padLeft(2, '0')}-${_date.day.toString().padLeft(2, '0')}';
       await matchService.sendChallenge(
         token: token,
         fromTeamId: fromTeamId,
         opponentTeamId: opponentTeamId,
-        date: dt.toIso8601String(),
+        date: dateOnly,
         time: '${_startH.toString().padLeft(2, '0')}:${_startM.toString().padLeft(2, '0')}',
         durationMinutes: _durationMin,
         zone: zone,

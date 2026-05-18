@@ -10,9 +10,12 @@ class SocketService with ChangeNotifier {
   void connect(String token) {
     if (_socket != null && _socket!.connected) return;
 
-    final String baseUrl = ApiService().baseUrl;
-    
-    _socket = IO.io('$baseUrl/ws', IO.OptionBuilder()
+    // Extraire la racine (sans /api/v1) pour le namespace WebSocket
+    final String apiUrl = ApiService().baseUrl;
+    final uri = Uri.parse(apiUrl);
+    final String wsRoot = '${uri.scheme}://${uri.host}:${uri.port}';
+
+    _socket = IO.io('$wsRoot/ws', IO.OptionBuilder()
       .setTransports(['websocket'])
       .setAuth({'token': token})
       .setExtraHeaders({'Authorization': 'Bearer $token'})

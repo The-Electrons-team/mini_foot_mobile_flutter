@@ -49,6 +49,8 @@ class Reservation {
       cancelled ||
       status == 'CANCELLED' ||
       status == 'COMPLETED' ||
+      status == 'REFUNDED' ||
+      status == 'PARTIALLY_REFUNDED' ||
       date.isBefore(DateTime.now().subtract(const Duration(days: 1)));
   bool get isActive => !isPast;
 

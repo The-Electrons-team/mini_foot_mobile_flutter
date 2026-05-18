@@ -290,7 +290,10 @@ class _PaymentScreenState extends State<PaymentScreen> {
               ),
               child: Column(
                 children: [
-                  _SummaryRow(label: 'Prix / 30 min', value: '${widget.totalPrice ~/ widget.intervals} F'),
+                  _SummaryRow(
+                    label: 'Tarif horaire',
+                    value: '${widget.subTerrain?.pricePerHour ?? widget.terrain.pricePerHour} F/h',
+                  ),
                   _SummaryRow(label: 'Durée totale', value: _durationLabel),
                   _SummaryRow(label: 'Sous-total', value: '${widget.totalPrice} F'),
                   if (_promoApplied) ...[
@@ -448,15 +451,11 @@ class _PaymentScreenState extends State<PaymentScreen> {
         promoCode: _promoApplied ? _promoController.text.trim() : null,
       );
 
-      final reservationId = reservation['id'] as String;
       final reference = reservation['reference'] as String;
-      final qrData = reservation['qrData'] as String?;
-
-      // 2 — Obtenir le lien de paiement DexPay
-      final paymentLink = await reservationProvider.getPaymentLink(
-        token: token,
-        reservationId: reservationId,
-      );
+      final paymentLink = reservation['paymentLink'] as String?;
+      if (paymentLink == null || paymentLink.isEmpty) {
+        throw Exception('Lien de paiement indisponible');
+      }
 
       // 3 — Ouvrir le lien de paiement dans le navigateur externe
       final uri = Uri.parse(paymentLink);
@@ -467,8 +466,10 @@ class _PaymentScreenState extends State<PaymentScreen> {
       }
 
       // 4 — Attendre la validation backend avant d'afficher le ticket.
-      final confirmed = await _waitForPaymentValidation(token, reservationId);
+      final confirmed = await _waitForPaymentValidation(token, reference);
       if (!mounted) return;
+      final isDepositOnly = confirmed['depositPaidAt'] != null &&
+          confirmed['status'] != 'CONFIRMED';
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
@@ -479,8 +480,10 @@ class _PaymentScreenState extends State<PaymentScreen> {
             startSlot: widget.startSlot,
             endSlot: widget.endSlot,
             finalPrice: (confirmed['finalPrice'] as num?)?.toInt() ?? _finalPrice,
-            reference: reference,
-            qrData: confirmed['qrData'] as String? ?? qrData,
+            reference: confirmed['reference'] as String? ?? reference,
+            qrData: confirmed['qrData'] as String?,
+            isDepositOnly: isDepositOnly,
+            depositAmount: (confirmed['depositAmount'] as num?)?.toInt(),
           ),
         ),
       );
@@ -501,12 +504,14 @@ class _PaymentScreenState extends State<PaymentScreen> {
     }
   }
 
-  Future<Map<String, dynamic>> _waitForPaymentValidation(String token, String reservationId) async {
+  Future<Map<String, dynamic>> _waitForPaymentValidation(String token, String reference) async {
     final service = ReservationService();
     for (var i = 0; i < 40; i++) {
       if (!_pollingActive) throw Exception('Paiement annulé.');
-      final reservation = await service.getReservation(token, reservationId);
+      final reservation = await service.getReservationByReference(token, reference);
       if (reservation['status'] == 'CONFIRMED') return reservation;
+      // Acompte payé : réservation créée avec QR mais en attente du solde
+      if (reservation['depositPaidAt'] != null) return reservation;
       if (!_pollingActive) throw Exception('Paiement annulé.');
       await Future.delayed(const Duration(seconds: 3));
     }

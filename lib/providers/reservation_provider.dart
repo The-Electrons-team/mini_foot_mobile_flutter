@@ -13,11 +13,15 @@ class ReservationProvider with ChangeNotifier {
   String? get error => _error;
 
   List<Map<String, dynamic>> get upcoming => _reservations
-      .where((r) => r['status'] == 'PENDING_PAYMENT' || r['status'] == 'CONFIRMED')
+      .where((r) => r['status'] == 'CONFIRMED')
       .toList();
 
   List<Map<String, dynamic>> get past => _reservations
-      .where((r) => r['status'] == 'CANCELLED' || r['status'] == 'COMPLETED')
+      .where((r) =>
+          r['status'] == 'CANCELLED' ||
+          r['status'] == 'COMPLETED' ||
+          r['status'] == 'REFUNDED' ||
+          r['status'] == 'PARTIALLY_REFUNDED')
       .toList();
 
   Future<void> loadReservations(String token) async {
@@ -60,8 +64,10 @@ class ReservationProvider with ChangeNotifier {
       promoCode: promoCode,
       nbPersonnes: nbPersonnes,
     );
-    _reservations.insert(0, reservation);
-    notifyListeners();
+    if (reservation['id'] != null) {
+      _reservations.insert(0, reservation);
+      notifyListeners();
+    }
     return reservation;
   }
 
@@ -74,6 +80,11 @@ class ReservationProvider with ChangeNotifier {
       token: token,
       reservationId: reservationId,
     );
+  }
+
+  /// Génère un lien DexPay pour payer le solde d'une réservation avec acompte.
+  Future<Map<String, dynamic>> completeDepositPayment(String token, String reference) async {
+    return _service.completeDepositPayment(token, reference);
   }
 
   /// Annule une réservation et recharge la liste.

@@ -82,6 +82,13 @@ class AuthProvider with ChangeNotifier {
   String? _token;
   bool _isLoading = false;
 
+  AuthProvider() {
+    // Déclencher logout automatique si un appel API reçoit un 401 (token expiré)
+    ApiService.onUnauthorized = () {
+      if (_token != null) logout();
+    };
+  }
+
   User? get user => _user;
   String? get token => _token;
   bool get isLoading => _isLoading;
@@ -216,37 +223,6 @@ class AuthProvider with ChangeNotifier {
         notifyListeners();
       }
       return result['verified'] == true;
-    } finally {
-      _isLoading = false;
-      notifyListeners();
-    }
-  }
-
-  Future<void> register({
-    required String phone,
-    required String password,
-    required String firstName,
-    required String lastName,
-  }) async {
-    _isLoading = true;
-    notifyListeners();
-    try {
-      final result = await _authService.register(
-        phone: phone,
-        password: password,
-        firstName: firstName,
-        lastName: lastName,
-      );
-      _token = result['token'];
-      _user = User.fromJson(result['user']);
-      if (!_user!.isPlayer) {
-        _token = null;
-        _user = null;
-        throw Exception('Ce compte est réservé à l’espace propriétaire.');
-      }
-      NotificationService().init(_token);
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('token', _token!);
     } finally {
       _isLoading = false;
       notifyListeners();

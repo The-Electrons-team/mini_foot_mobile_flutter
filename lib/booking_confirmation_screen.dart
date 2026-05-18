@@ -7,8 +7,12 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
+import 'package:provider/provider.dart';
 import 'package:qr_flutter/qr_flutter.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'terrain_data.dart';
+import 'providers/auth_provider.dart';
+import 'providers/reservation_provider.dart';
 
 const Color kGreen = Color(0xFF006F39);
 const Color kDark = Color(0xFF1A1A1A);
@@ -24,6 +28,8 @@ class BookingConfirmationScreen extends StatefulWidget {
   final String reference;
   final String? qrData;
   final bool fromReservations;
+  final bool isDepositOnly;
+  final int? depositAmount;
 
   const BookingConfirmationScreen({
     super.key,
@@ -36,6 +42,8 @@ class BookingConfirmationScreen extends StatefulWidget {
     required this.reference,
     this.qrData,
     this.fromReservations = false,
+    this.isDepositOnly = false,
+    this.depositAmount,
   });
 
   @override
@@ -45,6 +53,7 @@ class BookingConfirmationScreen extends StatefulWidget {
 class _BookingConfirmationScreenState extends State<BookingConfirmationScreen> {
   final GlobalKey _qrKey = GlobalKey();
   bool _sharing = false;
+  bool _completingPayment = false;
 
   String get _dateLabel {
     const days = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
@@ -177,6 +186,33 @@ class _BookingConfirmationScreenState extends State<BookingConfirmationScreen> {
     }
   }
 
+  Future<void> _completePayment() async {
+    if (_completingPayment) return;
+    final token = context.read<AuthProvider>().token;
+    if (token == null) return;
+    setState(() => _completingPayment = true);
+    try {
+      final result = await context
+          .read<ReservationProvider>()
+          .completeDepositPayment(token, widget.reference);
+      final link = result['link'] as String?;
+      if (link != null && link.isNotEmpty) {
+        final uri = Uri.parse(link);
+        if (await canLaunchUrl(uri)) {
+          await launchUrl(uri, mode: LaunchMode.externalApplication);
+        }
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(e.toString().replaceFirst('Exception: ', '')),
+        backgroundColor: Colors.red.shade700,
+      ));
+    } finally {
+      if (mounted) setState(() => _completingPayment = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -221,7 +257,9 @@ class _BookingConfirmationScreenState extends State<BookingConfirmationScreen> {
                     ),
                     child: Icon(
                       Icons.star_rounded,
-                      color: kGreen.withOpacity(0.15 + (i * 0.04)),
+                      color: widget.isDepositOnly
+                          ? const Color(0xFFFF9800).withOpacity(0.15 + (i * 0.04))
+                          : kGreen.withOpacity(0.15 + (i * 0.04)),
                       size: 12.0 + (i * 2),
                     ),
                   );
@@ -229,26 +267,76 @@ class _BookingConfirmationScreenState extends State<BookingConfirmationScreen> {
                 Container(
                   width: 72, height: 72,
                   decoration: BoxDecoration(
-                    color: kGreen,
+                    color: widget.isDepositOnly ? const Color(0xFFFF9800) : kGreen,
                     shape: BoxShape.circle,
                     boxShadow: [
-                      BoxShadow(color: kGreen.withOpacity(0.35), blurRadius: 20, spreadRadius: 2),
+                      BoxShadow(
+                        color: (widget.isDepositOnly ? const Color(0xFFFF9800) : kGreen).withOpacity(0.35),
+                        blurRadius: 20, spreadRadius: 2),
                     ],
                   ),
-                  child: const Icon(Icons.check_rounded, color: Colors.white, size: 40),
+                  child: Icon(
+                    widget.isDepositOnly ? Icons.hourglass_top_rounded : Icons.check_rounded,
+                    color: Colors.white, size: 40),
                 ),
               ],
             ),
 
             const SizedBox(height: 14),
-            Text('Réservation Confirmée !',
-                style: GoogleFonts.orbitron(
-                    color: kDark, fontSize: 17, fontWeight: FontWeight.w900)),
+            Text(
+              widget.isDepositOnly ? 'Acompte Payé !' : 'Réservation Confirmée !',
+              style: GoogleFonts.orbitron(color: kDark, fontSize: 17, fontWeight: FontWeight.w900),
+            ),
             const SizedBox(height: 5),
-            Text('Vous êtes prêt à jouer.',
-                style: TextStyle(color: Colors.black.withOpacity(0.45), fontSize: 13)),
+            Text(
+              widget.isDepositOnly
+                  ? 'Payez le solde avant le match pour activer le QR.'
+                  : 'Vous êtes prêt à jouer.',
+              style: TextStyle(color: Colors.black.withOpacity(0.45), fontSize: 13),
+              textAlign: TextAlign.center,
+            ),
 
-            const SizedBox(height: 20),
+            // ── BANNIÈRE ACOMPTE ──
+            if (widget.isDepositOnly) ...[
+              const SizedBox(height: 14),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFFF3E0),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: const Color(0xFFFF9800), width: 1),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.info_outline_rounded, color: Color(0xFFFF9800), size: 18),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'QR non scannable',
+                              style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12, color: Color(0xFFE65100)),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              'Acompte payé : ${widget.depositAmount ?? '—'} F. '
+                              'Solde restant : ${widget.finalPrice - (widget.depositAmount ?? 0)} F. '
+                              'Complétez avant le match pour accéder au terrain.',
+                              style: const TextStyle(fontSize: 11, color: Color(0xFF6D4C41)),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+
+            const SizedBox(height: 16),
 
             // ── TICKET ──
             Expanded(
@@ -264,6 +352,7 @@ class _BookingConfirmationScreenState extends State<BookingConfirmationScreen> {
                   finalPrice: widget.finalPrice,
                   reference: widget.reference,
                   qrData: _qrData,
+                  isDepositOnly: widget.isDepositOnly,
                 ),
               ),
             ),
@@ -273,63 +362,81 @@ class _BookingConfirmationScreenState extends State<BookingConfirmationScreen> {
             // ── BOUTONS ──
             Padding(
               padding: EdgeInsets.fromLTRB(20, 0, 20, MediaQuery.of(context).padding.bottom + 16),
-              child: Row(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  Expanded(
-                    child: GestureDetector(
-                      onTap: () => widget.fromReservations
-                          ? Navigator.pop(context)
-                          : Navigator.popUntil(context, (r) => r.isFirst),
-                      child: Container(
+                  if (widget.isDepositOnly) ...[
+                    GestureDetector(
+                      onTap: _completingPayment ? null : _completePayment,
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 200),
                         height: 52,
                         decoration: BoxDecoration(
-                          color: kDark,
+                          color: _completingPayment
+                              ? const Color(0xFFFF9800).withOpacity(0.6)
+                              : const Color(0xFFFF9800),
                           borderRadius: BorderRadius.circular(26),
                         ),
                         child: Center(
-                          child: Text(
-                            widget.fromReservations ? 'Retour' : 'Accueil',
-                            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 14),
+                          child: _completingPayment
+                              ? const SizedBox(
+                                  width: 20, height: 20,
+                                  child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                                )
+                              : Text(
+                                  'Payer le solde · ${widget.finalPrice - (widget.depositAmount ?? 0)} F',
+                                  style: const TextStyle(
+                                      color: Colors.white, fontWeight: FontWeight.w700, fontSize: 14),
+                                ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                  ],
+                  Row(
+                    children: [
+                      Expanded(
+                        child: GestureDetector(
+                          onTap: () => widget.fromReservations
+                              ? Navigator.pop(context)
+                              : Navigator.popUntil(context, (r) => r.isFirst),
+                          child: Container(
+                            height: 52,
+                            decoration: BoxDecoration(
+                              color: kDark,
+                              borderRadius: BorderRadius.circular(26),
+                            ),
+                            child: Center(
+                              child: Text(
+                                widget.fromReservations ? 'Retour' : 'Accueil',
+                                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 14),
+                              ),
+                            ),
                           ),
                         ),
                       ),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: GestureDetector(
-                      onTap: () {},
-                      child: Container(
-                        height: 52,
-                        decoration: BoxDecoration(
-                          color: kDark,
-                          borderRadius: BorderRadius.circular(26),
+                      if (!widget.isDepositOnly) ...[
+                        const SizedBox(width: 10),
+                        GestureDetector(
+                          onTap: _shareQrPdf,
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 200),
+                            width: 52, height: 52,
+                            decoration: BoxDecoration(
+                              color: _sharing ? kGreen : Colors.white,
+                              shape: BoxShape.circle,
+                              boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.08), blurRadius: 8)],
+                            ),
+                            child: _sharing
+                                ? const Padding(
+                                    padding: EdgeInsets.all(14),
+                                    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                                  )
+                                : const Icon(Icons.share_rounded, color: kDark, size: 20),
+                          ),
                         ),
-                        child: const Center(
-                          child: Text('Voir réservation',
-                              style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 13)),
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  GestureDetector(
-                    onTap: _shareQrPdf,
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 200),
-                      width: 52, height: 52,
-                      decoration: BoxDecoration(
-                        color: _sharing ? kGreen : Colors.white,
-                        shape: BoxShape.circle,
-                        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.08), blurRadius: 8)],
-                      ),
-                      child: _sharing
-                          ? const Padding(
-                              padding: EdgeInsets.all(14),
-                              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                            )
-                          : const Icon(Icons.share_rounded, color: kDark, size: 20),
-                    ),
+                      ],
+                    ],
                   ),
                 ],
               ),
@@ -352,6 +459,7 @@ class _TicketCard extends StatelessWidget {
   final int finalPrice;
   final String reference;
   final String qrData;
+  final bool isDepositOnly;
 
   const _TicketCard({
     required this.qrRepaintKey,
@@ -363,6 +471,7 @@ class _TicketCard extends StatelessWidget {
     required this.finalPrice,
     required this.reference,
     required this.qrData,
+    this.isDepositOnly = false,
   });
 
   @override
@@ -472,33 +581,75 @@ class _TicketCard extends StatelessWidget {
             padding: const EdgeInsets.fromLTRB(16, 18, 16, 18),
             child: Column(
               children: [
-                RepaintBoundary(
-                  key: qrRepaintKey,
-                  child: Container(
-                    padding: const EdgeInsets.all(14),
-                    color: const Color(0xFFF8F8F8),
-                    child: QrImageView(
-                      data: qrData,
-                      version: QrVersions.auto,
-                      size: 150,
-                      backgroundColor: const Color(0xFFF8F8F8),
-                      eyeStyle: const QrEyeStyle(eyeShape: QrEyeShape.square, color: kDark),
-                      dataModuleStyle: const QrDataModuleStyle(
-                          dataModuleShape: QrDataModuleShape.square, color: kDark),
+                Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    RepaintBoundary(
+                      key: qrRepaintKey,
+                      child: ColorFiltered(
+                        colorFilter: isDepositOnly
+                            ? const ColorFilter.matrix([
+                                0.2126, 0.7152, 0.0722, 0, 0,
+                                0.2126, 0.7152, 0.0722, 0, 0,
+                                0.2126, 0.7152, 0.0722, 0, 0,
+                                0,      0,      0,      1, 0,
+                              ])
+                            : const ColorFilter.mode(Colors.transparent, BlendMode.dst),
+                        child: Container(
+                          padding: const EdgeInsets.all(14),
+                          color: const Color(0xFFF8F8F8),
+                          child: QrImageView(
+                            data: qrData,
+                            version: QrVersions.auto,
+                            size: 150,
+                            backgroundColor: const Color(0xFFF8F8F8),
+                            eyeStyle: const QrEyeStyle(eyeShape: QrEyeShape.square, color: kDark),
+                            dataModuleStyle: const QrDataModuleStyle(
+                                dataModuleShape: QrDataModuleShape.square, color: kDark),
+                          ),
+                        ),
+                      ),
                     ),
-                  ),
+                    if (isDepositOnly)
+                      Container(
+                        width: 178, height: 178,
+                        decoration: BoxDecoration(
+                          color: Colors.black.withOpacity(0.45),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: const Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.lock_rounded, color: Colors.white, size: 32),
+                            SizedBox(height: 6),
+                            Text('Solde requis',
+                                style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 12)),
+                          ],
+                        ),
+                      ),
+                  ],
                 ),
                 const SizedBox(height: 12),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Icon(Icons.qr_code_scanner_rounded, size: 14, color: Colors.black38),
+                    Icon(
+                      isDepositOnly ? Icons.lock_outline_rounded : Icons.qr_code_scanner_rounded,
+                      size: 14,
+                      color: isDepositOnly ? const Color(0xFFFF9800) : Colors.black38,
+                    ),
                     const SizedBox(width: 6),
-                    Text('Présentez ce QR code à l\'entrée',
-                        style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.black.withOpacity(0.45),
-                            fontWeight: FontWeight.w500)),
+                    Text(
+                      isDepositOnly
+                          ? 'Payez le solde pour activer ce QR'
+                          : 'Présentez ce QR code à l\'entrée',
+                      style: TextStyle(
+                          fontSize: 12,
+                          color: isDepositOnly
+                              ? const Color(0xFFFF9800)
+                              : Colors.black.withOpacity(0.45),
+                          fontWeight: FontWeight.w500),
+                    ),
                   ],
                 ),
               ],

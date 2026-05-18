@@ -1,4 +1,5 @@
 import 'dart:convert';
+
 import 'package:flutter/material.dart';
 
 class TerrainFeature {
@@ -12,10 +13,18 @@ class TerrainSlot {
   final bool available;
   TerrainSlot({required this.slot, required this.available});
 
-  factory TerrainSlot.fromJson(Map<String, dynamic> json) => TerrainSlot(
-    slot: json['slot'] ?? '',
-    available: json['available'] ?? true,
-  );
+  factory TerrainSlot.fromJson(Map<String, dynamic> json) {
+    // Le backend retourne { slot, status: "available"|"booked"|"blocked" }
+    // Fallback sur json['available'] (bool) pour compatibilité
+    final status = json['status'] as String?;
+    final bool avail;
+    if (status != null) {
+      avail = status == 'available';
+    } else {
+      avail = (json['available'] as bool?) ?? true;
+    }
+    return TerrainSlot(slot: json['slot'] as String? ?? '', available: avail);
+  }
 }
 
 class SubTerrain {
@@ -29,6 +38,7 @@ class SubTerrain {
   final String type;
   final String? surface;
   final int? pricePerHour;
+  final List<PricingPeriod> pricingPeriods;
 
   SubTerrain({
     required this.id,
@@ -41,9 +51,21 @@ class SubTerrain {
     required this.type,
     this.surface,
     this.pricePerHour,
+    this.pricingPeriods = const [],
   });
 
   factory SubTerrain.fromJson(Map<String, dynamic> json) {
+    final rawPeriods = json['pricingPeriods'] ?? json['pricing_periods'];
+    final decodedPeriods = rawPeriods is String
+        ? _decodeJsonList(rawPeriods)
+        : rawPeriods;
+    final periods = decodedPeriods is List
+        ? decodedPeriods
+            .whereType<Map<String, dynamic>>()
+            .map(PricingPeriod.fromJson)
+            .toList()
+        : <PricingPeriod>[];
+
     return SubTerrain(
       id: json['id']?.toString() ?? '',
       name: json['name']?.toString() ?? '',
@@ -57,6 +79,7 @@ class SubTerrain {
       pricePerHour: _asNullableInt(
         json['pricePerHour'] ?? json['price_per_hour'],
       ),
+      pricingPeriods: periods,
     );
   }
 
@@ -76,6 +99,44 @@ class SubTerrain {
     'THIRD' => 'Tiers de terrain',
     _ => 'Terrain entier',
   };
+}
+
+class PricingPeriod {
+  final String label;
+  final String startTime;
+  final String endTime;
+  final int pricePerHour;
+  final List<int> days;
+
+  const PricingPeriod({
+    required this.label,
+    required this.startTime,
+    required this.endTime,
+    required this.pricePerHour,
+    this.days = const [],
+  });
+
+  factory PricingPeriod.fromJson(Map<String, dynamic> json) {
+    return PricingPeriod(
+      label: json['label']?.toString() ?? '',
+      startTime: json['startTime']?.toString() ?? '08:00',
+      endTime: json['endTime']?.toString() ?? '24:00',
+      pricePerHour: _asInt(json['pricePerHour'] ?? json['price_per_hour']),
+      days: (json['days'] as List<dynamic>? ?? [])
+          .map(_asInt)
+          .where((day) => day >= 0 && day <= 6)
+          .toList(),
+    );
+  }
+
+  bool appliesTo(DateTime date, int slotMinutes) {
+    final day = date.weekday % 7;
+    if (days.isNotEmpty && !days.contains(day)) return false;
+    final start = _clockToMinutes(startTime);
+    final end = _clockToMinutes(endTime);
+    if (start == null || end == null) return false;
+    return slotMinutes >= start && slotMinutes < end;
+  }
 }
 
 class Terrain {
@@ -197,6 +258,25 @@ double _asDouble(dynamic value, {double fallback = 0}) {
   return double.tryParse(value.toString()) ?? fallback;
 }
 
+int? _clockToMinutes(String time) {
+  final normalized = time.trim().replaceAll('h', ':');
+  final parts = normalized.split(':');
+  if (parts.length != 2) return null;
+  final hour = int.tryParse(parts[0]);
+  final minute = int.tryParse(parts[1]);
+  if (hour == null || minute == null) return null;
+  return hour * 60 + minute;
+}
+
+List<dynamic> _decodeJsonList(String value) {
+  try {
+    final decoded = jsonDecode(value);
+    return decoded is List ? decoded : const [];
+  } catch (_) {
+    return const [];
+  }
+}
+
 class TerrainReview {
   final String id;
   final String terrainId;
@@ -227,9 +307,9 @@ class TerrainReview {
       rating: (json['rating'] ?? 0).toDouble(),
       comment: json['comment'],
       userName: user != null
-          ? '${user['first_name']} ${user['last_name']}'
+          ? '${user['firstName'] ?? user['first_name'] ?? ''} ${user['lastName'] ?? user['last_name'] ?? ''}'.trim()
           : 'Anonyme',
-      userAvatar: user?['avatar_url'],
+      userAvatar: user?['avatarUrl'] ?? user?['avatar_url'],
       createdAt: DateTime.parse(
         json['createdAt'] ?? DateTime.now().toIso8601String(),
       ),

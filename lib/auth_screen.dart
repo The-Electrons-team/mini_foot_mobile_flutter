@@ -588,8 +588,8 @@ class _PhoneField extends StatelessWidget {
         labelStyle: TextStyle(color: Colors.black.withOpacity(0.45)),
         contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 18),
         prefixIconConstraints: const BoxConstraints(
-          minWidth: 98,
-          maxWidth: 98,
+          minWidth: 106,
+          maxWidth: 106,
           minHeight: 56,
         ),
         prefixIcon: Container(
@@ -602,10 +602,10 @@ class _PhoneField extends StatelessWidget {
             ),
           ),
           child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
             children: const [
               Text('🇸🇳', style: TextStyle(fontSize: 18)),
-              SizedBox(width: 7),
+              SizedBox(width: 6),
               Text(
                 '+221',
                 style: TextStyle(
@@ -1137,7 +1137,6 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                           ),
                         ],
                       ],
-                    ),
                     ),
                   ),
                 ),

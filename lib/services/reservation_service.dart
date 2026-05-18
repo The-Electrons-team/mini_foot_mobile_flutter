@@ -9,7 +9,7 @@ const _paymentMethod = 'DEXPAY';
 class ReservationService {
   final ApiService _api = ApiService();
 
-  /// Crée une réservation en base via POST /reservations
+  /// Crée une intention de paiement. La vraie réservation est créée après webhook DexPay.
   Future<Map<String, dynamic>> createReservation({
     required String token,
     required String terrainId,
@@ -73,6 +73,24 @@ class ReservationService {
       '/reservations/$id',
       token: token,
       defaultErrorMsg: 'Erreur détail réservation',
+    );
+  }
+
+  Future<Map<String, dynamic>> getReservationByReference(String token, String reference) async {
+    return await _api.get(
+      '/reservations/reference/$reference',
+      token: token,
+      defaultErrorMsg: 'Erreur détail réservation',
+    );
+  }
+
+  /// Génère un lien de paiement pour le solde d'une réservation avec acompte
+  Future<Map<String, dynamic>> completeDepositPayment(String token, String reference) async {
+    return await _api.post(
+      '/reservations/reference/$reference/complete-deposit',
+      body: {},
+      token: token,
+      defaultErrorMsg: 'Erreur génération lien solde',
     );
   }
 

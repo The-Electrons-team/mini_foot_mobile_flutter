@@ -4,6 +4,37 @@ import 'api_service.dart';
 class TerrainService {
   final ApiService _api = ApiService();
 
+  /// Normalise une URL d'image vers le proxy storage de l'API,
+  /// quelle que soit la forme retournée par le backend (MinIO direct, ancien domaine, etc.)
+  String _normalizeImageUrl(String? url) {
+    if (url == null || url.isEmpty) return '';
+    final uri = Uri.tryParse(url);
+    if (uri == null || uri.pathSegments.isEmpty) return url;
+    final idx = uri.pathSegments.indexWhere(
+      (s) => s == 'terrains' || s == 'minifoot-terrains',
+    );
+    if (idx >= 0 && idx + 1 < uri.pathSegments.length) {
+      final key = uri.pathSegments.skip(idx + 1).join('/');
+      return '${_api.baseUrl}/storage/terrains/$key';
+    }
+    return url;
+  }
+
+  Map<String, dynamic> _normalizeTerrainJson(Map<String, dynamic> json) {
+    final imageUrl = _normalizeImageUrl(
+      json['imageUrl']?.toString() ?? json['image_url']?.toString(),
+    );
+    final rawUrls = json['imageUrls'] ?? json['image_urls'];
+    final imageUrls = rawUrls is List
+        ? rawUrls.map((u) => _normalizeImageUrl(u?.toString())).toList()
+        : <String>[];
+    return {
+      ...json,
+      'imageUrl': imageUrl,
+      'imageUrls': imageUrls,
+    };
+  }
+
   Future<List<Terrain>> fetchTerrains({String? token, String? search, String? zone, int page = 1, int limit = 20, double? lat, double? lng}) async {
     final params = <String, String>{
       'page': page.toString(),
@@ -19,12 +50,14 @@ class TerrainService {
 
     final data = await _api.get(url, token: token, defaultErrorMsg: 'Erreur chargement terrains');
     final list = data['data'] as List<dynamic>;
-    return list.map((j) => Terrain.fromJson(j as Map<String, dynamic>)).toList();
+    return list
+        .map((j) => Terrain.fromJson(_normalizeTerrainJson(j as Map<String, dynamic>)))
+        .toList();
   }
 
   Future<Terrain> fetchTerrain(String id, {String? token}) async {
     final data = await _api.get('/terrains/$id', token: token, defaultErrorMsg: 'Terrain introuvable');
-    return Terrain.fromJson(data as Map<String, dynamic>);
+    return Terrain.fromJson(_normalizeTerrainJson(data as Map<String, dynamic>));
   }
 
   Future<List<TerrainSlot>> fetchSlots(String terrainId, String date, {String? token, String? subTerrainId}) async {
@@ -39,7 +72,9 @@ class TerrainService {
 
   Future<List<Terrain>> fetchFavoriteTerrains(String token) async {
     final list = await _api.get('/users/me/favorites', token: token, defaultErrorMsg: 'Erreur chargement favoris');
-    return (list as List).map((j) => Terrain.fromJson(j as Map<String, dynamic>)).toList();
+    return (list as List)
+        .map((j) => Terrain.fromJson(_normalizeTerrainJson(j as Map<String, dynamic>)))
+        .toList();
   }
 
   Future<bool> toggleFavorite(String token, String terrainId) async {
@@ -78,6 +113,8 @@ class TerrainService {
     final queryString = Uri(queryParameters: params).query;
     
     final list = await _api.get('/terrains/available?$queryString', token: token, defaultErrorMsg: 'Erreur chargement terrains disponibles');
-    return (list as List).map((j) => Terrain.fromJson(j as Map<String, dynamic>)).toList();
+    return (list as List)
+        .map((j) => Terrain.fromJson(_normalizeTerrainJson(j as Map<String, dynamic>)))
+        .toList();
   }
 }

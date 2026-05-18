@@ -9,6 +9,9 @@ class ApiService {
   factory ApiService() => _instance;
   ApiService._internal();
 
+  // Callback déclenché sur 401 — branché par AuthProvider au démarrage
+  static void Function()? onUnauthorized;
+
   String get baseUrl {
     try {
       return dotenv.env['API_URL'] ?? 'http://localhost:3000/api/v1';
@@ -47,13 +50,15 @@ class ApiService {
       if (response.body.isEmpty) return null;
       return jsonDecode(response.body);
     }
-    
-    // Auth specific errors
-    if (response.statusCode == 401 || response.statusCode == 404) {
-      // In some cases we want to catch this specifically, we'll let the caller handle it or throw generic
+
+    if (response.statusCode == 401) {
+      // Flux login/OTP : on remonte l'erreur spécifique
       if (defaultErrorMsg == 'AUTH_INVALID') throw Exception('AUTH_INVALID');
+      // Token expiré ou révoqué : déconnexion automatique
+      onUnauthorized?.call();
+      throw Exception('SESSION_EXPIREE');
     }
-    
+
     throw Exception(parseApiError(response.body, defaultErrorMsg));
   }
 
