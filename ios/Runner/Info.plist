@@ -7,7 +7,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>Minifoot</string>
+	<string>MiniFoot</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -49,6 +49,18 @@
 	</dict>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>MiniFoot utilise votre position pour afficher les terrains près de chez vous.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>MiniFoot utilise votre position pour afficher les terrains près de chez vous.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>MiniFoot utilise la caméra pour ajouter votre photo de profil.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>MiniFoot accède à votre galerie pour choisir votre photo de profil.</string>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>remote-notification</string>
+	</array>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
 	<key>UIMainStoryboardFile</key>
