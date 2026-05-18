@@ -717,7 +717,7 @@ class _OtpScreenState extends State<OtpScreen> {
         );
       }
     } catch (e) {
-      setState(() => _errorMessage = e.toString());
+      setState(() => _errorMessage = 'Impossible de renvoyer le code. Réessayez dans quelques instants.');
     }
   }
 
@@ -764,7 +764,7 @@ class _OtpScreenState extends State<OtpScreen> {
         setState(() => _errorMessage = 'Code invalide');
       }
     } catch (e) {
-      setState(() => _errorMessage = e.toString());
+      setState(() => _errorMessage = 'Code incorrect ou expiré. Vérifiez et réessayez.');
     }
   }
 

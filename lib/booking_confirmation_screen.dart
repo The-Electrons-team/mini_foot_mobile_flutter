@@ -13,6 +13,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'terrain_data.dart';
 import 'providers/auth_provider.dart';
 import 'providers/reservation_provider.dart';
+import 'app_snackbar.dart';
 
 const Color kGreen = Color(0xFF006F39);
 const Color kDark = Color(0xFF1A1A1A);
@@ -204,10 +205,7 @@ class _BookingConfirmationScreenState extends State<BookingConfirmationScreen> {
       }
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text(e.toString().replaceFirst('Exception: ', '')),
-        backgroundColor: Colors.red.shade700,
-      ));
+      AppSnackbar.error(context, 'Impossible d\'ouvrir le lien de paiement. Réessayez.');
     } finally {
       if (mounted) setState(() => _completingPayment = false);
     }

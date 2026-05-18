@@ -5,6 +5,7 @@ import 'terrain_data.dart';
 import 'services/terrain_service.dart';
 import 'providers/auth_provider.dart';
 import 'payment_screen.dart';
+import 'app_snackbar.dart';
 
 const Color kGreen = Color(0xFF006F39);
 const Color kDark = Color(0xFF1A1A1A);
@@ -85,14 +86,7 @@ class _TerrainBookingScreenState extends State<TerrainBookingScreen> {
       );
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'Impossible de charger les créneaux : ${e.toString().replaceFirst('Exception: ', '')}',
-            ),
-            backgroundColor: Colors.red.shade700,
-          ),
-        );
+        AppSnackbar.error(context, 'Impossible de charger les créneaux. Vérifiez votre connexion.');
       }
     } finally {
       if (mounted) setState(() => _slotsLoading = false);

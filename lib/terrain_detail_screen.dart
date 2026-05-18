@@ -13,6 +13,7 @@ import 'providers/auth_provider.dart';
 import 'providers/terrain_provider.dart';
 import 'chat_screen.dart';
 import 'providers/chat_provider.dart';
+import 'app_snackbar.dart';
 
 const Color kGreen = Color(0xFF006F39);
 const Color kDark = Color(0xFF1A1A1A);
@@ -397,9 +398,7 @@ class _TerrainDetailScreenState extends State<TerrainDetailScreen> {
                     );
                   } catch (e) {
                     Navigator.pop(context); // Fermer le loader
-                    ScaffoldMessenger.of(
-                      context,
-                    ).showSnackBar(SnackBar(content: Text('Erreur: $e')));
+                    AppSnackbar.error(context, 'Impossible d\'ouvrir le chat. Réessayez.');
                   }
                 },
                 child: Container(

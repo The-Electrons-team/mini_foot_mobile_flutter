@@ -99,7 +99,7 @@ class TerrainProvider with ChangeNotifier {
       if (fetched.isNotEmpty) _page++;
       
     } catch (e) {
-      _error = e.toString();
+      _error = 'Impossible de charger les terrains.';
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -122,7 +122,7 @@ class TerrainProvider with ChangeNotifier {
       debugPrint('Loaded ${_favorites.length} favorites');
     } catch (e) {
       debugPrint('Error loading favorites: $e');
-      _error = e.toString();
+      _error = 'Impossible de charger les favoris.';
     } finally {
       _isFavLoading = false;
       notifyListeners();
@@ -135,7 +135,7 @@ class TerrainProvider with ChangeNotifier {
       // Refresh local list if needed, or reload
       await loadFavorites(token);
     } catch (e) {
-      _error = e.toString();
+      _error = 'Impossible de mettre à jour les favoris.';
       notifyListeners();
     }
   }
@@ -148,7 +148,7 @@ class TerrainProvider with ChangeNotifier {
       final available = await _service.fetchAvailableTerrains(date, startTime, durationMin, token: _token);
       return available;
     } catch (e) {
-      _error = e.toString();
+      _error = 'Impossible de charger les terrains disponibles.';
       return [];
     } finally {
       _isLoading = false;

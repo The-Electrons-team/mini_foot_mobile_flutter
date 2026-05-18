@@ -31,7 +31,7 @@ class ReservationProvider with ChangeNotifier {
     try {
       _reservations = await _service.getMyReservations(token);
     } catch (e) {
-      _error = e.toString().replaceFirst('Exception: ', '');
+      _error = 'Impossible de charger vos réservations.';
     } finally {
       _isLoading = false;
       notifyListeners();

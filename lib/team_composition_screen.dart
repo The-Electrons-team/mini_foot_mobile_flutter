@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import 'team_screen.dart' show TeamData, TeamMember, MemberStatus, PlayerPositionLabel, mockPlayers;
 import 'providers/auth_provider.dart';
 import 'services/team_service.dart';
+import 'app_snackbar.dart';
 
 const Color _kGreen = Color(0xFF006F39);
 bool _isDark(BuildContext c) => Theme.of(c).brightness == Brightness.dark;
@@ -171,9 +172,7 @@ class _CompositionPageState extends State<CompositionPage> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erreur: $e'), backgroundColor: Colors.red),
-        );
+        AppSnackbar.error(context, 'Impossible de sauvegarder la composition. Réessayez.');
       }
     } finally {
       if (mounted) setState(() => _isSaving = false);

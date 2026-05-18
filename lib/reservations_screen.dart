@@ -5,6 +5,7 @@ import 'terrain_data.dart';
 import 'booking_confirmation_screen.dart';
 import 'providers/auth_provider.dart';
 import 'providers/reservation_provider.dart';
+import 'app_snackbar.dart';
 
 const Color kGreen = Color(0xFF006F39);
 const Color kDark = Color(0xFF1A1A1A);
@@ -312,12 +313,7 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
         }
       } catch (e) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(e.toString().replaceFirst('Exception: ', '')),
-              backgroundColor: Colors.red,
-            ),
-          );
+          AppSnackbar.error(context, 'Impossible d\'annuler cette réservation. Réessayez.');
         }
       }
     }

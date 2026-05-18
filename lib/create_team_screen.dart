@@ -11,6 +11,7 @@ import 'package:provider/provider.dart';
 
 import 'providers/auth_provider.dart';
 import 'providers/team_provider.dart';
+import 'app_snackbar.dart';
 
 const Color _kGreen = Color(0xFF006F39);
 
@@ -269,9 +270,7 @@ class _CreateTeamScreenState extends State<CreateTeamScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Erreur: $e')));
+        AppSnackbar.error(context, 'Impossible de créer l\'équipe. Réessayez.');
       }
     } finally {
       if (mounted) {

@@ -9,6 +9,7 @@ import 'providers/auth_provider.dart';
 import 'providers/terrain_provider.dart';
 import 'terrain_data.dart';
 import 'package:intl/date_symbol_data_local.dart';
+import 'app_snackbar.dart';
 
 const Color _kGreen = Color(0xFF006F39);
 
@@ -669,8 +670,7 @@ class _MatchesScreenState extends State<MatchesScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('Erreur: $e')));
+        AppSnackbar.error(context, 'Impossible de répondre au défi. Réessayez.');
       }
     }
   }
@@ -691,8 +691,7 @@ class _MatchesScreenState extends State<MatchesScreen> {
       if (mounted) setState(() {});
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('Erreur: $e'), backgroundColor: Colors.red));
+        AppSnackbar.error(context, 'Impossible d\'ouvrir le paiement. Réessayez.');
       }
     }
   }
@@ -1965,7 +1964,7 @@ class _ChallengeSheetState extends State<_ChallengeSheet> {
         ));
       }
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Erreur: $e'), backgroundColor: Colors.red));
+      if (mounted) AppSnackbar.error(context, 'Impossible d\'envoyer le défi. Réessayez.');
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }

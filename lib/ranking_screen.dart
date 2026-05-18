@@ -187,7 +187,7 @@ class _RankingScreenState extends State<RankingScreen>
           return Center(
             child: Padding(
               padding: const EdgeInsets.all(24),
-              child: Text('Erreur: ${snapshot.error}', 
+              child: Text('Impossible de charger le classement. Réessayez.',
                   textAlign: TextAlign.center,
                   style: TextStyle(color: Colors.red.shade400, fontSize: 12)),
             ),

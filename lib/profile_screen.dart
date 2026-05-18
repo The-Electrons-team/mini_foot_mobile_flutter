@@ -7,6 +7,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'providers/auth_provider.dart';
 import 'providers/terrain_provider.dart';
 import 'providers/notification_provider.dart';
+import 'app_snackbar.dart';
 
 import 'terrain_data.dart';
 import 'terrain_detail_screen.dart';
@@ -69,9 +70,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     } catch (e) {
       if (mounted) {
         setState(() => _isUploading = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erreur: $e'), backgroundColor: Colors.red),
-        );
+        AppSnackbar.error(context, 'Impossible de mettre à jour la photo. Réessayez.');
       }
     }
   }
@@ -796,9 +795,7 @@ class _AccountSettingsScreenState extends State<_AccountSettingsScreen> {
         if (mounted) _saveSuccess();
       } catch (e) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Erreur: $e'), backgroundColor: Colors.red.shade600),
-          );
+          AppSnackbar.error(context, 'Impossible de mettre à jour le profil. Réessayez.');
         }
       }
     }

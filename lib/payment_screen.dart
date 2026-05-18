@@ -7,6 +7,7 @@ import 'booking_confirmation_screen.dart';
 import 'providers/auth_provider.dart';
 import 'providers/reservation_provider.dart';
 import 'services/reservation_service.dart';
+import 'app_snackbar.dart';
 
 const Color kGreen = Color(0xFF006F39);
 const Color kBeige = Color(0xFFF5F0E8);
@@ -489,16 +490,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
       );
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            e.toString().replaceFirst('Exception: ', ''),
-            style: const TextStyle(fontSize: 13),
-          ),
-          backgroundColor: Colors.red.shade700,
-          duration: const Duration(seconds: 4),
-        ),
-      );
+      AppSnackbar.error(context, 'Impossible de finaliser le paiement. Réessayez.');
     } finally {
       if (mounted) setState(() => _isPaying = false);
     }

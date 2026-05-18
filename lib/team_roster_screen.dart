@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import 'providers/auth_provider.dart';
 import 'services/team_service.dart';
 import 'team_screen.dart' show TeamData, TeamMember, MemberStatus, PlayerPositionLabel, InviteCard;
+import 'app_snackbar.dart';
 
 const Color _kGreen = Color(0xFF006F39);
 Color _bg(BuildContext c) => Theme.of(c).scaffoldBackgroundColor;
@@ -72,9 +73,7 @@ class _RosterPageState extends State<RosterPage>
     } catch (e) {
       if (mounted) {
         Navigator.pop(context); // Fermer loader
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erreur: $e'), backgroundColor: Colors.red),
-        );
+        AppSnackbar.error(context, 'Impossible d\'accepter ce membre. Réessayez.');
       }
     }
   }
