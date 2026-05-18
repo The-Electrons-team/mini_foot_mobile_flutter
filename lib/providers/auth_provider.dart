@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/auth_service.dart';
 import '../services/notification_service.dart';
+import '../services/api_service.dart';
 
 class User {
   final String id;
@@ -191,6 +192,35 @@ class AuthProvider with ChangeNotifier {
         password: password,
       );
       return result;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> register({
+    required String phone,
+    required String firstName,
+    required String lastName,
+    required String password,
+  }) async {
+    _isLoading = true;
+    notifyListeners();
+    try {
+      final result = await _authService.register(
+        phone: phone,
+        firstName: firstName,
+        lastName: lastName,
+        password: password,
+      );
+      _token = result['token'];
+      if (result['user'] == null) {
+        throw Exception('Données utilisateur manquantes');
+      }
+      _user = User.fromJson(result['user']);
+      NotificationService().init(_token);
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('token', _token!);
     } finally {
       _isLoading = false;
       notifyListeners();

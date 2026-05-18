@@ -61,6 +61,24 @@ class AuthService {
     );
   }
 
+  Future<Map<String, dynamic>> register({
+    required String phone,
+    required String firstName,
+    required String lastName,
+    required String password,
+  }) async {
+    return await _api.post(
+      '/auth/register',
+      body: {
+        'phone': _normalizePhone(phone),
+        'firstName': firstName,
+        'lastName': lastName,
+        'password': password,
+      },
+      defaultErrorMsg: 'Erreur lors de la finalisation de l\'inscription',
+    );
+  }
+
   Future<Map<String, dynamic>> resendOtp(String phone) async {
     return await _api.post(
       '/auth/resend-otp',
