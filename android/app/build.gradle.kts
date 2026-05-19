@@ -7,7 +7,7 @@ plugins {
 }
 
 android {
-    namespace = "com.electrons.minifoot"
+    namespace = "com.electron.minifoot"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = "27.0.12077973"
     compileOptions {
@@ -20,8 +20,8 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.electrons.minifoot"
-        minSdk = 21
+        applicationId = "com.electron.minifoot"
+        minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
