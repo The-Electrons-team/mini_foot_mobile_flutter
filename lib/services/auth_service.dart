@@ -100,7 +100,7 @@ class AuthService {
       '/users/me',
       token: token,
       defaultErrorMsg: 'Erreur de récupération du profil',
-    );
+    ) as Map<String, dynamic>;
   }
 
   Future<Map<String, dynamic>> updateProfile(
@@ -112,7 +112,7 @@ class AuthService {
       token: token,
       body: data,
       defaultErrorMsg: 'Erreur lors de la mise à jour du profil',
-    );
+    ) as Map<String, dynamic>;
   }
 
   Future<Map<String, dynamic>> uploadAvatar(
@@ -128,6 +128,6 @@ class AuthService {
       'file',
       token: token,
       defaultErrorMsg: 'Erreur d\'upload avatar',
-    );
+    ) as Map<String, dynamic>;
   }
 }
