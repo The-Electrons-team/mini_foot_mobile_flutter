@@ -264,11 +264,8 @@ class AuthProvider with ChangeNotifier {
     _isLoading = true;
     notifyListeners();
     try {
-      final userData = await _authService.uploadAvatar(
-        _token!,
-        bytes,
-        filename,
-      );
+      await _authService.uploadAvatar(_token!, bytes, filename);
+      final userData = await _authService.getProfile(_token!);
       _user = User.fromJson(userData);
       notifyListeners();
     } finally {
@@ -282,7 +279,8 @@ class AuthProvider with ChangeNotifier {
     _isLoading = true;
     notifyListeners();
     try {
-      final userData = await _authService.updateProfile(_token!, data);
+      await _authService.updateProfile(_token!, data);
+      final userData = await _authService.getProfile(_token!);
       _user = User.fromJson(userData);
       notifyListeners();
     } finally {
