@@ -74,6 +74,7 @@ class TeamMember {
 }
 
 class TeamData {
+  String id;
   String name, zone, address;
   LatLng? location;
   Color color;
@@ -81,6 +82,7 @@ class TeamData {
   String inviteCode;
   List<TeamMember> members;
   TeamData({
+    this.id = '',
     required this.name, required this.zone, this.address = '',
     this.location, required this.color, this.logoPath,
     required this.inviteCode, required this.members,
@@ -285,6 +287,7 @@ class _MyTeamPageState extends State<_MyTeamPage> {
     }).toList();
 
     return TeamData(
+      id: team['id'] ?? '',
       name: team['name'] ?? '',
       zone: team['zone'] ?? 'DAKAR',
       address: team['address'] ?? '',

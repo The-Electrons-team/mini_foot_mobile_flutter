@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
 import 'team_screen.dart' show TeamData;
+import 'services/tournament_service.dart';
+import 'providers/auth_provider.dart';
 
 const Color _kGreen = Color(0xFF006F39);
 const Color _kGold  = Color(0xFFE6A800);
@@ -16,47 +19,78 @@ Color _sub(BuildContext c)  => Theme.of(c).brightness == Brightness.dark
 enum TournamentStatus { ongoing, finished, upcoming }
 
 class TournamentModel {
+  final String id;
   final String name, phase, location, image;
-  final int teams;
+  final int maxTeams;
+  final int registeredCount;
   final int? myPosition;
   final int? prize;
   final TournamentStatus status;
   final bool hasQualified;
+  final bool isRegistered;
+  final List<Map<String, dynamic>> participations;
+
   const TournamentModel({
+    required this.id,
     required this.name, required this.phase, required this.location,
-    required this.teams, required this.status, required this.image,
+    required this.maxTeams, required this.status, required this.image,
+    this.registeredCount = 0,
     this.myPosition, this.prize, this.hasQualified = false,
+    this.isRegistered = false,
+    this.participations = const [],
   });
+
+  factory TournamentModel.fromJson(Map<String, dynamic> json, {String? myTeamId}) {
+    final apiStatus = json['status'] as String? ?? 'UPCOMING';
+    TournamentStatus status;
+    switch (apiStatus) {
+      case 'ONGOING':   status = TournamentStatus.ongoing; break;
+      case 'FINISHED':  status = TournamentStatus.finished; break;
+      case 'CANCELLED': status = TournamentStatus.finished; break;
+      default:          status = TournamentStatus.upcoming;
+    }
+
+    final participations = (json['participations'] as List<dynamic>? ?? [])
+        .map((p) => Map<String, dynamic>.from(p as Map))
+        .toList();
+
+    final isRegistered = myTeamId != null &&
+        participations.any((p) => p['teamId'] == myTeamId && p['status'] != 'FORFEIT');
+
+    int? myPosition;
+    bool hasQualified = false;
+    if (myTeamId != null) {
+      final myParticipation = participations
+          .where((p) => p['teamId'] == myTeamId)
+          .firstOrNull;
+      if (myParticipation != null) {
+        myPosition = myParticipation['position'] as int?;
+        hasQualified = myParticipation['status'] == 'ACTIVE' ||
+            myParticipation['status'] == 'WINNER';
+      }
+    }
+
+    return TournamentModel(
+      id: json['id'] ?? '',
+      name: json['name'] ?? '',
+      phase: json['phase'] ?? '',
+      location: json['location'] ?? '',
+      maxTeams: json['maxTeams'] ?? json['max_teams'] ?? 0,
+      registeredCount: participations.length,
+      status: status,
+      image: json['imageUrl'] ?? 'assets/images/terrain.webp',
+      myPosition: myPosition,
+      prize: json['prize'],
+      hasQualified: hasQualified,
+      isRegistered: isRegistered,
+      participations: participations,
+    );
+  }
+
+  int get teams => maxTeams;
 }
 
-final _mockTournaments = [
-  TournamentModel(
-    name: 'Coupe de Dakar 2025', phase: 'Demi-finales',
-    location: 'Stade Léopold Sédar Senghor', teams: 16,
-    status: TournamentStatus.ongoing, myPosition: 3,
-    prize: 150000, hasQualified: true,
-    image: 'assets/images/terrain.webp',
-  ),
-  TournamentModel(
-    name: 'Ligue Pikine Saison 3', phase: 'Terminé – Vainqueur',
-    location: 'Terrain Pikine Est', teams: 8,
-    status: TournamentStatus.finished, myPosition: 1,
-    prize: 80000, hasQualified: true,
-    image: 'assets/images/free.png',
-  ),
-  TournamentModel(
-    name: 'Tournoi Ramadan 2025', phase: 'Phase de groupes',
-    location: 'Terrain HLM Grand Yoff', teams: 12,
-    status: TournamentStatus.upcoming, prize: 50000,
-    image: 'assets/images/ballon.png',
-  ),
-  TournamentModel(
-    name: 'Coupe Guédiawaye', phase: 'Phase de groupes',
-    location: 'Stade Municipal Guédiawaye', teams: 8,
-    status: TournamentStatus.upcoming, prize: 30000,
-    image: 'assets/images/wave.png',
-  ),
-];
+final TournamentService _tournamentService = TournamentService();
 
 // ─── TournamentsPage ──────────────────────────────────────────────────────────
 class TournamentsPage extends StatefulWidget {
@@ -69,17 +103,44 @@ class TournamentsPage extends StatefulWidget {
 class _TournamentsPageState extends State<TournamentsPage>
     with SingleTickerProviderStateMixin {
   late TabController _tab;
+  List<TournamentModel> _tournaments = [];
+  bool _isLoading = true;
 
   @override
-  void initState() { super.initState(); _tab = TabController(length: 4, vsync: this); }
+  void initState() {
+    super.initState();
+    _tab = TabController(length: 4, vsync: this);
+    _loadTournaments();
+  }
   @override
   void dispose() { _tab.dispose(); super.dispose(); }
 
-  List<TournamentModel> get _ongoing  => _mockTournaments.where((t) => t.status == TournamentStatus.ongoing).toList();
-  List<TournamentModel> get _upcoming => _mockTournaments.where((t) => t.status == TournamentStatus.upcoming).toList();
-  List<TournamentModel> get _finished => _mockTournaments.where((t) => t.status == TournamentStatus.finished).toList();
-  // Tournois en attente = inscrit mais pas encore démarré (mock : subset des upcoming)
-  List<TournamentModel> get _pending  => [_mockTournaments[2]]; // Tournoi Ramadan inscrit
+  Future<void> _loadTournaments() async {
+    setState(() => _isLoading = true);
+    try {
+      final data = await _tournamentService.getAll();
+      final myTeamId = widget.team.id;
+      setState(() {
+        _tournaments = data
+            .map((j) => TournamentModel.fromJson(Map<String, dynamic>.from(j), myTeamId: myTeamId))
+            .toList();
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() => _isLoading = false);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('Erreur chargement tournois: $e'),
+          backgroundColor: Colors.red,
+        ));
+      }
+    }
+  }
+
+  List<TournamentModel> get _ongoing  => _tournaments.where((t) => t.status == TournamentStatus.ongoing).toList();
+  List<TournamentModel> get _upcoming => _tournaments.where((t) => t.status == TournamentStatus.upcoming && !t.isRegistered).toList();
+  List<TournamentModel> get _finished => _tournaments.where((t) => t.status == TournamentStatus.finished).toList();
+  List<TournamentModel> get _pending  => _tournaments.where((t) => t.status == TournamentStatus.upcoming && t.isRegistered).toList();
 
   @override
   Widget build(BuildContext context) {
@@ -89,15 +150,21 @@ class _TournamentsPageState extends State<TournamentsPage>
         children: [
           _TournamentsHeader(team: widget.team, tabController: _tab),
           Expanded(
-            child: TabBarView(
-              controller: _tab,
-              children: [
-                _TournamentList(tournaments: _ongoing,  team: widget.team),
-                _TournamentList(tournaments: _pending,  team: widget.team, isPending: true),
-                _TournamentList(tournaments: _upcoming, team: widget.team),
-                _TournamentList(tournaments: _finished, team: widget.team),
-              ],
-            ),
+            child: _isLoading
+                ? const Center(child: CircularProgressIndicator(color: _kGreen))
+                : RefreshIndicator(
+                    color: _kGreen,
+                    onRefresh: _loadTournaments,
+                    child: TabBarView(
+                      controller: _tab,
+                      children: [
+                        _TournamentList(tournaments: _ongoing,  team: widget.team, onRefresh: _loadTournaments),
+                        _TournamentList(tournaments: _pending,  team: widget.team, isPending: true, onRefresh: _loadTournaments),
+                        _TournamentList(tournaments: _upcoming, team: widget.team, onRefresh: _loadTournaments),
+                        _TournamentList(tournaments: _finished, team: widget.team, onRefresh: _loadTournaments),
+                      ],
+                    ),
+                  ),
           ),
         ],
       ),
@@ -291,7 +358,8 @@ class _TournamentList extends StatelessWidget {
   final List<TournamentModel> tournaments;
   final TeamData team;
   final bool isPending;
-  const _TournamentList({required this.tournaments, required this.team, this.isPending = false});
+  final Future<void> Function()? onRefresh;
+  const _TournamentList({required this.tournaments, required this.team, this.isPending = false, this.onRefresh});
 
   @override
   Widget build(BuildContext context) {
@@ -305,7 +373,7 @@ class _TournamentList extends StatelessWidget {
     return ListView.builder(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
       itemCount: tournaments.length,
-      itemBuilder: (ctx, i) => _TournamentCard(t: tournaments[i], team: team, isPending: isPending),
+      itemBuilder: (ctx, i) => _TournamentCard(t: tournaments[i], team: team, isPending: isPending, onRefresh: onRefresh),
     );
   }
 }
@@ -315,7 +383,8 @@ class _TournamentCard extends StatelessWidget {
   final TournamentModel t;
   final TeamData team;
   final bool isPending;
-  const _TournamentCard({required this.t, required this.team, this.isPending = false});
+  final Future<void> Function()? onRefresh;
+  const _TournamentCard({required this.t, required this.team, this.isPending = false, this.onRefresh});
 
   Color get _statusColor {
     switch (t.status) {
@@ -611,14 +680,30 @@ class _TournamentCard extends StatelessWidget {
             child: Text('Annuler', style: TextStyle(color: _sub(context))),
           ),
           ElevatedButton(
-            onPressed: () {
+            onPressed: () async {
               Navigator.pop(ctx);
-              ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                content: Text('Inscription confirmée pour ${t.name} !'),
-                backgroundColor: _kGreen,
-                behavior: SnackBarBehavior.floating,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              ));
+              final token = context.read<AuthProvider>().token;
+              if (token == null) return;
+              try {
+                await _tournamentService.register(token, t.id, team.id);
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                    content: Text('Inscription confirmée pour ${t.name} !'),
+                    backgroundColor: _kGreen,
+                    behavior: SnackBarBehavior.floating,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ));
+                }
+                onRefresh?.call();
+              } catch (e) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                    content: Text('$e'),
+                    backgroundColor: Colors.red,
+                    behavior: SnackBarBehavior.floating,
+                  ));
+                }
+              }
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: _kGreen, foregroundColor: Colors.white,
@@ -661,14 +746,30 @@ class _TournamentCard extends StatelessWidget {
             child: Text('Annuler', style: TextStyle(color: _sub(context))),
           ),
           ElevatedButton(
-            onPressed: () {
+            onPressed: () async {
               Navigator.pop(ctx);
-              ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                content: Text('Forfait déclaré pour ${t.name}.'),
-                backgroundColor: Colors.red,
-                behavior: SnackBarBehavior.floating,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              ));
+              final token = context.read<AuthProvider>().token;
+              if (token == null) return;
+              try {
+                await _tournamentService.forfeit(token, t.id, team.id);
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                    content: Text('Forfait déclaré pour ${t.name}.'),
+                    backgroundColor: Colors.red,
+                    behavior: SnackBarBehavior.floating,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ));
+                }
+                onRefresh?.call();
+              } catch (e) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                    content: Text('$e'),
+                    backgroundColor: Colors.red,
+                    behavior: SnackBarBehavior.floating,
+                  ));
+                }
+              }
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.red, foregroundColor: Colors.white,
@@ -795,12 +896,39 @@ class _UpcomingDetailView extends StatefulWidget {
 }
 
 class _UpcomingDetailViewState extends State<_UpcomingDetailView> {
-  bool _isRegistered = false;
+  late bool _isRegistered;
+  List<Map<String, dynamic>> _participations = [];
+  bool _isLoading = true;
 
-  static const _registeredTeams = [
-    'AS Pikine', 'FC Médina', 'US Ouakam', 'Jaraaf FC',
-    'Teungueth FC', 'Casa Sports', 'RC Parcelles',
-  ];
+  @override
+  void initState() {
+    super.initState();
+    _isRegistered = widget.t.isRegistered;
+    _loadDetail();
+  }
+
+  Future<void> _loadDetail() async {
+    try {
+      final data = await _tournamentService.getOne(widget.t.id);
+      final participations = (data['participations'] as List<dynamic>? ?? [])
+          .map((p) => Map<String, dynamic>.from(p as Map))
+          .toList();
+      setState(() {
+        _participations = participations;
+        _isRegistered = participations.any((p) =>
+            p['teamId'] == widget.team.id && p['status'] != 'FORFEIT');
+        _isLoading = false;
+      });
+    } catch (_) {
+      setState(() => _isLoading = false);
+    }
+  }
+
+  List<String> get _registeredTeams =>
+      _participations
+          .where((p) => p['status'] != 'FORFEIT')
+          .map((p) => (p['team']?['name'] as String?) ?? 'Équipe inconnue')
+          .toList();
 
   void _showJoinDialog() {
     final t = widget.t;
@@ -825,15 +953,31 @@ class _UpcomingDetailViewState extends State<_UpcomingDetailView> {
             child: Text('Annuler', style: TextStyle(color: _sub(context))),
           ),
           ElevatedButton(
-            onPressed: () {
+            onPressed: () async {
               Navigator.pop(ctx);
-              setState(() => _isRegistered = true);
-              ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                content: Text('Inscription confirmée pour ${t.name} !'),
-                backgroundColor: _kGreen,
-                behavior: SnackBarBehavior.floating,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              ));
+              final token = context.read<AuthProvider>().token;
+              if (token == null) return;
+              try {
+                await _tournamentService.register(token, t.id, widget.team.id);
+                setState(() => _isRegistered = true);
+                _loadDetail();
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                    content: Text('Inscription confirmée pour ${t.name} !'),
+                    backgroundColor: _kGreen,
+                    behavior: SnackBarBehavior.floating,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ));
+                }
+              } catch (e) {
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                    content: Text('$e'),
+                    backgroundColor: Colors.red,
+                    behavior: SnackBarBehavior.floating,
+                  ));
+                }
+              }
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: _kGreen, foregroundColor: Colors.white,
@@ -877,15 +1021,31 @@ class _UpcomingDetailViewState extends State<_UpcomingDetailView> {
             child: Text('Annuler', style: TextStyle(color: _sub(context))),
           ),
           ElevatedButton(
-            onPressed: () {
+            onPressed: () async {
               Navigator.pop(ctx);
-              setState(() => _isRegistered = false);
-              ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                content: Text('Forfait déclaré pour ${t.name}.'),
-                backgroundColor: Colors.red,
-                behavior: SnackBarBehavior.floating,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              ));
+              final token = context.read<AuthProvider>().token;
+              if (token == null) return;
+              try {
+                await _tournamentService.forfeit(token, t.id, widget.team.id);
+                setState(() => _isRegistered = false);
+                _loadDetail();
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                    content: Text('Forfait déclaré pour ${t.name}.'),
+                    backgroundColor: Colors.red,
+                    behavior: SnackBarBehavior.floating,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ));
+                }
+              } catch (e) {
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                    content: Text('$e'),
+                    backgroundColor: Colors.red,
+                    behavior: SnackBarBehavior.floating,
+                  ));
+                }
+              }
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.red, foregroundColor: Colors.white,
@@ -956,7 +1116,7 @@ class _UpcomingDetailViewState extends State<_UpcomingDetailView> {
                   decoration: BoxDecoration(
                     color: _kGreen.withOpacity(0.12),
                     borderRadius: BorderRadius.circular(10)),
-                  child: Text('${_registeredTeams.length}/${t.teams}',
+                  child: Text('${_registeredTeams.length}/${t.maxTeams}',
                     style: const TextStyle(fontSize: 11, color: _kGreen, fontWeight: FontWeight.w800)),
                 ),
               ]),
@@ -1004,41 +1164,58 @@ class _UpcomingDetailViewState extends State<_UpcomingDetailView> {
           ),
         ),
 
-        // ── Statut + Forfait (déjà inscrit) ──
+        // ── Statut + actions ──
         SliverToBoxAdapter(
           child: Padding(
             padding: const EdgeInsets.fromLTRB(16, 28, 16, 40),
-            child: Column(children: [
-              Container(
-                padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-                decoration: BoxDecoration(
-                  color: _kGold.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: _kGold.withOpacity(0.3)),
-                ),
-                child: const Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                  Icon(Icons.hourglass_top_rounded, size: 16, color: _kGold),
-                  SizedBox(width: 8),
-                  Text('Inscription en attente de validation',
-                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: _kGold)),
-                ]),
-              ),
-              const SizedBox(height: 12),
-              SizedBox(
-                width: double.infinity,
-                height: 48,
-                child: OutlinedButton.icon(
-                  onPressed: _showForfaitDialog,
-                  icon: const Icon(Icons.flag_rounded, size: 16, color: Colors.red),
-                  label: const Text('Déclarer forfait',
-                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: Colors.red)),
-                  style: OutlinedButton.styleFrom(
-                    side: const BorderSide(color: Colors.red),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+            child: _isRegistered
+                ? Column(children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                      decoration: BoxDecoration(
+                        color: _kGold.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: _kGold.withOpacity(0.3)),
+                      ),
+                      child: const Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                        Icon(Icons.hourglass_top_rounded, size: 16, color: _kGold),
+                        SizedBox(width: 8),
+                        Text('Inscription en attente de validation',
+                          style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: _kGold)),
+                      ]),
+                    ),
+                    const SizedBox(height: 12),
+                    SizedBox(
+                      width: double.infinity,
+                      height: 48,
+                      child: OutlinedButton.icon(
+                        onPressed: _showForfaitDialog,
+                        icon: const Icon(Icons.flag_rounded, size: 16, color: Colors.red),
+                        label: const Text('Déclarer forfait',
+                          style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: Colors.red)),
+                        style: OutlinedButton.styleFrom(
+                          side: const BorderSide(color: Colors.red),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                        ),
+                      ),
+                    ),
+                  ])
+                : SizedBox(
+                    width: double.infinity,
+                    height: 48,
+                    child: ElevatedButton.icon(
+                      onPressed: _showJoinDialog,
+                      icon: const Icon(Icons.add_circle_outline_rounded, size: 18),
+                      label: const Text('Participer au tournoi',
+                        style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800)),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: _kGreen,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                        elevation: 0,
+                      ),
+                    ),
                   ),
-                ),
-              ),
-            ]),
           ),
         ),
       ],

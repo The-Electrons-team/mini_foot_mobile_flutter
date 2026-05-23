@@ -5,7 +5,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http_parser/http_parser.dart';
 
 class UserService {
-  final String _base = dotenv.env['API_URL'] ?? 'http://localhost:3000/api/v1';
+  final String _base = dotenv.env['API_URL'] ?? 'http://127.0.0.1:3001/api/v1';
 
   Future<Map<String, dynamic>?> updateAvatar(String token, Uint8List fileBytes, String fileName) async {
     final uri = Uri.parse('$_base/users/me/avatar');

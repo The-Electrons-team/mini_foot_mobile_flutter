@@ -66,7 +66,7 @@ class NotificationModel {
 }
 
 class NotificationProvider with ChangeNotifier {
-  final String _base = dotenv.env['API_URL'] ?? 'http://localhost:3000/api/v1';
+  final String _base = dotenv.env['API_URL'] ?? 'http://127.0.0.1:3001/api/v1';
   List<NotificationModel> _notifications = [];
   bool _isLoading = false;
 
