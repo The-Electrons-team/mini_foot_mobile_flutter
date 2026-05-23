@@ -4,6 +4,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'providers/auth_provider.dart';
 import 'providers/terrain_provider.dart';
@@ -14,10 +15,19 @@ import 'splash_screen.dart';
 // ─── Notifier global ───────────────────────────────────────────────────────
 final themeNotifier = ValueNotifier<ThemeMode>(ThemeMode.light);
 
+// Handler FCM en arrière-plan. Doit être top-level (pas une closure) et
+// annoté `vm:entry-point` pour survivre au tree-shaking AOT. Réinitialise
+// Firebase parce que le handler tourne dans un isolate séparé.
+@pragma('vm:entry-point')
+Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  await Firebase.initializeApp();
+  debugPrint('FCM background message: ${message.messageId}');
+}
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await dotenv.load(fileName: '.env');
-  
+
   // Configuration Web lue depuis le .env
   final firebaseOptions = FirebaseOptions(
     apiKey: dotenv.get('FIREBASE_API_KEY'),
@@ -35,6 +45,8 @@ void main() async {
     } else {
       await Firebase.initializeApp();
     }
+    // Doit être enregistré APRÈS initializeApp et AVANT runApp.
+    FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
     debugPrint("Firebase initialisé avec succès !");
   } catch (e) {
     debugPrint("Erreur initialisation Firebase : $e");

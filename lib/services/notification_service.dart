@@ -1,10 +1,10 @@
 import 'dart:convert';
-import 'dart:js' as js;
 import 'package:flutter/foundation.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:flutter/foundation.dart';
+import 'web_notification_io.dart'
+    if (dart.library.js) 'web_notification_web.dart';
 
 class NotificationService {
   static final NotificationService _instance = NotificationService._internal();
@@ -12,11 +12,16 @@ class NotificationService {
   NotificationService._internal();
 
   FirebaseMessaging get _fcm => FirebaseMessaging.instance;
-  final String _base = dotenv.env['API_URL'] ?? 'http://localhost:3000/api/v1';
+  final String _base = dotenv.env['API_URL'] ?? 'http://127.0.0.1:3001/api/v1';
+
+  // Conserve le dernier JWT vu pour que onTokenRefresh puisse PATCH
+  // sans dépendre de l'AuthProvider.
+  String? _authToken;
+  bool _refreshListenerInstalled = false;
 
   Future<void> init(String? token) async {
+    _authToken = token;
     try {
-      // 1. Demander la permission
       NotificationSettings settings = await _fcm.requestPermission(
         alert: true,
         badge: true,
@@ -27,7 +32,6 @@ class NotificationService {
         debugPrint('Permission notifications accordée');
       }
 
-      // 2. Récupérer le token FCM
       String? fcmToken = await _fcm.getToken();
 
       if (fcmToken != null && token != null) {
@@ -35,19 +39,19 @@ class NotificationService {
         await _updateTokenOnServer(token, fcmToken);
       }
 
-      // 3. Écouter les messages en premier plan
+      _installTokenRefreshListener();
+
       FirebaseMessaging.onMessage.listen((RemoteMessage message) {
         debugPrint('Notification reçue en premier plan: ${message.notification?.title}');
-        
+
         if (kIsWeb && message.notification != null) {
-          js.context.callMethod('showBrowserNotification', [
+          showBrowserNotification(
             message.notification!.title,
             message.notification!.body,
-          ]);
+          );
         }
       });
 
-      // 4. Écouter quand l'utilisateur clique sur la notification
       FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
         debugPrint('App ouverte via notification: ${message.data}');
       });
@@ -56,18 +60,44 @@ class NotificationService {
     }
   }
 
+  void _installTokenRefreshListener() {
+    if (_refreshListenerInstalled) return;
+    _refreshListenerInstalled = true;
+    _fcm.onTokenRefresh.listen((newToken) async {
+      debugPrint('FCM token refreshed: $newToken');
+      final authToken = _authToken;
+      if (authToken != null) {
+        await _updateTokenOnServer(authToken, newToken);
+      }
+    });
+  }
+
+  // Retry en backoff sur échec réseau ou code non-2xx. Trois tentatives
+  // suffisent : au-delà, le prochain refresh ou login retentera.
   Future<void> _updateTokenOnServer(String authToken, String fcmToken) async {
-    try {
-      await http.patch(
-        Uri.parse('$_base/users/me/fcm-token'),
-        headers: {
-          'Authorization': 'Bearer $authToken',
-          'Content-Type': 'application/json',
-        },
-        body: jsonEncode({'token': fcmToken}),
-      );
-    } catch (e) {
-      debugPrint('Erreur mise à jour FCM Token: $e');
+    const maxAttempts = 3;
+    for (var attempt = 1; attempt <= maxAttempts; attempt++) {
+      try {
+        final response = await http.patch(
+          Uri.parse('$_base/users/me/fcm-token'),
+          headers: {
+            'Authorization': 'Bearer $authToken',
+            'Content-Type': 'application/json',
+          },
+          body: jsonEncode({'token': fcmToken}),
+        );
+        if (response.statusCode >= 200 && response.statusCode < 300) {
+          return;
+        }
+        debugPrint(
+          'PATCH /users/me/fcm-token → ${response.statusCode} (tentative $attempt)',
+        );
+      } catch (e) {
+        debugPrint('Erreur PATCH fcm-token tentative $attempt: $e');
+      }
+      if (attempt < maxAttempts) {
+        await Future.delayed(Duration(seconds: 2 * attempt));
+      }
     }
   }
 }
