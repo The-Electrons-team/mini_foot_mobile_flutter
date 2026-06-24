@@ -133,44 +133,56 @@ class _ProfileScreenState extends State<ProfileScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
 
-              // ── HEADER ──
-              Padding(
-                padding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
-                child: Text('Mon Profil',
-                    style: GoogleFonts.orbitron(
-                        fontSize: 22, fontWeight: FontWeight.w900, color: _txt(context))),
-              ),
-
-              // ── AVATAR + INFOS ──
-              Padding(
-                padding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Avatar
-                    GestureDetector(
+              // ── HEADER BANNER ──
+              Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  Container(
+                    height: 120,
+                    width: double.infinity,
+                    decoration: const BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [_kGreen, Color(0xFF00C264)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.only(
+                        bottomLeft: Radius.circular(32),
+                        bottomRight: Radius.circular(32),
+                      ),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
+                      child: Text('Mon Profil',
+                          style: GoogleFonts.orbitron(
+                              fontSize: 22, fontWeight: FontWeight.w900, color: Colors.white)),
+                    ),
+                  ),
+                  Positioned(
+                    bottom: -36,
+                    left: 24,
+                    child: GestureDetector(
                       onTap: _showPhotoSheet,
                       child: Stack(
                         children: [
                           Container(
-                            width: 88, height: 88,
+                            width: 80, height: 80,
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
-                              color: _kGreen.withOpacity(0.15),
-                              border: Border.all(color: _kGreen, width: 2.5),
+                              color: _bg(context),
+                              border: Border.all(color: _bg(context), width: 4),
                             ),
                             child: ClipOval(
                               child: _isUploading
-                                  ? const Center(child: SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: _kGreen, strokeWidth: 3)))
+                                  ? const Center(child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: _kGreen, strokeWidth: 2)))
                                   : user?.avatarUrl != null
                                       ? Image.network(
                                           user!.avatarUrl!, 
                                           fit: BoxFit.cover,
                                           key: ValueKey(user.avatarUrl),
                                           errorBuilder: (context, error, stackTrace) => 
-                                            Icon(Icons.person_rounded, size: 52, color: _kGreen.withOpacity(0.5)))
-                                      : Icon(Icons.person_rounded,
-                                          size: 52, color: _kGreen.withOpacity(0.5)),
+                                            Icon(Icons.person_rounded, size: 40, color: _kGreen.withOpacity(0.5)))
+                                      : Container(color: _kGreen.withOpacity(0.1), child: Icon(Icons.person_rounded, size: 40, color: _kGreen.withOpacity(0.5))),
                             ),
                           ),
                           Positioned(
@@ -179,52 +191,55 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               width: 26, height: 26,
                               decoration: BoxDecoration(
                                 color: _kGreen, shape: BoxShape.circle,
-                                border: Border.all(color: _bg(context), width: 2),
+                                border: Border.all(color: _bg(context), width: 2.5),
+                                boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.15), blurRadius: 4, offset: const Offset(0, 2))],
                               ),
-                              child: const Icon(Icons.camera_alt_rounded, color: Colors.white, size: 13),
+                              child: const Icon(Icons.camera_alt_rounded, color: Colors.white, size: 12),
                             ),
                           ),
                         ],
                       ),
                     ),
-                    const SizedBox(width: 16),
-                    // Infos
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const SizedBox(height: 4),
-                          Text(user != null ? '${user.firstName} ${user.lastName}' : 'Utilisateur',
-                              style: GoogleFonts.orbitron(
-                                  fontSize: 15, fontWeight: FontWeight.w900, color: _txt(context))),
-                          const SizedBox(height: 4),
-                          Text(user?.phone ?? '',
-                              style: TextStyle(fontSize: 12, color: _sub(context))),
+                  ),
+                ],
+              ),
 
-                          const SizedBox(height: 10),
-                          Wrap(
-                            spacing: 6, runSpacing: 6,
-                            children: [
-                              if (user?.position != null)
-                                _PosBadge(label: user!.position!, color: _kGreen),
-                              if (user != null && user.teamName != null)
-                                _PosBadge(label: user.teamName!, color: const Color(0xFF1565C0)),
-                              if (user?.birthDate != null)
-                                Builder(
-                                  builder: (context) {
-                                    final birth = DateTime.tryParse(user!.birthDate!);
-                                    if (birth == null) return const SizedBox.shrink();
-                                    final age = DateTime.now().year - birth.year;
-                                    return _PosBadge(
-                                      label: '$age ans',
-                                      color: const Color(0xFF6A1B9A),
-                                    );
-                                  },
-                                ),
-                            ],
+              const SizedBox(height: 48),
+
+              // ── INFOS ──
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(user != null ? '${user.firstName} ${user.lastName}' : 'Utilisateur',
+                        style: GoogleFonts.orbitron(
+                            fontSize: 18, fontWeight: FontWeight.w900, color: _txt(context))),
+                    const SizedBox(height: 4),
+                    Text(user?.phone ?? '',
+                        style: TextStyle(fontSize: 13, color: _sub(context), fontWeight: FontWeight.w500)),
+
+                    const SizedBox(height: 14),
+                    Wrap(
+                      spacing: 8, runSpacing: 8,
+                      children: [
+                        if (user?.position != null)
+                          _PosBadge(label: user!.position!, color: _kGreen),
+                        if (user != null && user.teamName != null)
+                          _PosBadge(label: user.teamName!, color: const Color(0xFF1565C0)),
+                        if (user?.birthDate != null)
+                          Builder(
+                            builder: (context) {
+                              final birth = DateTime.tryParse(user!.birthDate!);
+                              if (birth == null) return const SizedBox.shrink();
+                              final age = DateTime.now().year - birth.year;
+                              return _PosBadge(
+                                label: '$age ans',
+                                color: const Color(0xFF6A1B9A),
+                              );
+                            },
                           ),
-                        ],
-                      ),
+                      ],
                     ),
                   ],
                 ),

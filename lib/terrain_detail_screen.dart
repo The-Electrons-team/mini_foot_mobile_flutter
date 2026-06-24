@@ -56,406 +56,290 @@ class _TerrainDetailScreenState extends State<TerrainDetailScreen> {
   @override
   Widget build(BuildContext context) {
     final t = widget.terrain;
-    // Sécurité si la liste d'images est vide
-    final List<String> images = t.imageUrls.isNotEmpty
-        ? t.imageUrls
-        : [t.imageUrl];
-    final currentImage = images.isNotEmpty
-        ? images[_selectedImageIndex.clamp(0, images.length - 1)]
-        : '';
+    final List<String> images = t.imageUrls.isNotEmpty ? t.imageUrls : [t.imageUrl];
 
     return Scaffold(
       backgroundColor: _bg(context),
-      appBar: AppBar(
-        backgroundColor: _bg(context),
-        elevation: 0,
-        centerTitle: true,
-        automaticallyImplyLeading: false,
-        leading: GestureDetector(
-          onTap: () => Navigator.pop(context),
-          child: Icon(
-            Icons.arrow_back_ios_new_rounded,
-            color: _txt(context),
-            size: 18,
-          ),
-        ),
-        title: Text(
-          'Détail',
-          style: GoogleFonts.orbitron(
-            fontSize: 14,
-            fontWeight: FontWeight.w800,
-            color: _txt(context),
-          ),
-        ),
-        actions: [
-          Consumer2<TerrainProvider, AuthProvider>(
-            builder: (context, terrainProv, authProv, _) {
-              final isFav = terrainProv.favorites.any((fav) => fav.id == t.id);
-              return Padding(
-                padding: const EdgeInsets.only(right: 16),
-                child: GestureDetector(
-                  onTap: () {
-                    final token = authProv.token;
-                    if (token != null) {
-                      terrainProv.toggleFavorite(token, t.id);
-                    }
-                  },
-                  child: Icon(
-                    isFav
-                        ? Icons.bookmark_rounded
-                        : Icons.bookmark_border_rounded,
-                    color: isFav ? kGreen : _txt(context),
-                    size: 22,
+      bottomNavigationBar: _buildBottomBar(context, t),
+      body: CustomScrollView(
+        slivers: [
+          SliverAppBar(
+            expandedHeight: 320,
+            pinned: true,
+            backgroundColor: _bg(context),
+            elevation: 0,
+            leading: Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: GestureDetector(
+                onTap: () => Navigator.pop(context),
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: _bg(context).withOpacity(0.85),
+                    shape: BoxShape.circle,
                   ),
+                  child: Icon(Icons.arrow_back_ios_new_rounded, color: _txt(context), size: 18),
                 ),
-              );
-            },
-          ),
-        ],
-      ),
-      body: Column(
-        children: [
-          // ── IMAGE PRINCIPALE + GALERIE OVERLAY ──
-          SizedBox(
-            height: 240,
-            width: double.infinity,
-            child: Stack(
-              fit: StackFit.expand,
-              children: [
-                // Image principale
-                currentImage.isEmpty
-                    ? Container(color: kGreen.withOpacity(0.12))
-                    : Image.network(
-                        currentImage,
-                        fit: BoxFit.cover,
-                        loadingBuilder: (_, child, progress) {
-                          if (progress == null) return child;
-                          return Container(
-                            color: kGreen.withOpacity(0.06),
-                            child: const Center(
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: kGreen,
-                              ),
-                            ),
-                          );
-                        },
-                        errorBuilder: (_, __, ___) =>
-                            Container(color: kGreen.withOpacity(0.12)),
-                      ),
-                // Dégradé bas pour les miniatures
-                Positioned.fill(
-                  child: Container(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [
-                          Colors.transparent,
-                          Colors.black.withOpacity(0.55),
-                        ],
-                        stops: const [0.55, 1.0],
-                      ),
-                    ),
-                  ),
-                ),
-                // Miniatures centrées en bas (sur l'image)
-                if (images.length > 1)
-                  Positioned(
-                    bottom: 10,
-                    left: 0,
-                    right: 0,
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: List.generate(images.length, (i) {
-                        final selected = _selectedImageIndex == i;
-                        return GestureDetector(
-                          onTap: () => setState(() => _selectedImageIndex = i),
-                          child: AnimatedContainer(
-                            duration: const Duration(milliseconds: 180),
-                            width: 46,
-                            height: 38,
-                            margin: const EdgeInsets.only(left: 6),
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border.all(
-                                color: selected
-                                    ? Colors.white
-                                    : Colors.transparent,
-                                width: 2,
-                              ),
-                            ),
-                            child: ClipRRect(
-                              borderRadius: BorderRadius.circular(6),
-                              child: images[i].isEmpty
-                                  ? Container(color: Colors.white24)
-                                  : Image.network(
-                                      images[i],
-                                      fit: BoxFit.cover,
-                                      errorBuilder: (_, __, ___) =>
-                                          Container(color: Colors.white24),
-                                    ),
-                            ),
-                          ),
-                        );
-                      }),
-                    ),
-                  ),
-              ],
+              ),
             ),
-          ),
-
-          // ── CONTENU SCROLLABLE ──
-          Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+            actions: [
+              Consumer2<TerrainProvider, AuthProvider>(
+                builder: (context, terrainProv, authProv, _) {
+                  final isFav = terrainProv.favorites.any((fav) => fav.id == t.id);
+                  return Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: GestureDetector(
+                      onTap: () {
+                        final token = authProv.token;
+                        if (token != null) terrainProv.toggleFavorite(token, t.id);
+                      },
+                      child: Container(
+                        width: 40,
+                        height: 40,
+                        decoration: BoxDecoration(
+                          color: _bg(context).withOpacity(0.85),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          isFav ? Icons.bookmark_rounded : Icons.bookmark_border_rounded,
+                          color: isFav ? kGreen : _txt(context),
+                          size: 20,
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+              const SizedBox(width: 8),
+            ],
+            flexibleSpace: FlexibleSpaceBar(
+              background: Stack(
+                fit: StackFit.expand,
                 children: [
-                  // Nom + rating
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(
-                        child: Text(
-                          t.name,
-                          style: TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.w900,
-                            color: _txt(context),
-                            height: 1.2,
-                          ),
+                  PageView.builder(
+                    itemCount: images.length,
+                    onPageChanged: (i) => setState(() => _selectedImageIndex = i),
+                    itemBuilder: (context, index) {
+                      final img = images[index];
+                      if (img.isEmpty) return Container(color: kGreen.withOpacity(0.12));
+                      return Image.network(
+                        img,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => Container(color: kGreen.withOpacity(0.12)),
+                      );
+                    },
+                  ),
+                  Positioned.fill(
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            Colors.black.withOpacity(0.4),
+                            Colors.transparent,
+                            Colors.transparent,
+                            Colors.black.withOpacity(0.7),
+                          ],
+                          stops: const [0.0, 0.2, 0.7, 1.0],
                         ),
                       ),
-                      const SizedBox(width: 8),
-                      Row(
-                        children: [
-                          const Icon(
-                            Icons.star_rounded,
-                            color: Color(0xFFFFB300),
-                            size: 18,
-                          ),
-                          const SizedBox(width: 3),
-                          Text(
-                            _currentRating.toStringAsFixed(1),
-                            style: TextStyle(
-                              fontWeight: FontWeight.w800,
-                              fontSize: 15,
-                              color: _txt(context),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
+                    ),
                   ),
-
-                  const SizedBox(height: 6),
-
-                  // Adresse
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.location_on_rounded,
-                        color: _sub(context),
-                        size: 14,
-                      ),
-                      const SizedBox(width: 4),
-                      Expanded(
+                  if (images.length > 1)
+                    Positioned(
+                      bottom: 30,
+                      right: 16,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withOpacity(0.65),
+                          borderRadius: BorderRadius.circular(14),
+                        ),
                         child: Text(
-                          t.address,
-                          style: TextStyle(fontSize: 12, color: _sub(context)),
+                          '${_selectedImageIndex + 1} / ${images.length}',
+                          style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w700, letterSpacing: 1.2),
                         ),
                       ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 20),
-
-                  // ── ONGLETS ──
-                  Row(
-                    children: [
-                      _Tab(
-                        label: 'À propos',
-                        index: 0,
-                        selected: _selectedTab == 0,
-                        onTap: () => setState(() => _selectedTab = 0),
-                      ),
-                      _Tab(
-                        label: 'Avis',
-                        index: 1,
-                        selected: _selectedTab == 1,
-                        onTap: () => setState(() => _selectedTab = 1),
-                      ),
-                      _Tab(
-                        label: 'Carte',
-                        index: 2,
-                        selected: _selectedTab == 2,
-                        onTap: () => setState(() => _selectedTab = 2),
-                      ),
-                    ],
-                  ),
-
-                  Container(height: 1, color: Colors.black.withOpacity(0.08)),
-
-                  const SizedBox(height: 16),
-
-                  // ── CONTENU ONGLET ──
-                  if (_selectedTab == 0)
-                    _AboutTab(
-                      terrain: t,
-                      selectedSub: _selectedSub,
-                      onSelect: (s) => setState(() => _selectedSub = s),
                     ),
-                  if (_selectedTab == 1)
-                    _ReviewTab(
-                      terrain: t,
-                      onRatingUpdated: (newRating) =>
-                          setState(() => _currentRating = newRating),
-                    ),
-                  if (_selectedTab == 2) _MapTab(terrain: t),
-
-                  const SizedBox(height: 24),
                 ],
               ),
             ),
           ),
-        ],
-      ),
-
-      // ── BOUTON RÉSERVER ──
-      bottomNavigationBar: Container(
-        padding: EdgeInsets.fromLTRB(
-          20,
-          12,
-          20,
-          MediaQuery.of(context).padding.bottom + 12,
-        ),
-        decoration: BoxDecoration(
-          color: _card(context),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.06),
-              blurRadius: 12,
-              offset: const Offset(0, -3),
-            ),
-          ],
-        ),
-        child: Row(
-          children: [
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  'Prix par heure',
-                  style: TextStyle(fontSize: 11, color: _sub(context)),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  _selectedSub != null
-                      ? '${_selectedSub!.pricePerHour ?? t.pricePerHour} F'
-                      : t.priceLabel,
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w900,
-                    color: _txt(context),
-                  ),
-                ),
-              ],
-            ),
-            const Spacer(),
-            // Bouton Message
-            if (t.managerId != null) ...[
-              GestureDetector(
-                onTap: () async {
-                  final chatProvider = context.read<ChatProvider>();
-                  final auth = context.read<AuthProvider>();
-
-                  // Afficher un loader
-                  showDialog(
-                    context: context,
-                    barrierDismissible: false,
-                    builder: (_) => const Center(
-                      child: CircularProgressIndicator(color: kGreen),
-                    ),
-                  );
-
-                  try {
-                    final convData = await chatProvider
-                        .getOrCreateDirectConversation(t.managerId!);
-                    Navigator.pop(context); // Fermer le loader
-
-                    final chat = ChatPreview.fromJson(
-                      convData,
-                      auth.user?.id ?? '',
-                    );
-
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => ChatConversationScreen(chat: chat),
-                      ),
-                    );
-                  } catch (e) {
-                    Navigator.pop(context); // Fermer le loader
-                    AppSnackbar.error(context, 'Impossible d\'ouvrir le chat. Réessayez.');
-                  }
-                },
-                child: Container(
-                  width: 50,
-                  height: 50,
-                  decoration: BoxDecoration(
-                    color: kGreen.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: kGreen.withValues(alpha: 0.2)),
-                  ),
-                  child: const Icon(
-                    Icons.chat_bubble_outline_rounded,
-                    color: kGreen,
-                    size: 22,
-                  ),
-                ),
+          SliverToBoxAdapter(
+            child: Container(
+              decoration: BoxDecoration(
+                color: _bg(context),
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
               ),
-              const SizedBox(width: 10),
-            ],
-            GestureDetector(
-              onTap: (_selectedSub != null || t.subTerrains.isEmpty)
-                  ? () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => TerrainBookingScreen(
-                            terrain: widget.terrain,
-                            initialSubTerrain: _selectedSub,
+              transform: Matrix4.translationValues(0, -24, 0),
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 28, 20, 0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: Text(
+                            t.name,
+                            style: GoogleFonts.orbitron(
+                              fontSize: 24,
+                              fontWeight: FontWeight.w900,
+                              color: _txt(context),
+                              height: 1.2,
+                            ),
                           ),
                         ),
-                      );
-                    }
+                        const SizedBox(width: 12),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFFD700).withOpacity(0.15),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.star_rounded, color: Color(0xFFD4AF37), size: 16),
+                              const SizedBox(width: 4),
+                              Text(
+                                _currentRating.toStringAsFixed(1),
+                                style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14, color: Color(0xFFD4AF37)),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    Row(
+                      children: [
+                        Icon(Icons.location_on_rounded, color: _sub(context), size: 16),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            t.address,
+                            style: TextStyle(fontSize: 13, color: _sub(context), fontWeight: FontWeight.w500),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 28),
+                    Row(
+                      children: [
+                        _Tab(label: 'À propos', index: 0, selected: _selectedTab == 0, onTap: () => setState(() => _selectedTab = 0)),
+                        _Tab(label: 'Avis', index: 1, selected: _selectedTab == 1, onTap: () => setState(() => _selectedTab = 1)),
+                        _Tab(label: 'Carte', index: 2, selected: _selectedTab == 2, onTap: () => setState(() => _selectedTab = 2)),
+                      ],
+                    ),
+                    Container(height: 1, color: _isDark(context) ? Colors.white.withOpacity(0.1) : Colors.black.withOpacity(0.05)),
+                    const SizedBox(height: 24),
+                    if (_selectedTab == 0) _AboutTab(terrain: t, selectedSub: _selectedSub, onSelect: (s) => setState(() => _selectedSub = s)),
+                    if (_selectedTab == 1) _ReviewTab(terrain: t, onRatingUpdated: (r) => setState(() => _currentRating = r)),
+                    if (_selectedTab == 2) _MapTab(terrain: t),
+                    const SizedBox(height: 40),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBottomBar(BuildContext context, Terrain t) {
+    return Container(
+      padding: EdgeInsets.fromLTRB(20, 16, 20, MediaQuery.of(context).padding.bottom + 16),
+      decoration: BoxDecoration(
+        color: _card(context),
+        boxShadow: [
+          BoxShadow(color: Colors.black.withOpacity(_isDark(context) ? 0.3 : 0.08), blurRadius: 24, offset: const Offset(0, -6)),
+        ],
+      ),
+      child: Row(
+        children: [
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text('Prix à partir de', style: TextStyle(fontSize: 12, color: _sub(context), fontWeight: FontWeight.w600)),
+              const SizedBox(height: 4),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.baseline,
+                textBaseline: TextBaseline.alphabetic,
+                children: [
+                  Text(
+                    _selectedSub != null ? '${_selectedSub!.pricePerHour ?? t.pricePerHour} F' : t.priceLabel,
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: _txt(context)),
+                  ),
+                  Text(' /h', style: TextStyle(fontSize: 12, color: _sub(context), fontWeight: FontWeight.w600)),
+                ],
+              ),
+            ],
+          ),
+          const Spacer(),
+          if (t.managerId != null) ...[
+            GestureDetector(
+              onTap: () async {
+                final chatProvider = context.read<ChatProvider>();
+                final auth = context.read<AuthProvider>();
+                showDialog(context: context, barrierDismissible: false, builder: (_) => const Center(child: CircularProgressIndicator(color: kGreen)));
+                try {
+                  final convData = await chatProvider.getOrCreateDirectConversation(t.managerId!);
+                  if (!mounted) return;
+                  Navigator.pop(context);
+                  final chat = ChatPreview.fromJson(convData, auth.user?.id ?? '');
+                  Navigator.push(context, MaterialPageRoute(builder: (_) => ChatConversationScreen(chat: chat)));
+                } catch (e) {
+                  if (!mounted) return;
+                  Navigator.pop(context);
+                  AppSnackbar.error(context, 'Impossible d\'ouvrir le chat. Réessayez.');
+                }
+              },
+              child: Container(
+                width: 52,
+                height: 52,
+                decoration: BoxDecoration(
+                  color: kGreen.withOpacity(0.12),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: kGreen.withOpacity(0.3)),
+                ),
+                child: const Icon(Icons.chat_bubble_outline_rounded, color: kGreen, size: 24),
+              ),
+            ),
+            const SizedBox(width: 14),
+          ],
+          Expanded(
+            child: GestureDetector(
+              onTap: (_selectedSub != null || t.subTerrains.isEmpty)
+                  ? () => Navigator.push(context, MaterialPageRoute(builder: (_) => TerrainBookingScreen(terrain: widget.terrain, initialSubTerrain: _selectedSub)))
                   : null,
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 200),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 32,
-                  vertical: 14,
-                ),
+                height: 52,
                 decoration: BoxDecoration(
-                  color: (_selectedSub != null || t.subTerrains.isEmpty)
-                      ? kGreen
-                      : Colors.grey[400],
-                  borderRadius: BorderRadius.circular(14),
+                  gradient: LinearGradient(
+                    colors: (_selectedSub != null || t.subTerrains.isEmpty)
+                        ? [kGreen, const Color(0xFF00C264)]
+                        : [Colors.grey[400]!, Colors.grey[500]!],
+                    begin: Alignment.centerLeft,
+                    end: Alignment.centerRight,
+                  ),
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: (_selectedSub != null || t.subTerrains.isEmpty)
+                      ? [BoxShadow(color: kGreen.withOpacity(0.4), blurRadius: 14, offset: const Offset(0, 4))]
+                      : null,
                 ),
+                alignment: Alignment.center,
                 child: Text(
                   _selectedSub != null ? 'Réserver' : 'Choisir terrain',
-                  style: GoogleFonts.orbitron(
-                    color: Colors.white,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                  ),
+                  style: GoogleFonts.orbitron(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w800),
                 ),
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

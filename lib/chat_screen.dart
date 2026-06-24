@@ -439,6 +439,7 @@ class _ChatTile extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: chat.avatarColor,
                     shape: BoxShape.circle,
+                    border: Border.all(color: _kGreen, width: 3),
                   ),
                   child: Center(
                     child: Text(chat.initials,
@@ -802,13 +803,13 @@ class _MessageBubble extends StatelessWidget {
             decoration: BoxDecoration(
               color: isMe ? _kDark : _card(context),
               borderRadius: BorderRadius.only(
-                topLeft: const Radius.circular(16),
-                topRight: const Radius.circular(16),
-                bottomLeft: Radius.circular(isMe ? 16 : 4),
-                bottomRight: Radius.circular(isMe ? 4 : 16),
+                topLeft: const Radius.circular(18),
+                topRight: const Radius.circular(18),
+                bottomLeft: Radius.circular(isMe ? 18 : 4),
+                bottomRight: Radius.circular(isMe ? 4 : 18),
               ),
               boxShadow: [
-                BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 6),
+                if (!isMe) BoxShadow(color: Colors.black.withOpacity(0.06), blurRadius: 8, offset: const Offset(0, 2)),
               ],
             ),
             child: Column(

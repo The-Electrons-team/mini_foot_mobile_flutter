@@ -11,7 +11,11 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:provider/provider.dart';
 import 'terrain_data.dart';
 import 'providers/terrain_provider.dart';
+import 'providers/auth_provider.dart';
+import 'providers/chat_provider.dart';
 import 'terrain_detail_screen.dart';
+import 'chat_screen.dart';
+import 'app_snackbar.dart';
 
 const Color kGreen = Color(0xFF006F39);
 const Color kGreenLight = Color(0xFF00C264);
@@ -215,6 +219,7 @@ class _TerrainMapScreenState extends State<TerrainMapScreen>
             options: MapOptions(
               initialCenter: const LatLng(14.7167, -17.4677),
               initialZoom: 12,
+              interactionOptions: const InteractionOptions(flags: InteractiveFlag.all & ~InteractiveFlag.rotate),
               backgroundColor: isDark ? const Color(0xFF1A1A2E) : const Color(0xFFE8E0D5),
               onTap: (_, __) => setState(() { _selectedTerrain = null; _routePoints = []; }),
             ),
@@ -522,161 +527,176 @@ class _TerrainCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cardBg = isDark ? kDark : Colors.white;
-    final textPrimary = isDark ? Colors.white : const Color(0xFF1A1A1A);
-    final textSecondary = isDark ? Colors.white.withOpacity(0.5) : Colors.black.withOpacity(0.45);
-    final chipBg = isDark ? Colors.white.withOpacity(0.06) : Colors.black.withOpacity(0.05);
+    final cardBg = isDark ? const Color(0xFF232325) : Colors.white;
+    final textPrimary = isDark ? Colors.white : const Color(0xFF111111);
+    final textSecondary = isDark ? Colors.white70 : Colors.black54;
+    final chipBg = isDark ? Colors.white.withOpacity(0.06) : const Color(0xFFF4F4F4);
     
     final distance = (context.read<TerrainProvider>().distanceTo(terrain) / 1000).toStringAsFixed(1);
 
     return Container(
       decoration: BoxDecoration(
         color: cardBg,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: kGreen.withOpacity(0.25), width: 1),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: isDark ? Colors.white.withOpacity(0.08) : Colors.black.withOpacity(0.05), width: 1),
         boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(isDark ? 0.5 : 0.15), blurRadius: 20, offset: const Offset(0, 6)),
-          BoxShadow(color: kGreen.withOpacity(0.08), blurRadius: 20),
+          BoxShadow(color: Colors.black.withOpacity(isDark ? 0.4 : 0.1), blurRadius: 24, offset: const Offset(0, 8)),
         ],
       ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // ── Header ──────────────────────────────────────────────────────
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 14, 16, 10),
-            child: Row(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // ── Info Principale ──────────────────────────────────────────────
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // Image (Thumbnail)
                 Container(
-                  width: 46, height: 46,
+                  width: 85,
+                  height: 85,
                   decoration: BoxDecoration(
-                    color: kGreen.withOpacity(0.12),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: kGreen.withOpacity(0.3)),
+                    borderRadius: BorderRadius.circular(16),
+                    color: kGreen.withOpacity(0.1),
                   ),
-                  child: Padding(
-                    padding: const EdgeInsets.all(6),
-                    child: Image.asset('assets/images/minifoot.png', fit: BoxFit.contain),
+                  clipBehavior: Clip.hardEdge,
+                  child: Image.asset(
+                    'assets/images/minifoot.png',
+                    fit: BoxFit.cover,
                   ),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: 14),
+                // Texte descriptif
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
                         terrain.name,
-                        style: GoogleFonts.orbitron(color: textPrimary, fontWeight: FontWeight.w800, fontSize: 13),
+                        style: GoogleFonts.orbitron(color: textPrimary, fontWeight: FontWeight.w800, fontSize: 15),
                         maxLines: 1, overflow: TextOverflow.ellipsis,
                       ),
-                      const SizedBox(height: 3),
+                      const SizedBox(height: 6),
                       Row(
                         children: [
-                          Icon(Icons.location_on_rounded, color: kGreen, size: 12),
-                          const SizedBox(width: 3),
+                          Icon(Icons.location_on_rounded, color: textSecondary, size: 14),
+                          const SizedBox(width: 4),
                           Expanded(
-                            child: Text(terrain.address,
-                              style: TextStyle(color: textSecondary, fontSize: 11),
-                              overflow: TextOverflow.ellipsis),
+                            child: Text(
+                              terrain.address,
+                              style: TextStyle(color: textSecondary, fontSize: 12, fontWeight: FontWeight.w500),
+                              maxLines: 1, overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFFFD700).withOpacity(0.15),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Row(
+                              children: [
+                                const Icon(Icons.star_rounded, color: Color(0xFFD4AF37), size: 14),
+                                const SizedBox(width: 4),
+                                Text(
+                                  terrain.rating.toStringAsFixed(1),
+                                  style: const TextStyle(color: Color(0xFFD4AF37), fontSize: 12, fontWeight: FontWeight.w800),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const Spacer(),
+                          Text(
+                            '${terrain.pricePerHour} F',
+                            style: const TextStyle(color: kGreen, fontWeight: FontWeight.w900, fontSize: 15),
+                          ),
+                          Text(
+                            '/h',
+                            style: TextStyle(color: textSecondary, fontSize: 11, fontWeight: FontWeight.w600),
                           ),
                         ],
                       ),
                     ],
                   ),
                 ),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                  decoration: BoxDecoration(
-                    color: kGreen,
-                    borderRadius: BorderRadius.circular(10),
-                    boxShadow: [BoxShadow(color: kGreen.withOpacity(0.4), blurRadius: 8)],
-                  ),
-                  child: Text('${terrain.pricePerHour} F/h',
-                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 11)),
-                ),
               ],
             ),
-          ),
 
-          // ── Stats ────────────────────────────────────────────────────────
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-            child: Row(
-              children: [
-                _StatChip(icon: Icons.star_rounded, color: const Color(0xFFFFD700), label: terrain.rating.toStringAsFixed(1), bg: chipBg, textColor: textSecondary),
-                const SizedBox(width: 8),
-                _StatChip(icon: Icons.directions_walk_rounded, color: textSecondary, label: '$distance km', bg: chipBg, textColor: textSecondary),
-                if (hasRoute && routeDuration != null) ...[
-                  const SizedBox(width: 8),
-                  _StatChip(icon: Icons.timer_outlined, color: kGreen, label: routeDuration!, bg: chipBg, textColor: textSecondary),
-                  const SizedBox(width: 8),
-                  _StatChip(icon: Icons.route_rounded, color: kGreen, label: routeDistance!, bg: chipBg, textColor: textSecondary),
+            // ── Itinéraire Stats (si actif) ──────────────────────────────────
+            if (hasRoute && routeDuration != null) ...[
+              const SizedBox(height: 14),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                decoration: BoxDecoration(
+                  color: chipBg,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    _StatChip(icon: Icons.directions_walk_rounded, color: textSecondary, label: '$distance km', bg: Colors.transparent, textColor: textSecondary),
+                    Container(width: 1, height: 16, color: isDark ? Colors.white24 : Colors.black12),
+                    _StatChip(icon: Icons.timer_outlined, color: kGreen, label: routeDuration!, bg: Colors.transparent, textColor: textPrimary),
+                    Container(width: 1, height: 16, color: isDark ? Colors.white24 : Colors.black12),
+                    _StatChip(icon: Icons.route_rounded, color: kGreen, label: routeDistance!, bg: Colors.transparent, textColor: textPrimary),
+                  ],
+                ),
+              ),
+            ] else ...[
+              const SizedBox(height: 14),
+              Row(
+                children: [
+                  _StatChip(icon: Icons.directions_walk_rounded, color: textSecondary, label: '$distance km', bg: chipBg, textColor: textSecondary),
                 ],
-              ],
-            ),
-          ),
+              ),
+            ],
 
-          // ── Actions ──────────────────────────────────────────────────────
-          Padding(
-            padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
-            child: Row(
+            const SizedBox(height: 14),
+
+            // ── Boutons d'action ─────────────────────────────────────────────
+            Row(
               children: [
                 Expanded(
-                  child: GestureDetector(
-                    onTap: onDetail,
-                    child: Container(
-                      height: 44,
-                      decoration: BoxDecoration(
-                        color: isDark ? Colors.white.withOpacity(0.07) : Colors.black.withOpacity(0.04),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: isDark ? Colors.white.withOpacity(0.12) : Colors.black.withOpacity(0.1)),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.info_outline_rounded, color: textSecondary, size: 16),
-                          const SizedBox(width: 6),
-                          Text('Détails', style: TextStyle(color: textSecondary, fontWeight: FontWeight.w600, fontSize: 13)),
-                        ],
-                      ),
+                  child: ElevatedButton.icon(
+                    onPressed: onDetail,
+                    icon: Icon(Icons.info_outline_rounded, size: 18, color: textPrimary),
+                    label: Text('Détails', style: TextStyle(color: textPrimary, fontWeight: FontWeight.w700, fontSize: 13)),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: isDark ? Colors.white.withOpacity(0.08) : const Color(0xFFF0F0F0),
+                      foregroundColor: textPrimary,
+                      elevation: 0,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                     ),
                   ),
                 ),
-                const SizedBox(width: 10),
+                const SizedBox(width: 12),
                 Expanded(
-                  flex: 2,
-                  child: GestureDetector(
-                    onTap: onNavigate,
-                    child: Container(
-                      height: 44,
-                      decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          colors: [kGreen, kGreenLight],
-                          begin: Alignment.centerLeft,
-                          end: Alignment.centerRight,
-                        ),
-                        borderRadius: BorderRadius.circular(12),
-                        boxShadow: [BoxShadow(color: kGreen.withOpacity(0.45), blurRadius: 12, offset: const Offset(0, 4))],
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Transform.rotate(
-                            angle: math.pi / 2,
-                            child: const Icon(Icons.navigation_rounded, color: Colors.white, size: 18),
-                          ),
-                          const SizedBox(width: 8),
-                          Text('Démarrer',
-                            style: GoogleFonts.orbitron(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 12)),
-                        ],
-                      ),
+                  flex: 1,
+                  child: ElevatedButton.icon(
+                    onPressed: onNavigate,
+                    icon: const Icon(Icons.navigation_rounded, size: 18, color: Colors.white),
+                    label: Text('Y aller', style: GoogleFonts.orbitron(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 13)),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: kGreen,
+                      foregroundColor: Colors.white,
+                      elevation: 4,
+                      shadowColor: kGreen.withOpacity(0.4),
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                     ),
                   ),
                 ),
               ],
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
