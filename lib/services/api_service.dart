@@ -14,9 +14,9 @@ class ApiService {
 
   String get baseUrl {
     try {
-      return dotenv.env['API_URL'] ?? 'http://localhost:3000/api/v1';
+      return dotenv.env['API_URL'] ?? 'https://api.minifootapp.com/api/v1';
     } catch (_) {
-      return 'http://localhost:3000/api/v1';
+      return 'https://api.minifootapp.com/api/v1';
     }
   }
 
