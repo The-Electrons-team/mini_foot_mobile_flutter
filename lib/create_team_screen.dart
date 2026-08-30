@@ -695,7 +695,6 @@ class _CreateTeamScreenState extends State<CreateTeamScreen> {
             ),
           ],
         ),
-      ),
     );
   }
 }
