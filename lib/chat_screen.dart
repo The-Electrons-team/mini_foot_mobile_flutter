@@ -605,8 +605,17 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
           child: Row(
             children: [
               GestureDetector(
+                behavior: HitTestBehavior.opaque,
                 onTap: () => Navigator.pop(context),
-                child: Icon(Icons.arrow_back_ios_new_rounded, color: _txt(context), size: 18),
+                child: Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: _card(context),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(Icons.arrow_back_ios_new_rounded, color: _kGreen, size: 18),
+                ),
               ),
               const SizedBox(width: 12),
               Stack(

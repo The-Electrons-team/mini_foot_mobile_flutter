@@ -42,7 +42,7 @@ class _HomeScreenState extends State<HomeScreen> {
     const _HomePage(),
     const ChatListScreen(),
     const TerrainMapScreen(),
-    const ShopScreen(),
+    const _ComingSoonPage(),
     const ProfileScreen(),
   ];
 
@@ -531,35 +531,6 @@ class _HomePageState extends State<_HomePage> {
                 ),
                 const SliverToBoxAdapter(child: _TerrainHorizontalList()),
 
-
-                // Boutique foot
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 28, 20, 10),
-                    child: Row(
-                      children: [
-                        Text('Boutique foot',
-                            style: GoogleFonts.orbitron(
-                                color: _txt(context), fontSize: 15, fontWeight: FontWeight.w800)),
-                        const SizedBox(width: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFE65100),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: const Text('PUB',
-                              style: TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w800)),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                const SliverToBoxAdapter(child: _ShopSection()),
-
-                // Offres flash
-                const SliverToBoxAdapter(child: _FlashDealsSection()),
-
                 const SliverToBoxAdapter(child: SizedBox(height: 100)),
               ],
             ),
@@ -946,7 +917,80 @@ class _FeedPreviewCard extends StatelessWidget {
   }
 }
 // ---------------------------------------------------------------------------
-// SHOP SECTION — Boutique foot
+// COMING SOON — Boutique placeholder
+// ---------------------------------------------------------------------------
+
+class _ComingSoonPage extends StatelessWidget {
+  const _ComingSoonPage();
+
+  @override
+  Widget build(BuildContext context) {
+    final dark = _isDark(context);
+    return Scaffold(
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        centerTitle: true,
+        automaticallyImplyLeading: false,
+        title: Text(
+          'Boutique',
+          style: GoogleFonts.orbitron(
+            fontSize: 18,
+            fontWeight: FontWeight.w700,
+            color: kGreen,
+          ),
+        ),
+      ),
+      body: Center(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 32),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 100,
+                height: 100,
+                decoration: BoxDecoration(
+                  color: dark ? Colors.white.withOpacity(0.05) : const Color(0xFFF0EBE3),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.storefront_rounded,
+                  size: 48,
+                  color: kGreen.withOpacity(0.6),
+                ),
+              ),
+              const SizedBox(height: 24),
+              Text(
+                'Bientot disponible',
+                style: GoogleFonts.orbitron(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w800,
+                  color: _txt(context),
+                ),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                'La boutique MiniFoot arrive bientot.\nMaillots, ballons, equipements... restez connectes !',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 14,
+                  color: _sub(context),
+                  height: 1.5,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// SHOP SECTION — Boutique foot (masque)
 // ---------------------------------------------------------------------------
 
 class _ShopProduct {

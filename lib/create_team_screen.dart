@@ -303,6 +303,7 @@ class _CreateTeamScreenState extends State<CreateTeamScreen> {
               child: Row(
                 children: [
                   GestureDetector(
+                    behavior: HitTestBehavior.opaque,
                     onTap: () => Navigator.pop(context),
                     child: Container(
                       width: 40,
@@ -310,16 +311,10 @@ class _CreateTeamScreenState extends State<CreateTeamScreen> {
                       decoration: BoxDecoration(
                         color: _card(context),
                         shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.07),
-                            blurRadius: 8,
-                          ),
-                        ],
                       ),
                       child: Icon(
                         Icons.arrow_back_ios_new_rounded,
-                        size: 16,
+                        size: 18,
                         color: _txt(context),
                       ),
                     ),
@@ -328,9 +323,9 @@ class _CreateTeamScreenState extends State<CreateTeamScreen> {
                   Text(
                     _isEditing ? 'Modifier equipe' : 'Creer mon equipe',
                     style: GoogleFonts.orbitron(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w900,
-                      color: _txt(context),
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      color: _kGreen,
                     ),
                   ),
                 ],

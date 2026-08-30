@@ -71,13 +71,16 @@ class _TerrainDetailScreenState extends State<TerrainDetailScreen> {
             leading: Padding(
               padding: const EdgeInsets.all(8.0),
               child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
                 onTap: () => Navigator.pop(context),
                 child: Container(
+                  width: 40,
+                  height: 40,
                   decoration: BoxDecoration(
-                    color: _bg(context).withOpacity(0.85),
+                    color: _card(context),
                     shape: BoxShape.circle,
                   ),
-                  child: Icon(Icons.arrow_back_ios_new_rounded, color: _txt(context), size: 18),
+                  child: Icon(Icons.arrow_back_ios_new_rounded, color: kGreen, size: 18),
                 ),
               ),
             ),

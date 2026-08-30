@@ -264,15 +264,15 @@ class _HeroHeader extends StatelessWidget {
             // Top row
             Row(children: [
               GestureDetector(
+                behavior: HitTestBehavior.opaque,
                 onTap: onBack,
                 child: Container(
-                  width: 38, height: 38,
+                  width: 40, height: 40,
                   decoration: BoxDecoration(
                     color: Colors.white.withOpacity(0.15),
                     shape: BoxShape.circle,
-                    border: Border.all(color: Colors.white.withOpacity(0.3)),
                   ),
-                  child: const Icon(Icons.arrow_back_ios_new_rounded, size: 15, color: Colors.white),
+                  child: const Icon(Icons.arrow_back_ios_new_rounded, size: 18, color: Colors.white),
                 ),
               ),
               const SizedBox(width: 14),

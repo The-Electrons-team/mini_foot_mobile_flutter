@@ -196,13 +196,13 @@ class _MatchesScreenState extends State<MatchesScreen> {
       child: Row(
         children: [
           GestureDetector(
+            behavior: HitTestBehavior.opaque,
             onTap: () => Navigator.pop(context),
             child: Container(
-              padding: const EdgeInsets.all(12),
+              width: 40, height: 40,
               decoration: BoxDecoration(
                 color: _card(context),
                 shape: BoxShape.circle,
-                boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10)],
               ),
               child: Icon(Icons.arrow_back_ios_new_rounded, size: 18, color: _txt(context)),
             ),
@@ -212,9 +212,9 @@ class _MatchesScreenState extends State<MatchesScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Matchs', 
-                  style: GoogleFonts.orbitron(fontSize: 26, fontWeight: FontWeight.w900, color: _txt(context))),
-                Text('Région de Dakar · Saison 2026', 
+                Text('Matchs',
+                  style: GoogleFonts.orbitron(fontSize: 18, fontWeight: FontWeight.w700, color: _kGreen)),
+                Text('Region de Dakar',
                   style: TextStyle(fontSize: 12, color: _sub(context), fontWeight: FontWeight.w500)),
               ],
             ),

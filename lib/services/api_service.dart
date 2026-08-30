@@ -14,9 +14,9 @@ class ApiService {
 
   String get baseUrl {
     try {
-      return dotenv.env['API_URL'] ?? 'https://api.minifootapp.com/api/v1';
+      return dotenv.env['API_URL'] ?? 'https://api.minifootapp.com';
     } catch (_) {
-      return 'https://api.minifootapp.com/api/v1';
+      return 'https://api.minifootapp.com';
     }
   }
 

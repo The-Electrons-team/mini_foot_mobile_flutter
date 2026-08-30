@@ -352,15 +352,16 @@ class _TerrainBookingScreenState extends State<TerrainBookingScreen> {
               child: Row(
                 children: [
                   GestureDetector(
+                    behavior: HitTestBehavior.opaque,
                     onTap: () => Navigator.pop(context),
                     child: Container(
                       width: 40,
                       height: 40,
-                      decoration: const BoxDecoration(
-                        color: Color(0xFFF0F0F0),
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).cardColor,
                         shape: BoxShape.circle,
                       ),
-                      child: const Icon(
+                      child: Icon(
                         Icons.arrow_back_ios_new_rounded,
                         size: 18,
                         color: kDark,
@@ -370,11 +371,11 @@ class _TerrainBookingScreenState extends State<TerrainBookingScreen> {
                   Expanded(
                     child: Center(
                       child: Text(
-                        'Réserver',
+                        'Reserver',
                         style: GoogleFonts.orbitron(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w800,
-                          color: kDark,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                          color: kGreen,
                         ),
                       ),
                     ),

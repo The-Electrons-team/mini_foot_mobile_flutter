@@ -101,17 +101,17 @@ class _RosterPageState extends State<RosterPage>
             padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
             child: Row(children: [
               GestureDetector(
+                behavior: HitTestBehavior.opaque,
                 onTap: () => Navigator.pop(context),
                 child: Container(
                   width: 40, height: 40,
-                  decoration: BoxDecoration(color: _card(context), shape: BoxShape.circle,
-                      boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.07), blurRadius: 8)]),
-                  child: Icon(Icons.arrow_back_ios_new_rounded, size: 16, color: _txt(context)),
+                  decoration: BoxDecoration(color: _card(context), shape: BoxShape.circle),
+                  child: Icon(Icons.arrow_back_ios_new_rounded, size: 18, color: _kGreen),
                 ),
               ),
               const SizedBox(width: 14),
               Text('Effectif', style: GoogleFonts.orbitron(
-                  fontSize: 18, fontWeight: FontWeight.w900, color: _txt(context))),
+                  fontSize: 16, fontWeight: FontWeight.w700, color: _kGreen)),
             ]),
           ),
           const SizedBox(height: 16),
@@ -391,16 +391,16 @@ class _PlayerDetailPage extends StatelessWidget {
                 Positioned(
                   top: topPad + 12, left: 16,
                   child: GestureDetector(
+                    behavior: HitTestBehavior.opaque,
                     onTap: () => Navigator.pop(context),
                     child: Container(
-                      width: 38, height: 38,
+                      width: 40, height: 40,
                       decoration: BoxDecoration(
                         color: Colors.black.withOpacity(0.4),
                         shape: BoxShape.circle,
-                        border: Border.all(color: Colors.white.withOpacity(0.25)),
                       ),
                       child: const Icon(Icons.arrow_back_ios_new_rounded,
-                          size: 15, color: Colors.white),
+                          size: 18, color: Colors.white),
                     ),
                   ),
                 ),

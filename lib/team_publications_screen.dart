@@ -307,14 +307,16 @@ class _PublicationsPageState extends State<PublicationsPage> {
           backgroundColor: _bg(context),
           elevation: 0,
           leading: GestureDetector(
+            behavior: HitTestBehavior.opaque,
             onTap: () => Navigator.pop(context),
             child: Container(
+              width: 40, height: 40,
               margin: const EdgeInsets.all(8),
               decoration: BoxDecoration(color: _card(context), shape: BoxShape.circle),
-              child: Icon(Icons.arrow_back_ios_new_rounded, size: 15, color: _txt(context)),
+              child: Icon(Icons.arrow_back_ios_new_rounded, size: 18, color: _kGreen),
             ),
           ),
-          title: Text('Notre Page', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: _txt(context))),
+          title: Text('Notre Page', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: _kGreen)),
           centerTitle: true,
         ),
 
@@ -698,13 +700,14 @@ class _PostDetailPageState extends State<PostDetailPage> {
             padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
             child: Row(children: [
               GestureDetector(
+                behavior: HitTestBehavior.opaque,
                 onTap: () => Navigator.pop(context),
-                child: Container(width: 38, height: 38,
+                child: Container(width: 40, height: 40,
                   decoration: BoxDecoration(color: _card(context), shape: BoxShape.circle),
-                  child: Icon(Icons.arrow_back_ios_new_rounded, size: 15, color: _txt(context))),
+                  child: Icon(Icons.arrow_back_ios_new_rounded, size: 18, color: _kGreen)),
               ),
               const SizedBox(width: 12),
-              Text('Publication', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: _txt(context))),
+              Text('Publication', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: _kGreen)),
             ]),
           ),
           const SizedBox(height: 12),

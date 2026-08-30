@@ -333,23 +333,23 @@ class _CompositionPageState extends State<CompositionPage> {
               // Ligne 1 : Retour + titre + indicateur dirty + formation
               Row(children: [
                 GestureDetector(
+                  behavior: HitTestBehavior.opaque,
                   onTap: () async {
                     final canLeave = await _onWillPop();
                     if (canLeave && context.mounted) Navigator.of(context).pop();
                   },
                   child: Container(
-                    width: 38, height: 38,
+                    width: 40, height: 40,
                     decoration: BoxDecoration(
                       color: _card(context), shape: BoxShape.circle,
-                      boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.07), blurRadius: 8)],
                     ),
-                    child: Icon(Icons.arrow_back_ios_new_rounded, size: 15, color: _txt(context)),
+                    child: Icon(Icons.arrow_back_ios_new_rounded, size: 18, color: _kGreen),
                   ),
                 ),
                 const Spacer(),
                 Column(crossAxisAlignment: CrossAxisAlignment.center, mainAxisSize: MainAxisSize.min, children: [
                   Text('Composition',
-                      style: GoogleFonts.orbitron(fontSize: 16, fontWeight: FontWeight.w900, color: _txt(context))),
+                      style: GoogleFonts.orbitron(fontSize: 16, fontWeight: FontWeight.w700, color: _kGreen)),
                   if (_isDirty)
                     Text('Modifications non sauvegardées',
                         style: TextStyle(fontSize: 9, color: Colors.orange.shade600, fontWeight: FontWeight.w700)),

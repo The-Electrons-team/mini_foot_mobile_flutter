@@ -366,21 +366,21 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
               child: Row(
                 children: [
                   GestureDetector(
+                    behavior: HitTestBehavior.opaque,
                     onTap: () => Navigator.pop(context),
                     child: Container(
                       width: 40, height: 40,
                       decoration: BoxDecoration(
                         color: _card(context),
                         shape: BoxShape.circle,
-                        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.07), blurRadius: 8)],
                       ),
-                      child: Icon(Icons.arrow_back_ios_new_rounded, size: 16, color: _txt(context)),
+                      child: Icon(Icons.arrow_back_ios_new_rounded, size: 18, color: _txt(context)),
                     ),
                   ),
                   Expanded(
                     child: Center(
-                      child: Text('Mes Réservations',
-                          style: GoogleFonts.orbitron(fontSize: 14, fontWeight: FontWeight.w800, color: _txt(context))),
+                      child: Text('Mes Reservations',
+                          style: GoogleFonts.orbitron(fontSize: 16, fontWeight: FontWeight.w700, color: kGreen)),
                     ),
                   ),
                   const SizedBox(width: 40),

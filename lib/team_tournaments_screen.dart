@@ -228,20 +228,20 @@ class _TournamentsHeader extends StatelessWidget {
                     children: [
                       Row(children: [
                         GestureDetector(
+                          behavior: HitTestBehavior.opaque,
                           onTap: () => Navigator.pop(context),
                           child: Container(
-                            width: 38, height: 38,
+                            width: 40, height: 40,
                             decoration: BoxDecoration(
                               color: Colors.black.withOpacity(0.3),
                               shape: BoxShape.circle,
-                              border: Border.all(color: Colors.white.withOpacity(0.2)),
                             ),
-                            child: const Icon(Icons.arrow_back_ios_new_rounded, size: 16, color: Colors.white),
+                            child: const Icon(Icons.arrow_back_ios_new_rounded, size: 18, color: Colors.white),
                           ),
                         ),
                         const SizedBox(width: 14),
                         Text('Tournois', style: GoogleFonts.orbitron(
-                          fontSize: 22, fontWeight: FontWeight.w900,
+                          fontSize: 16, fontWeight: FontWeight.w700,
                           color: Colors.white,
                           shadows: [Shadow(color: Colors.black.withOpacity(0.4), blurRadius: 8)])),
                         const Spacer(),
@@ -1528,16 +1528,16 @@ class _DetailHeader extends StatelessWidget {
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                   Row(children: [
                     GestureDetector(
+                      behavior: HitTestBehavior.opaque,
                       onTap: () => Navigator.pop(context),
                       child: Container(
-                        width: 36, height: 36,
+                        width: 40, height: 40,
                         decoration: BoxDecoration(
                           color: Colors.black.withOpacity(0.35),
                           shape: BoxShape.circle,
-                          border: Border.all(color: Colors.white.withOpacity(0.2)),
                         ),
                         child: const Icon(Icons.arrow_back_ios_new_rounded,
-                            size: 15, color: Colors.white),
+                            size: 18, color: Colors.white),
                       ),
                     ),
                     const Spacer(),

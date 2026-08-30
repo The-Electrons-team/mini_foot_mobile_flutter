@@ -98,23 +98,25 @@ class _PaymentScreenState extends State<PaymentScreen> {
     return Scaffold(
       backgroundColor: kBeige,
       appBar: AppBar(
-        backgroundColor: kBeige,
+        backgroundColor: Colors.transparent,
         elevation: 0,
-        automaticallyImplyLeading: false,
-        leading: GestureDetector(
-          onTap: () => Navigator.pop(context),
-          child: Container(
-            margin: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              shape: BoxShape.circle,
-              boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.08), blurRadius: 8)],
+        scrolledUnderElevation: 0,
+        leading: Center(
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: () => Navigator.pop(context),
+            child: Container(
+              width: 40, height: 40,
+              decoration: BoxDecoration(
+                color: Theme.of(context).cardColor,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(Icons.arrow_back_ios_new_rounded, size: 18, color: Theme.of(context).colorScheme.onSurface),
             ),
-            child: const Icon(Icons.arrow_back_ios_new_rounded, size: 16, color: kDark),
           ),
         ),
         title: Text('Paiement',
-            style: GoogleFonts.orbitron(fontSize: 15, fontWeight: FontWeight.w800, color: kDark)),
+            style: GoogleFonts.orbitron(fontSize: 16, fontWeight: FontWeight.w700, color: kGreen)),
         centerTitle: true,
       ),
       body: SingleChildScrollView(
