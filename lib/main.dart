@@ -14,6 +14,7 @@ import 'providers/chat_provider.dart';
 import 'services/socket_service.dart';
 import 'splash_screen.dart';
 import 'app_navigator.dart';
+import 'services/deep_link_service.dart';
 
 // ─── Notifier global ───────────────────────────────────────────────────────
 final themeNotifier = ValueNotifier<ThemeMode>(ThemeMode.light);
@@ -46,6 +47,7 @@ void main() async {
   }
 
   await initializeDateFormatting('fr_FR', null);
+  DeepLinkService().init();
   runApp(const MinifootApp());
 }
 

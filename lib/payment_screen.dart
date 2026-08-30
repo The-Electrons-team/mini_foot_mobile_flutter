@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
@@ -7,6 +8,7 @@ import 'booking_confirmation_screen.dart';
 import 'providers/auth_provider.dart';
 import 'providers/reservation_provider.dart';
 import 'services/reservation_service.dart';
+import 'services/deep_link_service.dart';
 import 'app_snackbar.dart';
 
 const Color kGreen = Color(0xFF006F39);
@@ -498,16 +500,42 @@ class _PaymentScreenState extends State<PaymentScreen> {
 
   Future<Map<String, dynamic>> _waitForPaymentValidation(String token, String reference) async {
     final service = ReservationService();
-    for (var i = 0; i < 40; i++) {
-      if (!_pollingActive) throw Exception('Paiement annulé.');
-      final reservation = await service.getReservationByReference(token, reference);
-      if (reservation['status'] == 'CONFIRMED') return reservation;
-      // Acompte payé : réservation créée avec QR mais en attente du solde
-      if (reservation['depositPaidAt'] != null) return reservation;
-      if (!_pollingActive) throw Exception('Paiement annulé.');
-      await Future.delayed(const Duration(seconds: 3));
+    final completer = Completer<Map<String, dynamic>>();
+
+    // Listen for deep link return (instant confirmation)
+    final deepLinkSub = DeepLinkService().onPaymentRef.listen((ref) async {
+      if (ref == reference && !completer.isCompleted) {
+        try {
+          final reservation = await service.getReservationByReference(token, reference);
+          if (!completer.isCompleted) completer.complete(reservation);
+        } catch (_) {}
+      }
+    });
+
+    // Polling fallback
+    () async {
+      for (var i = 0; i < 40; i++) {
+        if (completer.isCompleted || !_pollingActive) break;
+        final reservation = await service.getReservationByReference(token, reference);
+        if (reservation['status'] == 'CONFIRMED' || reservation['depositPaidAt'] != null) {
+          if (!completer.isCompleted) completer.complete(reservation);
+          break;
+        }
+        if (!_pollingActive) break;
+        await Future.delayed(const Duration(seconds: 3));
+      }
+      if (!completer.isCompleted) {
+        completer.completeError(
+          Exception('Paiement lancé. Le ticket sera disponible après validation du paiement.'),
+        );
+      }
+    }();
+
+    try {
+      return await completer.future;
+    } finally {
+      deepLinkSub.cancel();
     }
-    throw Exception('Paiement lancé. Le ticket sera disponible après validation du paiement.');
   }
 }
 
