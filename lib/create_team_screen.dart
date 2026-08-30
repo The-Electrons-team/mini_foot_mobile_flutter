@@ -295,42 +295,32 @@ class _CreateTeamScreenState extends State<CreateTeamScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: _bg(context),
-      body: SafeArea(
-        child: Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
-              child: Row(
-                children: [
-                  GestureDetector(
-                    behavior: HitTestBehavior.opaque,
-                    onTap: () => Navigator.pop(context),
-                    child: Container(
-                      width: 40,
-                      height: 40,
-                      decoration: BoxDecoration(
-                        color: _card(context),
-                        shape: BoxShape.circle,
-                      ),
-                      child: Icon(
-                        Icons.arrow_back_ios_new_rounded,
-                        size: 18,
-                        color: _txt(context),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 14),
-                  Text(
-                    _isEditing ? 'Modifier equipe' : 'Creer mon equipe',
-                    style: GoogleFonts.orbitron(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
-                      color: _kGreen,
-                    ),
-                  ),
-                ],
+      appBar: AppBar(
+        backgroundColor: _card(context),
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        leading: Center(
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: () => Navigator.pop(context),
+            child: Container(
+              width: 40, height: 40,
+              decoration: BoxDecoration(
+                color: _isDark(context) ? Colors.white.withOpacity(0.08) : const Color(0xFFF0EBE3),
+                shape: BoxShape.circle,
               ),
+              child: Icon(Icons.arrow_back_ios_new_rounded, size: 16, color: _txt(context)),
             ),
+          ),
+        ),
+        centerTitle: true,
+        title: Text(
+          _isEditing ? 'Modifier equipe' : 'Creer mon equipe',
+          style: GoogleFonts.orbitron(fontSize: 16, fontWeight: FontWeight.w700, color: _kGreen),
+        ),
+      ),
+      body: Column(
+        children: [
             Expanded(
               child: ListView(
                 padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),

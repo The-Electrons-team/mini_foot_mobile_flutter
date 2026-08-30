@@ -357,37 +357,32 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
 
     return Scaffold(
       backgroundColor: _bg(context),
+      appBar: AppBar(
+        backgroundColor: _card(context),
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        leading: Center(
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: () => Navigator.pop(context),
+            child: Container(
+              width: 40, height: 40,
+              decoration: BoxDecoration(
+                color: _isDark(context) ? Colors.white.withOpacity(0.08) : const Color(0xFFF0EBE3),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(Icons.arrow_back_ios_new_rounded, size: 16, color: _txt(context)),
+            ),
+          ),
+        ),
+        centerTitle: true,
+        title: Text('Mes Reservations',
+            style: GoogleFonts.orbitron(fontSize: 16, fontWeight: FontWeight.w700, color: kGreen)),
+      ),
       body: SafeArea(
+        top: false,
         child: Column(
           children: [
-            // ── APP BAR ──
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
-              child: Row(
-                children: [
-                  GestureDetector(
-                    behavior: HitTestBehavior.opaque,
-                    onTap: () => Navigator.pop(context),
-                    child: Container(
-                      width: 40, height: 40,
-                      decoration: BoxDecoration(
-                        color: _card(context),
-                        shape: BoxShape.circle,
-                      ),
-                      child: Icon(Icons.arrow_back_ios_new_rounded, size: 18, color: _txt(context)),
-                    ),
-                  ),
-                  Expanded(
-                    child: Center(
-                      child: Text('Mes Reservations',
-                          style: GoogleFonts.orbitron(fontSize: 16, fontWeight: FontWeight.w700, color: kGreen)),
-                    ),
-                  ),
-                  const SizedBox(width: 40),
-                ],
-              ),
-            ),
-
             const SizedBox(height: 16),
 
             // ── FILTRES ──

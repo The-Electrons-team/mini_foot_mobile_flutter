@@ -343,47 +343,32 @@ class _TerrainBookingScreenState extends State<TerrainBookingScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: kBeige,
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        leading: Center(
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: () => Navigator.pop(context),
+            child: Container(
+              width: 40, height: 40,
+              decoration: const BoxDecoration(
+                color: Color(0xFFF0EBE3),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.arrow_back_ios_new_rounded, size: 16, color: kDark),
+            ),
+          ),
+        ),
+        centerTitle: true,
+        title: Text('Reserver',
+            style: GoogleFonts.orbitron(fontSize: 16, fontWeight: FontWeight.w700, color: kGreen)),
+      ),
       body: SafeArea(
+        top: false,
         child: Column(
           children: [
-            // ── APP BAR ──
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
-              child: Row(
-                children: [
-                  GestureDetector(
-                    behavior: HitTestBehavior.opaque,
-                    onTap: () => Navigator.pop(context),
-                    child: Container(
-                      width: 40,
-                      height: 40,
-                      decoration: BoxDecoration(
-                        color: Theme.of(context).cardColor,
-                        shape: BoxShape.circle,
-                      ),
-                      child: Icon(
-                        Icons.arrow_back_ios_new_rounded,
-                        size: 18,
-                        color: kDark,
-                      ),
-                    ),
-                  ),
-                  Expanded(
-                    child: Center(
-                      child: Text(
-                        'Reserver',
-                        style: GoogleFonts.orbitron(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w700,
-                          color: kGreen,
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 40),
-                ],
-              ),
-            ),
 
             Expanded(
               child: SingleChildScrollView(
