@@ -1040,6 +1040,7 @@ class _MapTab extends StatelessWidget {
                 TileLayer(
                   urlTemplate:
                       'https://api.mapbox.com/styles/v1/mapbox/streets-v12/tiles/{z}/{x}/{y}?access_token=${dotenv.env['MAPBOX_ACCESS_TOKEN']}',
+                  fallbackUrl: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
                   userAgentPackageName: 'com.minifoot.app',
                   tileSize: 512,
                   zoomOffset: -1,

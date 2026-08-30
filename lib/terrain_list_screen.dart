@@ -86,49 +86,56 @@ class _TerrainListScreenState extends State<TerrainListScreen> {
 
     return Scaffold(
       backgroundColor: _bg(context),
-      body: SafeArea(
-        child: Column(
+      appBar: AppBar(
+        backgroundColor: _card(context),
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        leading: Center(
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: () => Navigator.pop(context),
+            child: Container(
+              width: 40, height: 40,
+              decoration: BoxDecoration(
+                color: _isDark(context) ? Colors.white.withOpacity(0.08) : const Color(0xFFF0EBE3),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(Icons.arrow_back_ios_new_rounded, size: 16, color: _txt(context)),
+            ),
+          ),
+        ),
+        centerTitle: true,
+        title: Text('Terrains',
+            style: GoogleFonts.orbitron(fontSize: 16, fontWeight: FontWeight.w700, color: kGreen)),
+      ),
+      body: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // ── HEADER (Location + Search) ──
+            // ── SEARCH ──
             Padding(
-              padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Localisation', style: TextStyle(fontSize: 11, color: _sub(context))),
-                  const SizedBox(height: 3),
-                  Row(children: [
-                    const Icon(Icons.location_on_rounded, color: kGreen, size: 16),
-                    const SizedBox(width: 4),
-                    Text('Dakar, Sénégal', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14, color: _txt(context))),
-                    Icon(Icons.keyboard_arrow_down_rounded, size: 18, color: _sub(context)),
-                  ]),
-                  const SizedBox(height: 16),
-                  Container(
-                    height: 48,
-                    decoration: BoxDecoration(color: _card(context), borderRadius: BorderRadius.circular(14)),
-                    child: Row(
-                      children: [
-                        Padding(padding: const EdgeInsets.symmetric(horizontal: 12), child: Icon(Icons.search_rounded, color: _sub(context), size: 22)),
-                        Expanded(
-                          child: TextField(
-                            onChanged: (v) {
-                              setState(() => _query = v);
-                              provider.loadTerrains(search: v, refresh: true);
-                            },
-                            style: TextStyle(color: _txt(context)),
-                            decoration: InputDecoration(hintText: 'Rechercher un terrain...', hintStyle: TextStyle(color: _sub(context), fontSize: 14), border: InputBorder.none),
-                          ),
-                        ),
-                      ],
+              padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+              child: Container(
+                height: 48,
+                decoration: BoxDecoration(color: _isDark(context) ? Colors.white.withOpacity(0.05) : const Color(0xFFF0EBE3), borderRadius: BorderRadius.circular(14)),
+                child: Row(
+                  children: [
+                    Padding(padding: const EdgeInsets.symmetric(horizontal: 12), child: Icon(Icons.search_rounded, color: _sub(context), size: 22)),
+                    Expanded(
+                      child: TextField(
+                        onChanged: (v) {
+                          setState(() => _query = v);
+                          provider.loadTerrains(search: v, refresh: true);
+                        },
+                        style: TextStyle(color: _txt(context)),
+                        decoration: InputDecoration(hintText: 'Rechercher un terrain...', hintStyle: TextStyle(color: _sub(context), fontSize: 14), border: InputBorder.none),
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
 
-            const SizedBox(height: 18),
+            const SizedBox(height: 12),
 
             // ── CONTENU PRINCIPAL ──
             Expanded(
@@ -193,7 +200,6 @@ class _TerrainListScreenState extends State<TerrainListScreen> {
             ),
           ],
         ),
-      ),
     );
   }
 }
