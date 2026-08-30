@@ -33,7 +33,7 @@ class DeepLinkService {
     debugPrint('[DeepLink] Received: $uri');
 
     // minifoot://reservation/success?ref=MF-xxx  → host=reservation, path=/success
-    // https://minifoot.app/reservation/success?ref=MF-xxx → path=/reservation/success
+    // https://minifootapp.com/reservation/success?ref=MF-xxx → path=/reservation/success
     final path = uri.host == 'reservation'
         ? '/${uri.host}${uri.path}'
         : uri.path;
