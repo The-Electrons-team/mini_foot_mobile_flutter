@@ -64,6 +64,7 @@ lib/config/env.dart
 google-services.json
 GoogleService-Info.plist
 firebase_options.dart
+/.asc/
 
 # ── Logs ──────────────────────────────────────────────────────────────────────
 *.log

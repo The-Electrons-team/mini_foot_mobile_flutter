@@ -1,3 +1,6 @@
+import java.io.FileInputStream
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("kotlin-android")
@@ -6,8 +9,17 @@ plugins {
     id("com.google.gms.google-services")
 }
 
+val keystoreProperties = Properties()
+val keystorePropertiesFile = rootProject.file("key.properties")
+if (keystorePropertiesFile.exists()) {
+    keystoreProperties.load(FileInputStream(keystorePropertiesFile))
+}
+
+fun signingValue(propertyName: String, environmentName: String): String? =
+    keystoreProperties[propertyName] as String? ?: System.getenv(environmentName)
+
 android {
-    namespace = "com.electron.minifoot"
+    namespace = "com.electrons.minifoot"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = "27.0.12077973"
     compileOptions {
@@ -20,18 +32,25 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.electron.minifoot"
+        applicationId = "com.electrons.minifoot"
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
     }
 
+    signingConfigs {
+        create("release") {
+            keyAlias = signingValue("keyAlias", "MINIFOOT_PLAYER_UPLOAD_KEY_ALIAS")
+            keyPassword = signingValue("keyPassword", "MINIFOOT_PLAYER_UPLOAD_KEY_PASSWORD")
+            storeFile = signingValue("storeFile", "MINIFOOT_PLAYER_UPLOAD_STORE_FILE")?.let { file(it) }
+            storePassword = signingValue("storePassword", "MINIFOOT_PLAYER_UPLOAD_STORE_PASSWORD")
+        }
+    }
+
     buildTypes {
-        release {
-            // TODO: Remplacer par un vrai keystore avant publication sur le Play Store.
-            // Voir : https://docs.flutter.dev/deployment/android#signing-the-app
-            signingConfig = signingConfigs.getByName("debug")
+        getByName("release") {
+            signingConfig = signingConfigs.getByName("release")
         }
     }
 }

@@ -1,4 +1,4 @@
-package com.electron.minifoot
+package com.electrons.minifoot
 
 import io.flutter.embedding.android.FlutterActivity
 
